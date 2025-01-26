@@ -1,0 +1,24 @@
+{
+  "name": "kintone-mcp-server",
+  "version": "1.0.0",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "modelcontextprotocol",
+    "mcp",
+    "kintone"
+  ],
+  "author": "r3-yamauchi https://www.r3it.com/blog/author/yamauchi",
+  "license": "MIT",
+  "description": "MCP server for kintone",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.3",
+    "axios": "^1.7.9"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
