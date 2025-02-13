@@ -161,6 +161,24 @@ class KintoneRepository {
             this.handleKintoneError(error, `download file with key ${fileKey}`);
         }
     }
+
+    async addRecordComment(appId, recordId, text, mentions = []) {
+        try {
+            console.error(`Adding comment to record: ${appId}/${recordId}`);
+            const response = await this.client.record.addRecordComment({
+                app: appId,
+                record: recordId,
+                comment: {
+                    text: text,
+                    mentions: mentions
+                }
+            });
+            console.error('Comment added:', response);
+            return response.id;
+        } catch (error) {
+            this.handleKintoneError(error, `add comment to record ${appId}/${recordId}`);
+        }
+    }
 }
 
 class KintoneMCPServer {
@@ -293,6 +311,46 @@ class KintoneMCPServer {
                                     },
                                 },
                                 required: ['file_name', 'file_data'],
+                            },
+                        },
+                        add_comment: {
+                            description: 'kintoneレコードにコメントを追加します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    app_id: {
+                                        type: 'number',
+                                        description: 'kintoneアプリのID',
+                                    },
+                                    record_id: {
+                                        type: 'number',
+                                        description: 'レコードID',
+                                    },
+                                    text: {
+                                        type: 'string',
+                                        description: 'コメント本文',
+                                    },
+                                    mentions: {
+                                        type: 'array',
+                                        items: {
+                                            type: 'object',
+                                            properties: {
+                                                code: {
+                                                    type: 'string',
+                                                    description: 'メンション対象のユーザー、グループ、組織のコード',
+                                                },
+                                                type: {
+                                                    type: 'string',
+                                                    enum: ['USER', 'GROUP', 'ORGANIZATION'],
+                                                    description: 'メンション対象の種類',
+                                                }
+                                            },
+                                            required: ['code', 'type']
+                                        },
+                                        description: 'メンション情報の配列',
+                                    }
+                                },
+                                required: ['app_id', 'record_id', 'text'],
                             },
                         },
                     },
@@ -459,6 +517,47 @@ class KintoneMCPServer {
                         required: ['file_name', 'file_data'],
                     },
                 },
+                {
+                    name: 'add_comment',
+                    description: 'kintoneレコードにコメントを追加します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            app_id: {
+                                type: 'number',
+                                description: 'kintoneアプリのID',
+                            },
+                            record_id: {
+                                type: 'number',
+                                description: 'レコードID',
+                            },
+                            text: {
+                                type: 'string',
+                                description: 'コメント本文',
+                            },
+                            mentions: {
+                                type: 'array',
+                                items: {
+                                    type: 'object',
+                                    properties: {
+                                        code: {
+                                            type: 'string',
+                                            description: 'メンション対象のユーザー、グループ、組織のコード',
+                                        },
+                                        type: {
+                                            type: 'string',
+                                            enum: ['USER', 'GROUP', 'ORGANIZATION'],
+                                            description: 'メンション対象の種類',
+                                        }
+                                    },
+                                    required: ['code', 'type']
+                                },
+                                description: 'メンション情報の配列',
+                            }
+                        },
+                        required: ['app_id', 'record_id', 'text'],
+                    },
+                },
             ],
         }));
 
@@ -529,6 +628,16 @@ class KintoneMCPServer {
                     args.file_key
                 );
                 return fileData;
+
+            case 'add_comment': {
+                const commentId = await this.repository.addRecordComment(
+                    args.app_id,
+                    args.record_id,
+                    args.text,
+                    args.mentions || []
+                );
+                return { comment_id: commentId };
+            }
 
             default:
                 throw new McpError(
