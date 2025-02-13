@@ -49,16 +49,48 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 
 ### 6. 動作確認
 
-まずは Claude に "kintoneアプリ「設定したkintoneユーザーでアクセス出来るアプリ名の一例」のアプリIDを調べて" と尋ねてみてください。
+まずは Claude に "kintoneアプリ「*設定したkintoneユーザーでアクセス出来るアプリ名の一例*」のアプリIDを調べて" と尋ねてみてください。
 ここで入力するkintoneアプリ名は一言一句正確に指定する必要があります。
 
-### 7. その他
+### 7. この MCP server が提供している機能の一覧
 
-その他に、この MCP server を使用してどういったことが出来るか、[ブログ](https://www.r3it.com/blog/kintone-mcp-server-20250115-yamauchi)に書いたので読んでみてください。
+#### レコード操作
+
+- `get_record`: kintoneアプリの1レコードを取得
+- `search_records`: kintoneアプリのレコードを検索
+- `create_record`: kintoneアプリに新しいレコードを作成
+- `update_record`: kintoneアプリの既存レコードを更新
+- `add_comment`: kintoneレコードにコメントを追加
+
+#### ファイル操作
+
+- `upload_file`: kintoneアプリにファイルをアップロード
+- `download_file`: kintoneアプリからファイルをダウンロード
+
+#### アプリ情報
+
+- `get_apps_info`: 検索キーワードを指定して該当する複数のkintoneアプリの情報を取得
+
+#### スペース操作
+
+- `get_space`: スペースの一般情報を取得
+- `update_space`: スペースの設定を更新
+- `update_space_body`: スペースの本文を更新
+- `get_space_members`: スペースメンバーのリストを取得
+- `update_space_members`: スペースメンバーを更新
+- `add_thread`: スペースにスレッドを追加
+- `update_thread`: スレッドを更新
+- `add_thread_comment`: スレッドにコメントを追加
+- `add_guests`: ゲストユーザーを追加
+- `update_space_guests`: スペースのゲストメンバーを更新
+
+### 8. その他
+
+その他に、この MCP server を使用してどういったことが出来るか、[ブログ](https://www.r3it.com/blog/kintone-mcp-server-20250115-yamauchi) に書いたので読んでみてください。
 
 他にも kintone用の MCP server を公開されている方がおられますので、参考にしながらご自身でオリジナルの MCP server を作ってみるのも良いかもしれません。
 
-** 「kintone」はサイボウズ株式会社の登録商標です。
+** 「kintone」はサイボウズ株式会社の登録商標です。**
 
 ここに記載している内容は情報提供を目的としており、個別のサポートはできません。
 設定内容についてのご質問やご自身の環境で動作しないといったお問い合わせをいただいても対応はできませんので、ご了承ください。

@@ -179,6 +179,126 @@ class KintoneRepository {
             this.handleKintoneError(error, `add comment to record ${appId}/${recordId}`);
         }
     }
+
+    async getSpace(spaceId) {
+        try {
+            console.error(`Fetching space: ${spaceId}`);
+            const response = await this.client.space.getSpace({ id: spaceId });
+            console.error('Response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get space ${spaceId}`);
+        }
+    }
+
+    async updateSpace(spaceId, settings) {
+        try {
+            console.error(`Updating space: ${spaceId}`);
+            await this.client.space.updateSpace({
+                id: spaceId,
+                ...settings
+            });
+        } catch (error) {
+            this.handleKintoneError(error, `update space ${spaceId}`);
+        }
+    }
+
+    async updateSpaceBody(spaceId, body) {
+        try {
+            console.error(`Updating space body: ${spaceId}`);
+            await this.client.space.updateSpaceBody({
+                id: spaceId,
+                body: body
+            });
+        } catch (error) {
+            this.handleKintoneError(error, `update space body ${spaceId}`);
+        }
+    }
+
+    async getSpaceMembers(spaceId) {
+        try {
+            console.error(`Fetching space members: ${spaceId}`);
+            const response = await this.client.space.getSpaceMembers({ id: spaceId });
+            console.error('Response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get space members ${spaceId}`);
+        }
+    }
+
+    async updateSpaceMembers(spaceId, members) {
+        try {
+            console.error(`Updating space members: ${spaceId}`);
+            await this.client.space.updateSpaceMembers({
+                id: spaceId,
+                members: members
+            });
+        } catch (error) {
+            this.handleKintoneError(error, `update space members ${spaceId}`);
+        }
+    }
+
+    async addThread(spaceId, name) {
+        try {
+            console.error(`Adding thread to space: ${spaceId}`);
+            const response = await this.client.space.addThread({
+                space: spaceId,
+                name: name
+            });
+            console.error('Response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `add thread to space ${spaceId}`);
+        }
+    }
+
+    async updateThread(threadId, params) {
+        try {
+            console.error(`Updating thread: ${threadId}`);
+            await this.client.space.updateThread({
+                id: threadId,
+                ...params
+            });
+        } catch (error) {
+            this.handleKintoneError(error, `update thread ${threadId}`);
+        }
+    }
+
+    async addThreadComment(spaceId, threadId, comment) {
+        try {
+            console.error(`Adding comment to thread: ${threadId}`);
+            const response = await this.client.space.addThreadComment({
+                space: spaceId,
+                thread: threadId,
+                comment: comment
+            });
+            console.error('Response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `add comment to thread ${threadId}`);
+        }
+    }
+
+    async addGuests(guests) {
+        try {
+            console.error(`Adding guests:`, guests);
+            await this.client.space.addGuests({ guests });
+        } catch (error) {
+            this.handleKintoneError(error, 'add guests');
+        }
+    }
+
+    async updateSpaceGuests(spaceId, guests) {
+        try {
+            console.error(`Updating space guests: ${spaceId}`);
+            await this.client.space.updateSpaceGuests({
+                id: spaceId,
+                guests: guests
+            });
+        } catch (error) {
+            this.handleKintoneError(error, `update space guests ${spaceId}`);
+        }
+    }
 }
 
 class KintoneMCPServer {
@@ -351,6 +471,232 @@ class KintoneMCPServer {
                                     }
                                 },
                                 required: ['app_id', 'record_id', 'text'],
+                            },
+                        },
+                        get_space: {
+                            description: 'スペースの一般情報を取得します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    space_id: {
+                                        type: 'string',
+                                        description: 'スペースID',
+                                    },
+                                },
+                                required: ['space_id'],
+                            },
+                        },
+                        update_space: {
+                            description: 'スペースの設定を更新します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    space_id: {
+                                        type: 'string',
+                                        description: 'スペースID',
+                                    },
+                                    name: {
+                                        type: 'string',
+                                        description: 'スペースの新しい名前',
+                                    },
+                                    isPrivate: {
+                                        type: 'boolean',
+                                        description: 'プライベート設定',
+                                    },
+                                    fixedMember: {
+                                        type: 'boolean',
+                                        description: 'メンバー固定設定',
+                                    },
+                                    useMultiThread: {
+                                        type: 'boolean',
+                                        description: 'マルチスレッド設定',
+                                    },
+                                },
+                                required: ['space_id'],
+                            },
+                        },
+                        update_space_body: {
+                            description: 'スペースの本文を更新します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    space_id: {
+                                        type: 'string',
+                                        description: 'スペースID',
+                                    },
+                                    body: {
+                                        type: 'string',
+                                        description: 'スペースの本文（HTML形式）',
+                                    },
+                                },
+                                required: ['space_id', 'body'],
+                            },
+                        },
+                        get_space_members: {
+                            description: 'スペースメンバーのリストを取得します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    space_id: {
+                                        type: 'string',
+                                        description: 'スペースID',
+                                    },
+                                },
+                                required: ['space_id'],
+                            },
+                        },
+                        update_space_members: {
+                            description: 'スペースメンバーを更新します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    space_id: {
+                                        type: 'string',
+                                        description: 'スペースID',
+                                    },
+                                    members: {
+                                        type: 'array',
+                                        items: {
+                                            type: 'object',
+                                            properties: {
+                                                entity: {
+                                                    type: 'object',
+                                                    properties: {
+                                                        type: {
+                                                            type: 'string',
+                                                            enum: ['USER', 'GROUP', 'ORGANIZATION'],
+                                                        },
+                                                        code: { type: 'string' },
+                                                    },
+                                                    required: ['type', 'code'],
+                                                },
+                                                isAdmin: { type: 'boolean' },
+                                                includeSubs: { type: 'boolean' },
+                                            },
+                                            required: ['entity'],
+                                        },
+                                    },
+                                },
+                                required: ['space_id', 'members'],
+                            },
+                        },
+                        add_thread: {
+                            description: 'スペースにスレッドを追加します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    space_id: {
+                                        type: 'string',
+                                        description: 'スペースID',
+                                    },
+                                    name: {
+                                        type: 'string',
+                                        description: 'スレッド名',
+                                    },
+                                },
+                                required: ['space_id', 'name'],
+                            },
+                        },
+                        update_thread: {
+                            description: 'スレッドを更新します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    thread_id: {
+                                        type: 'string',
+                                        description: 'スレッドID',
+                                    },
+                                    name: {
+                                        type: 'string',
+                                        description: 'スレッドの新しい名前',
+                                    },
+                                    body: {
+                                        type: 'string',
+                                        description: 'スレッドの本文（HTML形式）',
+                                    },
+                                },
+                                required: ['thread_id'],
+                            },
+                        },
+                        add_thread_comment: {
+                            description: 'スレッドにコメントを追加します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    space_id: {
+                                        type: 'string',
+                                        description: 'スペースID',
+                                    },
+                                    thread_id: {
+                                        type: 'string',
+                                        description: 'スレッドID',
+                                    },
+                                    text: {
+                                        type: 'string',
+                                        description: 'コメント本文',
+                                    },
+                                    mentions: {
+                                        type: 'array',
+                                        items: {
+                                            type: 'object',
+                                            properties: {
+                                                code: { type: 'string' },
+                                                type: {
+                                                    type: 'string',
+                                                    enum: ['USER', 'GROUP', 'ORGANIZATION'],
+                                                },
+                                            },
+                                            required: ['code', 'type'],
+                                        },
+                                    },
+                                },
+                                required: ['space_id', 'thread_id', 'text'],
+                            },
+                        },
+                        add_guests: {
+                            description: 'ゲストユーザーを追加します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    guests: {
+                                        type: 'array',
+                                        items: {
+                                            type: 'object',
+                                            properties: {
+                                                name: { type: 'string' },
+                                                code: { type: 'string' },
+                                                password: { type: 'string' },
+                                                timezone: { type: 'string' },
+                                                locale: {
+                                                    type: 'string',
+                                                    enum: ['auto', 'en', 'zh', 'ja'],
+                                                },
+                                            },
+                                            required: ['name', 'code', 'password', 'timezone'],
+                                        },
+                                    },
+                                },
+                                required: ['guests'],
+                            },
+                        },
+                        update_space_guests: {
+                            description: 'スペースのゲストメンバーを更新します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    space_id: {
+                                        type: 'string',
+                                        description: 'スペースID',
+                                    },
+                                    guests: {
+                                        type: 'array',
+                                        items: {
+                                            type: 'string',
+                                            description: 'ゲストユーザーのメールアドレス',
+                                        },
+                                    },
+                                },
+                                required: ['space_id', 'guests'],
                             },
                         },
                     },
@@ -558,6 +904,242 @@ class KintoneMCPServer {
                         required: ['app_id', 'record_id', 'text'],
                     },
                 },
+                {
+                    name: 'get_space',
+                    description: 'スペースの一般情報を取得します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            space_id: {
+                                type: 'string',
+                                description: 'スペースID',
+                            },
+                        },
+                        required: ['space_id'],
+                    },
+                },
+                {
+                    name: 'update_space',
+                    description: 'スペースの設定を更新します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            space_id: {
+                                type: 'string',
+                                description: 'スペースID',
+                            },
+                            name: {
+                                type: 'string',
+                                description: 'スペースの新しい名前',
+                            },
+                            isPrivate: {
+                                type: 'boolean',
+                                description: 'プライベート設定',
+                            },
+                            fixedMember: {
+                                type: 'boolean',
+                                description: 'メンバー固定設定',
+                            },
+                            useMultiThread: {
+                                type: 'boolean',
+                                description: 'マルチスレッド設定',
+                            },
+                        },
+                        required: ['space_id'],
+                    },
+                },
+                {
+                    name: 'update_space_body',
+                    description: 'スペースの本文を更新します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            space_id: {
+                                type: 'string',
+                                description: 'スペースID',
+                            },
+                            body: {
+                                type: 'string',
+                                description: 'スペースの本文（HTML形式）',
+                            },
+                        },
+                        required: ['space_id', 'body'],
+                    },
+                },
+                {
+                    name: 'get_space_members',
+                    description: 'スペースメンバーのリストを取得します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            space_id: {
+                                type: 'string',
+                                description: 'スペースID',
+                            },
+                        },
+                        required: ['space_id'],
+                    },
+                },
+                {
+                    name: 'update_space_members',
+                    description: 'スペースメンバーを更新します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            space_id: {
+                                type: 'string',
+                                description: 'スペースID',
+                            },
+                            members: {
+                                type: 'array',
+                                items: {
+                                    type: 'object',
+                                    properties: {
+                                        entity: {
+                                            type: 'object',
+                                            properties: {
+                                                type: {
+                                                    type: 'string',
+                                                    enum: ['USER', 'GROUP', 'ORGANIZATION'],
+                                                },
+                                                code: { type: 'string' },
+                                            },
+                                            required: ['type', 'code'],
+                                        },
+                                        isAdmin: { type: 'boolean' },
+                                        includeSubs: { type: 'boolean' },
+                                    },
+                                    required: ['entity'],
+                                },
+                            },
+                        },
+                        required: ['space_id', 'members'],
+                    },
+                },
+                {
+                    name: 'add_thread',
+                    description: 'スペースにスレッドを追加します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            space_id: {
+                                type: 'string',
+                                description: 'スペースID',
+                            },
+                            name: {
+                                type: 'string',
+                                description: 'スレッド名',
+                            },
+                        },
+                        required: ['space_id', 'name'],
+                    },
+                },
+                {
+                    name: 'update_thread',
+                    description: 'スレッドを更新します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            thread_id: {
+                                type: 'string',
+                                description: 'スレッドID',
+                            },
+                            name: {
+                                type: 'string',
+                                description: 'スレッドの新しい名前',
+                            },
+                            body: {
+                                type: 'string',
+                                description: 'スレッドの本文（HTML形式）',
+                            },
+                        },
+                        required: ['thread_id'],
+                    },
+                },
+                {
+                    name: 'add_thread_comment',
+                    description: 'スレッドにコメントを追加します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            space_id: {
+                                type: 'string',
+                                description: 'スペースID',
+                            },
+                            thread_id: {
+                                type: 'string',
+                                description: 'スレッドID',
+                            },
+                            text: {
+                                type: 'string',
+                                description: 'コメント本文',
+                            },
+                            mentions: {
+                                type: 'array',
+                                items: {
+                                    type: 'object',
+                                    properties: {
+                                        code: { type: 'string' },
+                                        type: {
+                                            type: 'string',
+                                            enum: ['USER', 'GROUP', 'ORGANIZATION'],
+                                        },
+                                    },
+                                    required: ['code', 'type'],
+                                },
+                            },
+                        },
+                        required: ['space_id', 'thread_id', 'text'],
+                    },
+                },
+                {
+                    name: 'add_guests',
+                    description: 'ゲストユーザーを追加します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            guests: {
+                                type: 'array',
+                                items: {
+                                    type: 'object',
+                                    properties: {
+                                        name: { type: 'string' },
+                                        code: { type: 'string' },
+                                        password: { type: 'string' },
+                                        timezone: { type: 'string' },
+                                        locale: {
+                                            type: 'string',
+                                            enum: ['auto', 'en', 'zh', 'ja'],
+                                        },
+                                    },
+                                    required: ['name', 'code', 'password', 'timezone'],
+                                },
+                            },
+                        },
+                        required: ['guests'],
+                    },
+                },
+                {
+                    name: 'update_space_guests',
+                    description: 'スペースのゲストメンバーを更新します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            space_id: {
+                                type: 'string',
+                                description: 'スペースID',
+                            },
+                            guests: {
+                                type: 'array',
+                                items: {
+                                    type: 'string',
+                                    description: 'ゲストユーザーのメールアドレス',
+                                },
+                            },
+                        },
+                        required: ['space_id', 'guests'],
+                    },
+                },
             ],
         }));
 
@@ -589,7 +1171,7 @@ class KintoneMCPServer {
                 return record.fields;  // KintoneRecord ではなく fields を返す
             }
             case 'search_records':
-                const records = await this.repository.searchRecords(
+                        const records = await this.repository.searchRecords(
                     args.app_id,
                     args.query,
                     args.fields
@@ -597,7 +1179,7 @@ class KintoneMCPServer {
                 return records.map(r => r.fields);
 
             case 'create_record':
-                const recordId = await this.repository.createRecord(
+                        const recordId = await this.repository.createRecord(
                     args.app_id,
                     args.fields
                 );
@@ -605,7 +1187,7 @@ class KintoneMCPServer {
 
             case 'update_record':
                 const response = await this.repository.updateRecord(
-                    new KintoneRecord(
+                            new KintoneRecord(
                         args.app_id,
                         args.record_id,
                         args.fields
@@ -639,6 +1221,61 @@ class KintoneMCPServer {
                 return { comment_id: commentId };
             }
 
+            case 'get_space':
+                return this.repository.getSpace(args.space_id);
+
+            case 'update_space':
+                await this.repository.updateSpace(args.space_id, {
+                    name: args.name,
+                    isPrivate: args.isPrivate,
+                    fixedMember: args.fixedMember,
+                    useMultiThread: args.useMultiThread,
+                });
+                return { success: true };
+
+            case 'update_space_body':
+                await this.repository.updateSpaceBody(args.space_id, args.body);
+                return { success: true };
+
+            case 'get_space_members':
+                return this.repository.getSpaceMembers(args.space_id);
+
+            case 'update_space_members':
+                await this.repository.updateSpaceMembers(args.space_id, args.members);
+                return { success: true };
+
+            case 'add_thread': {
+                const response = await this.repository.addThread(args.space_id, args.name);
+                return { thread_id: response.id };
+            }
+
+            case 'update_thread':
+                await this.repository.updateThread(args.thread_id, {
+                    name: args.name,
+                    body: args.body,
+                });
+                return { success: true };
+
+            case 'add_thread_comment': {
+                const response = await this.repository.addThreadComment(
+                    args.space_id,
+                    args.thread_id,
+                    {
+                        text: args.text,
+                        mentions: args.mentions || [],
+                    }
+                );
+                return { comment_id: response.id };
+            }
+
+            case 'add_guests':
+                await this.repository.addGuests(args.guests);
+                return { success: true };
+
+            case 'update_space_guests':
+                await this.repository.updateSpaceGuests(args.space_id, args.guests);
+                return { success: true };
+
             default:
                 throw new McpError(
                     ErrorCode.MethodNotFound,
@@ -651,26 +1288,26 @@ class KintoneMCPServer {
     formatSuccessResponse(result) {
         // ファイルダウンロードの場合は特別な処理
         if (Buffer.isBuffer(result)) {
-            return {
-                content: [
-                    {
-                        type: 'text',
+                        return {
+                            content: [
+                                {
+                                    type: 'text',
                         text: result.toString('base64'),
-                    },
-                ],
-            };
-        }
+                                },
+                            ],
+                        };
+                    }
 
         // 通常のレスポンス
-        return {
-            content: [
-                {
-                    type: 'text',
+                        return {
+                            content: [
+                                {
+                                    type: 'text',
                     text: JSON.stringify(result, null, 2),
-                },
-            ],
-        };
-    }
+                                },
+                            ],
+                        };
+                    }
 
     // エラーハンドリング
     handleToolError(error) {
