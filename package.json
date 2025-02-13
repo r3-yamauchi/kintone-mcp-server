@@ -1,9 +1,10 @@
 {
   "name": "kintone-mcp-server",
-  "version": "1.0.0",
+  "version": "7.0.0",
   "main": "server.js",
   "type": "module",
   "scripts": {
+    "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -11,12 +12,16 @@
     "mcp",
     "kintone"
   ],
-  "author": "r3-yamauchi https://www.r3it.com/blog/author/yamauchi",
-  "license": "MIT",
+  "author": {
+    "name": "r3-yamauchi",
+    "url": "https://www.r3it.com/blog/author/yamauchi"
+  },
+  "license": "AGPL-3.0",
   "description": "MCP server for kintone",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.3",
-    "axios": "^1.7.9"
+    "@kintone/rest-api-client": "^5.7.1",
+    "@modelcontextprotocol/sdk": "^1.9.0",
+    "dotenv": "^16.5.0"
   },
   "engines": {
     "node": ">=18"

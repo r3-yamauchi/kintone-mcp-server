@@ -1,0 +1,3623 @@
+└── docs
+    └── specification
+        └── 2025-03-26
+            ├── _index.md
+            ├── architecture
+                └── _index.md
+            ├── basic
+                ├── _index.md
+                ├── authorization.md
+                ├── lifecycle.md
+                ├── transports.md
+                └── utilities
+                │   ├── _index.md
+                │   ├── cancellation.md
+                │   ├── ping.md
+                │   └── progress.md
+            ├── changelog.md
+            ├── client
+                ├── _index.md
+                ├── roots.md
+                └── sampling.md
+            └── server
+                ├── _index.md
+                ├── prompts.md
+                ├── resource-picker.png
+                ├── resources.md
+                ├── slash-command.png
+                ├── tools.md
+                └── utilities
+                    ├── _index.md
+                    ├── completion.md
+                    ├── logging.md
+                    └── pagination.md
+
+
+/docs/specification/2025-03-26/_index.md:
+--------------------------------------------------------------------------------
+  1 | ---
+  2 | linkTitle: 2025-03-26 (Latest)
+  3 | title: Model Context Protocol specification
+  4 | cascade:
+  5 |   type: docs
+  6 | breadcrumbs: false
+  7 | weight: 1
+  8 | aliases:
+  9 |   - /latest
+ 10 | ---
+ 11 | 
+ 12 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+ 13 | 
+ 14 | [Model Context Protocol](https://modelcontextprotocol.io) (MCP) is an open protocol that
+ 15 | enables seamless integration between LLM applications and external data sources and
+ 16 | tools. Whether you're building an AI-powered IDE, enhancing a chat interface, or creating
+ 17 | custom AI workflows, MCP provides a standardized way to connect LLMs with the context
+ 18 | they need.
+ 19 | 
+ 20 | This specification defines the authoritative protocol requirements, based on the
+ 21 | TypeScript schema in
+ 22 | [schema.ts](https://github.com/modelcontextprotocol/specification/blob/main/schema/draft/schema.ts).
+ 23 | 
+ 24 | For implementation guides and examples, visit
+ 25 | [modelcontextprotocol.io](https://modelcontextprotocol.io).
+ 26 | 
+ 27 | The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD
+ 28 | NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be
+ 29 | interpreted as described in [BCP 14](https://datatracker.ietf.org/doc/html/bcp14)
+ 30 | [[RFC2119](https://datatracker.ietf.org/doc/html/rfc2119)]
+ 31 | [[RFC8174](https://datatracker.ietf.org/doc/html/rfc8174)] when, and only when, they
+ 32 | appear in all capitals, as shown here.
+ 33 | 
+ 34 | ## Overview
+ 35 | 
+ 36 | MCP provides a standardized way for applications to:
+ 37 | 
+ 38 | - Share contextual information with language models
+ 39 | - Expose tools and capabilities to AI systems
+ 40 | - Build composable integrations and workflows
+ 41 | 
+ 42 | The protocol uses [JSON-RPC](https://www.jsonrpc.org/) 2.0 messages to establish
+ 43 | communication between:
+ 44 | 
+ 45 | - **Hosts**: LLM applications that initiate connections
+ 46 | - **Clients**: Connectors within the host application
+ 47 | - **Servers**: Services that provide context and capabilities
+ 48 | 
+ 49 | MCP takes some inspiration from the
+ 50 | [Language Server Protocol](https://microsoft.github.io/language-server-protocol/), which
+ 51 | standardizes how to add support for programming languages across a whole ecosystem of
+ 52 | development tools. In a similar way, MCP standardizes how to integrate additional context
+ 53 | and tools into the ecosystem of AI applications.
+ 54 | 
+ 55 | ## Key Details
+ 56 | 
+ 57 | ### Base Protocol
+ 58 | 
+ 59 | - [JSON-RPC](https://www.jsonrpc.org/) message format
+ 60 | - Stateful connections
+ 61 | - Server and client capability negotiation
+ 62 | 
+ 63 | ### Features
+ 64 | 
+ 65 | Servers offer any of the following features to clients:
+ 66 | 
+ 67 | - **Resources**: Context and data, for the user or the AI model to use
+ 68 | - **Prompts**: Templated messages and workflows for users
+ 69 | - **Tools**: Functions for the AI model to execute
+ 70 | 
+ 71 | Clients may offer the following feature to servers:
+ 72 | 
+ 73 | - **Sampling**: Server-initiated agentic behaviors and recursive LLM interactions
+ 74 | 
+ 75 | ### Additional Utilities
+ 76 | 
+ 77 | - Configuration
+ 78 | - Progress tracking
+ 79 | - Cancellation
+ 80 | - Error reporting
+ 81 | - Logging
+ 82 | 
+ 83 | ## Security and Trust & Safety
+ 84 | 
+ 85 | The Model Context Protocol enables powerful capabilities through arbitrary data access
+ 86 | and code execution paths. With this power comes important security and trust
+ 87 | considerations that all implementors must carefully address.
+ 88 | 
+ 89 | ### Key Principles
+ 90 | 
+ 91 | 1. **User Consent and Control**
+ 92 | 
+ 93 |    - Users must explicitly consent to and understand all data access and operations
+ 94 |    - Users must retain control over what data is shared and what actions are taken
+ 95 |    - Implementors should provide clear UIs for reviewing and authorizing activities
+ 96 | 
+ 97 | 2. **Data Privacy**
+ 98 | 
+ 99 |    - Hosts must obtain explicit user consent before exposing user data to servers
+100 |    - Hosts must not transmit resource data elsewhere without user consent
+101 |    - User data should be protected with appropriate access controls
+102 | 
+103 | 3. **Tool Safety**
+104 | 
+105 |    - Tools represent arbitrary code execution and must be treated with appropriate
+106 |      caution.
+107 |      - In particular, descriptions of tool behavior such as annotations should be
+108 |        considered untrusted, unless obtained from a trusted server.
+109 |    - Hosts must obtain explicit user consent before invoking any tool
+110 |    - Users should understand what each tool does before authorizing its use
+111 | 
+112 | 4. **LLM Sampling Controls**
+113 |    - Users must explicitly approve any LLM sampling requests
+114 |    - Users should control:
+115 |      - Whether sampling occurs at all
+116 |      - The actual prompt that will be sent
+117 |      - What results the server can see
+118 |    - The protocol intentionally limits server visibility into prompts
+119 | 
+120 | ### Implementation Guidelines
+121 | 
+122 | While MCP itself cannot enforce these security principles at the protocol level,
+123 | implementors **SHOULD**:
+124 | 
+125 | 1. Build robust consent and authorization flows into their applications
+126 | 2. Provide clear documentation of security implications
+127 | 3. Implement appropriate access controls and data protections
+128 | 4. Follow security best practices in their integrations
+129 | 5. Consider privacy implications in their feature designs
+130 | 
+131 | ## Learn More
+132 | 
+133 | Explore the detailed specification for each protocol component:
+134 | 
+135 | {{< cards >}} {{< card link="architecture" title="Architecture" icon="template" >}}
+136 | {{< card link="basic" title="Base Protocol" icon="code" >}}
+137 | {{< card link="server" title="Server Features" icon="server" >}}
+138 | {{< card link="client" title="Client Features" icon="user" >}}
+139 | {{< card link="contributing" title="Contributing" icon="pencil" >}} {{< /cards >}}
+140 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/architecture/_index.md:
+--------------------------------------------------------------------------------
+  1 | ---
+  2 | title: Architecture
+  3 | cascade:
+  4 |   type: docs
+  5 | weight: 10
+  6 | ---
+  7 | 
+  8 | The Model Context Protocol (MCP) follows a client-host-server architecture where each
+  9 | host can run multiple client instances. This architecture enables users to integrate AI
+ 10 | capabilities across applications while maintaining clear security boundaries and
+ 11 | isolating concerns. Built on JSON-RPC, MCP provides a stateful session protocol focused
+ 12 | on context exchange and sampling coordination between clients and servers.
+ 13 | 
+ 14 | ## Core Components
+ 15 | 
+ 16 | ```mermaid
+ 17 | graph LR
+ 18 |     subgraph "Application Host Process"
+ 19 |         H[Host]
+ 20 |         C1[Client 1]
+ 21 |         C2[Client 2]
+ 22 |         C3[Client 3]
+ 23 |         H --> C1
+ 24 |         H --> C2
+ 25 |         H --> C3
+ 26 |     end
+ 27 | 
+ 28 |     subgraph "Local machine"
+ 29 |         S1[Server 1<br>Files & Git]
+ 30 |         S2[Server 2<br>Database]
+ 31 |         R1[("Local<br>Resource A")]
+ 32 |         R2[("Local<br>Resource B")]
+ 33 | 
+ 34 |         C1 --> S1
+ 35 |         C2 --> S2
+ 36 |         S1 <--> R1
+ 37 |         S2 <--> R2
+ 38 |     end
+ 39 | 
+ 40 |     subgraph "Internet"
+ 41 |         S3[Server 3<br>External APIs]
+ 42 |         R3[("Remote<br>Resource C")]
+ 43 | 
+ 44 |         C3 --> S3
+ 45 |         S3 <--> R3
+ 46 |     end
+ 47 | ```
+ 48 | 
+ 49 | ### Host
+ 50 | 
+ 51 | The host process acts as the container and coordinator:
+ 52 | 
+ 53 | - Creates and manages multiple client instances
+ 54 | - Controls client connection permissions and lifecycle
+ 55 | - Enforces security policies and consent requirements
+ 56 | - Handles user authorization decisions
+ 57 | - Coordinates AI/LLM integration and sampling
+ 58 | - Manages context aggregation across clients
+ 59 | 
+ 60 | ### Clients
+ 61 | 
+ 62 | Each client is created by the host and maintains an isolated server connection:
+ 63 | 
+ 64 | - Establishes one stateful session per server
+ 65 | - Handles protocol negotiation and capability exchange
+ 66 | - Routes protocol messages bidirectionally
+ 67 | - Manages subscriptions and notifications
+ 68 | - Maintains security boundaries between servers
+ 69 | 
+ 70 | A host application creates and manages multiple clients, with each client having a 1:1
+ 71 | relationship with a particular server.
+ 72 | 
+ 73 | ### Servers
+ 74 | 
+ 75 | Servers provide specialized context and capabilities:
+ 76 | 
+ 77 | - Expose resources, tools and prompts via MCP primitives
+ 78 | - Operate independently with focused responsibilities
+ 79 | - Request sampling through client interfaces
+ 80 | - Must respect security constraints
+ 81 | - Can be local processes or remote services
+ 82 | 
+ 83 | ## Design Principles
+ 84 | 
+ 85 | MCP is built on several key design principles that inform its architecture and
+ 86 | implementation:
+ 87 | 
+ 88 | 1. **Servers should be extremely easy to build**
+ 89 | 
+ 90 |    - Host applications handle complex orchestration responsibilities
+ 91 |    - Servers focus on specific, well-defined capabilities
+ 92 |    - Simple interfaces minimize implementation overhead
+ 93 |    - Clear separation enables maintainable code
+ 94 | 
+ 95 | 2. **Servers should be highly composable**
+ 96 | 
+ 97 |    - Each server provides focused functionality in isolation
+ 98 |    - Multiple servers can be combined seamlessly
+ 99 |    - Shared protocol enables interoperability
+100 |    - Modular design supports extensibility
+101 | 
+102 | 3. **Servers should not be able to read the whole conversation, nor "see into" other
+103 |    servers**
+104 | 
+105 |    - Servers receive only necessary contextual information
+106 |    - Full conversation history stays with the host
+107 |    - Each server connection maintains isolation
+108 |    - Cross-server interactions are controlled by the host
+109 |    - Host process enforces security boundaries
+110 | 
+111 | 4. **Features can be added to servers and clients progressively**
+112 |    - Core protocol provides minimal required functionality
+113 |    - Additional capabilities can be negotiated as needed
+114 |    - Servers and clients evolve independently
+115 |    - Protocol designed for future extensibility
+116 |    - Backwards compatibility is maintained
+117 | 
+118 | ## Capability Negotiation
+119 | 
+120 | The Model Context Protocol uses a capability-based negotiation system where clients and
+121 | servers explicitly declare their supported features during initialization. Capabilities
+122 | determine which protocol features and primitives are available during a session.
+123 | 
+124 | - Servers declare capabilities like resource subscriptions, tool support, and prompt
+125 |   templates
+126 | - Clients declare capabilities like sampling support and notification handling
+127 | - Both parties must respect declared capabilities throughout the session
+128 | - Additional capabilities can be negotiated through extensions to the protocol
+129 | 
+130 | ```mermaid
+131 | sequenceDiagram
+132 |     participant Host
+133 |     participant Client
+134 |     participant Server
+135 | 
+136 |     Host->>+Client: Initialize client
+137 |     Client->>+Server: Initialize session with capabilities
+138 |     Server-->>Client: Respond with supported capabilities
+139 | 
+140 |     Note over Host,Server: Active Session with Negotiated Features
+141 | 
+142 |     loop Client Requests
+143 |         Host->>Client: User- or model-initiated action
+144 |         Client->>Server: Request (tools/resources)
+145 |         Server-->>Client: Response
+146 |         Client-->>Host: Update UI or respond to model
+147 |     end
+148 | 
+149 |     loop Server Requests
+150 |         Server->>Client: Request (sampling)
+151 |         Client->>Host: Forward to AI
+152 |         Host-->>Client: AI response
+153 |         Client-->>Server: Response
+154 |     end
+155 | 
+156 |     loop Notifications
+157 |         Server--)Client: Resource updates
+158 |         Client--)Server: Status changes
+159 |     end
+160 | 
+161 |     Host->>Client: Terminate
+162 |     Client->>-Server: End session
+163 |     deactivate Server
+164 | ```
+165 | 
+166 | Each capability unlocks specific protocol features for use during the session. For
+167 | example:
+168 | 
+169 | - Implemented [server features]({{< ref "../server" >}}) must be advertised in the
+170 |   server's capabilities
+171 | - Emitting resource subscription notifications requires the server to declare
+172 |   subscription support
+173 | - Tool invocation requires the server to declare tool capabilities
+174 | - [Sampling]({{< ref "../client" >}}) requires the client to declare support in its
+175 |   capabilities
+176 | 
+177 | This capability negotiation ensures clients and servers have a clear understanding of
+178 | supported functionality while maintaining protocol extensibility.
+179 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/basic/_index.md:
+--------------------------------------------------------------------------------
+  1 | ---
+  2 | title: Base Protocol
+  3 | cascade:
+  4 |   type: docs
+  5 | weight: 20
+  6 | ---
+  7 | 
+  8 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+  9 | 
+ 10 | The Model Context Protocol consists of several key components that work together:
+ 11 | 
+ 12 | - **Base Protocol**: Core JSON-RPC message types
+ 13 | - **Lifecycle Management**: Connection initialization, capability negotiation, and
+ 14 |   session control
+ 15 | - **Server Features**: Resources, prompts, and tools exposed by servers
+ 16 | - **Client Features**: Sampling and root directory lists provided by clients
+ 17 | - **Utilities**: Cross-cutting concerns like logging and argument completion
+ 18 | 
+ 19 | All implementations **MUST** support the base protocol and lifecycle management
+ 20 | components. Other components **MAY** be implemented based on the specific needs of the
+ 21 | application.
+ 22 | 
+ 23 | These protocol layers establish clear separation of concerns while enabling rich
+ 24 | interactions between clients and servers. The modular design allows implementations to
+ 25 | support exactly the features they need.
+ 26 | 
+ 27 | ## Messages
+ 28 | 
+ 29 | All messages between MCP clients and servers **MUST** follow the
+ 30 | [JSON-RPC 2.0](https://www.jsonrpc.org/specification) specification. The protocol defines
+ 31 | these types of messages:
+ 32 | 
+ 33 | ### Requests
+ 34 | 
+ 35 | Requests are sent from the client to the server or vice versa, to initiate an operation.
+ 36 | 
+ 37 | ```typescript
+ 38 | {
+ 39 |   jsonrpc: "2.0";
+ 40 |   id: string | number;
+ 41 |   method: string;
+ 42 |   params?: {
+ 43 |     [key: string]: unknown;
+ 44 |   };
+ 45 | }
+ 46 | ```
+ 47 | 
+ 48 | - Requests **MUST** include a string or integer ID.
+ 49 | - Unlike base JSON-RPC, the ID **MUST NOT** be `null`.
+ 50 | - The request ID **MUST NOT** have been previously used by the requestor within the same
+ 51 |   session.
+ 52 | 
+ 53 | ### Responses
+ 54 | 
+ 55 | Responses are sent in reply to requests, containing the result or error of the operation.
+ 56 | 
+ 57 | ```typescript
+ 58 | {
+ 59 |   jsonrpc: "2.0";
+ 60 |   id: string | number;
+ 61 |   result?: {
+ 62 |     [key: string]: unknown;
+ 63 |   }
+ 64 |   error?: {
+ 65 |     code: number;
+ 66 |     message: string;
+ 67 |     data?: unknown;
+ 68 |   }
+ 69 | }
+ 70 | ```
+ 71 | 
+ 72 | - Responses **MUST** include the same ID as the request they correspond to.
+ 73 | - **Responses** are further sub-categorized as either **successful results** or
+ 74 |   **errors**. Either a `result` or an `error` **MUST** be set. A response **MUST NOT**
+ 75 |   set both.
+ 76 | - Results **MAY** follow any JSON object structure, while errors **MUST** include an
+ 77 |   error code and message at minimum.
+ 78 | - Error codes **MUST** be integers.
+ 79 | 
+ 80 | ### Notifications
+ 81 | 
+ 82 | Notifications are sent from the client to the server or vice versa, as a one-way message.
+ 83 | The receiver **MUST NOT** send a response.
+ 84 | 
+ 85 | ```typescript
+ 86 | {
+ 87 |   jsonrpc: "2.0";
+ 88 |   method: string;
+ 89 |   params?: {
+ 90 |     [key: string]: unknown;
+ 91 |   };
+ 92 | }
+ 93 | ```
+ 94 | 
+ 95 | - Notifications **MUST NOT** include an ID.
+ 96 | 
+ 97 | ### Batching
+ 98 | 
+ 99 | JSON-RPC also defines a means to
+100 | [batch multiple requests and notifications](https://www.jsonrpc.org/specification#batch),
+101 | by sending them in an array. MCP implementations **MAY** support sending JSON-RPC
+102 | batches, but **MUST** support receiving JSON-RPC batches.
+103 | 
+104 | ## Auth
+105 | 
+106 | MCP provides an [Authorization]({{< ref "authorization" >}}) framework for use with HTTP.
+107 | Implementations using an HTTP-based transport **SHOULD** conform to this specification,
+108 | whereas implementations using STDIO transport **SHOULD NOT** follow this specification,
+109 | and instead retrieve credentials from the environment.
+110 | 
+111 | Additionally, clients and servers **MAY** negotiate their own custom authentication and
+112 | authorization strategies.
+113 | 
+114 | For further discussions and contributions to the evolution of MCP’s auth mechanisms, join
+115 | us in
+116 | [GitHub Discussions](https://github.com/modelcontextprotocol/specification/discussions)
+117 | to help shape the future of the protocol!
+118 | 
+119 | ## Schema
+120 | 
+121 | The full specification of the protocol is defined as a
+122 | [TypeScript schema](http://github.com/modelcontextprotocol/specification/tree/main/schema/draft/schema.ts).
+123 | This is the source of truth for all protocol messages and structures.
+124 | 
+125 | There is also a
+126 | [JSON Schema](http://github.com/modelcontextprotocol/specification/tree/main/schema/draft/schema.json),
+127 | which is automatically generated from the TypeScript source of truth, for use with
+128 | various automated tooling.
+129 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/basic/authorization.md:
+--------------------------------------------------------------------------------
+  1 | ---
+  2 | title: Authorization
+  3 | type: docs
+  4 | weight: 15
+  5 | ---
+  6 | 
+  7 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+  8 | 
+  9 | ## 1. Introduction
+ 10 | 
+ 11 | ### 1.1 Purpose and Scope
+ 12 | 
+ 13 | The Model Context Protocol provides authorization capabilities at the transport level,
+ 14 | enabling MCP clients to make requests to restricted MCP servers on behalf of resource
+ 15 | owners. This specification defines the authorization flow for HTTP-based transports.
+ 16 | 
+ 17 | ### 1.2 Protocol Requirements
+ 18 | 
+ 19 | Authorization is **OPTIONAL** for MCP implementations. When supported:
+ 20 | 
+ 21 | - Implementations using an HTTP-based transport **SHOULD** conform to this specification.
+ 22 | - Implementations using an STDIO transport **SHOULD NOT** follow this specification, and
+ 23 |   instead retrieve credentials from the environment.
+ 24 | - Implementations using alternative transports **MUST** follow established security best
+ 25 |   practices for their protocol.
+ 26 | 
+ 27 | ### 1.3 Standards Compliance
+ 28 | 
+ 29 | This authorization mechanism is based on established specifications listed below, but
+ 30 | implements a selected subset of their features to ensure security and interoperability
+ 31 | while maintaining simplicity:
+ 32 | 
+ 33 | - [OAuth 2.1 IETF DRAFT](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12)
+ 34 | - OAuth 2.0 Authorization Server Metadata
+ 35 |   ([RFC8414](https://datatracker.ietf.org/doc/html/rfc8414))
+ 36 | - OAuth 2.0 Dynamic Client Registration Protocol
+ 37 |   ([RFC7591](https://datatracker.ietf.org/doc/html/rfc7591))
+ 38 | 
+ 39 | ## 2. Authorization Flow
+ 40 | 
+ 41 | ### 2.1 Overview
+ 42 | 
+ 43 | 1. MCP auth implementations **MUST** implement OAuth 2.1 with appropriate security
+ 44 |    measures for both confidential and public clients.
+ 45 | 
+ 46 | 2. MCP auth implementations **SHOULD** support the OAuth 2.0 Dynamic Client Registration
+ 47 |    Protocol ([RFC7591](https://datatracker.ietf.org/doc/html/rfc7591)).
+ 48 | 
+ 49 | 3. MCP servers **SHOULD** and MCP clients **MUST** implement OAuth 2.0 Authorization
+ 50 |    Server Metadata ([RFC8414](https://datatracker.ietf.org/doc/html/rfc8414)). Servers
+ 51 |    that do not support Authorization Server Metadata **MUST** follow the default URI
+ 52 |    schema.
+ 53 | 
+ 54 | ### 2.2 Basic OAuth 2.1 Authorization
+ 55 | 
+ 56 | When authorization is required and not yet proven by the client, servers **MUST** respond
+ 57 | with _HTTP 401 Unauthorized_.
+ 58 | 
+ 59 | Clients initiate the
+ 60 | [OAuth 2.1 IETF DRAFT](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12)
+ 61 | authorization flow after receiving the _HTTP 401 Unauthorized_.
+ 62 | 
+ 63 | The following demonstrates the basic OAuth 2.1 for public clients using PKCE.
+ 64 | 
+ 65 | ```mermaid
+ 66 | sequenceDiagram
+ 67 |     participant B as User-Agent (Browser)
+ 68 |     participant C as Client
+ 69 |     participant M as MCP Server
+ 70 | 
+ 71 |     C->>M: MCP Request
+ 72 |     M->>C: HTTP 401 Unauthorized
+ 73 |     Note over C: Generate code_verifier and code_challenge
+ 74 |     C->>B: Open browser with authorization URL + code_challenge
+ 75 |     B->>M: GET /authorize
+ 76 |     Note over M: User logs in and authorizes
+ 77 |     M->>B: Redirect to callback URL with auth code
+ 78 |     B->>C: Callback with authorization code
+ 79 |     C->>M: Token Request with code + code_verifier
+ 80 |     M->>C: Access Token (+ Refresh Token)
+ 81 |     C->>M: MCP Request with Access Token
+ 82 |     Note over C,M: Begin standard MCP message exchange
+ 83 | ```
+ 84 | 
+ 85 | ### 2.3 Server Metadata Discovery
+ 86 | 
+ 87 | For server capability discovery:
+ 88 | 
+ 89 | - MCP clients _MUST_ follow the OAuth 2.0 Authorization Server Metadata protocol defined
+ 90 |   in [RFC8414](https://datatracker.ietf.org/doc/html/rfc8414).
+ 91 | - MCP server _SHOULD_ follow the OAuth 2.0 Authorization Server Metadata protocol.
+ 92 | - MCP servers that do not support the OAuth 2.0 Authorization Server Metadata protocol,
+ 93 |   _MUST_ support fallback URLs.
+ 94 | 
+ 95 | The discovery flow is illustrated below:
+ 96 | 
+ 97 | ```mermaid
+ 98 | sequenceDiagram
+ 99 |     participant C as Client
+100 |     participant S as Server
+101 | 
+102 |     C->>S: GET /.well-known/oauth-authorization-server
+103 |     alt Discovery Success
+104 |         S->>C: 200 OK + Metadata Document
+105 |         Note over C: Use endpoints from metadata
+106 |     else Discovery Failed
+107 |         S->>C: 404 Not Found
+108 |         Note over C: Fall back to default endpoints
+109 |     end
+110 |     Note over C: Continue with authorization flow
+111 | ```
+112 | 
+113 | #### 2.3.1 Server Metadata Discovery Headers
+114 | 
+115 | MCP clients _SHOULD_ include the header `MCP-Protocol-Version: <protocol-version>` during
+116 | Server Metadata Discovery to allow the MCP server to respond based on the MCP protocol
+117 | version.
+118 | 
+119 | For example: `MCP-Protocol-Version: 2024-11-05`
+120 | 
+121 | #### 2.3.2 Authorization Base URL
+122 | 
+123 | The authorization base URL **MUST** be determined from the MCP server URL by discarding
+124 | any existing `path` component. For example:
+125 | 
+126 | If the MCP server URL is `https://api.example.com/v1/mcp`, then:
+127 | 
+128 | - The authorization base URL is `https://api.example.com`
+129 | - The metadata endpoint **MUST** be at
+130 |   `https://api.example.com/.well-known/oauth-authorization-server`
+131 | 
+132 | This ensures authorization endpoints are consistently located at the root level of the
+133 | domain hosting the MCP server, regardless of any path components in the MCP server URL.
+134 | 
+135 | #### 2.3.3 Fallbacks for Servers without Metadata Discovery
+136 | 
+137 | For servers that do not implement OAuth 2.0 Authorization Server Metadata, clients
+138 | **MUST** use the following default endpoint paths relative to the authorization base URL
+139 | (as defined in [Section 2.3.2](#232-authorization-base-url)):
+140 | 
+141 | | Endpoint               | Default Path | Description                          |
+142 | | ---------------------- | ------------ | ------------------------------------ |
+143 | | Authorization Endpoint | /authorize   | Used for authorization requests      |
+144 | | Token Endpoint         | /token       | Used for token exchange & refresh    |
+145 | | Registration Endpoint  | /register    | Used for dynamic client registration |
+146 | 
+147 | For example, with an MCP server hosted at `https://api.example.com/v1/mcp`, the default
+148 | endpoints would be:
+149 | 
+150 | - `https://api.example.com/authorize`
+151 | - `https://api.example.com/token`
+152 | - `https://api.example.com/register`
+153 | 
+154 | Clients **MUST** first attempt to discover endpoints via the metadata document before
+155 | falling back to default paths. When using default paths, all other protocol requirements
+156 | remain unchanged.
+157 | 
+158 | ### 2.3 Dynamic Client Registration
+159 | 
+160 | MCP clients and servers **SHOULD** support the
+161 | [OAuth 2.0 Dynamic Client Registration Protocol](https://datatracker.ietf.org/doc/html/rfc7591)
+162 | to allow MCP clients to obtain OAuth client IDs without user interaction. This provides a
+163 | standardized way for clients to automatically register with new servers, which is crucial
+164 | for MCP because:
+165 | 
+166 | - Clients cannot know all possible servers in advance
+167 | - Manual registration would create friction for users
+168 | - It enables seamless connection to new servers
+169 | - Servers can implement their own registration policies
+170 | 
+171 | Any MCP servers that _do not_ support Dynamic Client Registration need to provide
+172 | alternative ways to obtain a client ID (and, if applicable, client secret). For one of
+173 | these servers, MCP clients will have to either:
+174 | 
+175 | 1. Hardcode a client ID (and, if applicable, client secret) specifically for that MCP
+176 |    server, or
+177 | 2. Present a UI to users that allows them to enter these details, after registering an
+178 |    OAuth client themselves (e.g., through a configuration interface hosted by the
+179 |    server).
+180 | 
+181 | ### 2.4 Authorization Flow Steps
+182 | 
+183 | The complete Authorization flow proceeds as follows:
+184 | 
+185 | ```mermaid
+186 | sequenceDiagram
+187 |     participant B as User-Agent (Browser)
+188 |     participant C as Client
+189 |     participant M as MCP Server
+190 | 
+191 |     C->>M: GET /.well-known/oauth-authorization-server
+192 |     alt Server Supports Discovery
+193 |         M->>C: Authorization Server Metadata
+194 |     else No Discovery
+195 |         M->>C: 404 (Use default endpoints)
+196 |     end
+197 | 
+198 |     alt Dynamic Client Registration
+199 |         C->>M: POST /register
+200 |         M->>C: Client Credentials
+201 |     end
+202 | 
+203 |     Note over C: Generate PKCE Parameters
+204 |     C->>B: Open browser with authorization URL + code_challenge
+205 |     B->>M: Authorization Request
+206 |     Note over M: User /authorizes
+207 |     M->>B: Redirect to callback with authorization code
+208 |     B->>C: Authorization code callback
+209 |     C->>M: Token Request + code_verifier
+210 |     M->>C: Access Token (+ Refresh Token)
+211 |     C->>M: API Requests with Access Token
+212 | ```
+213 | 
+214 | #### 2.4.1 Decision Flow Overview
+215 | 
+216 | ```mermaid
+217 | flowchart TD
+218 |     A[Start Auth Flow] --> B{Check Metadata Discovery}
+219 |     B -->|Available| C[Use Metadata Endpoints]
+220 |     B -->|Not Available| D[Use Default Endpoints]
+221 | 
+222 |     C --> G{Check Registration Endpoint}
+223 |     D --> G
+224 | 
+225 |     G -->|Available| H[Perform Dynamic Registration]
+226 |     G -->|Not Available| I[Alternative Registration Required]
+227 | 
+228 |     H --> J[Start OAuth Flow]
+229 |     I --> J
+230 | 
+231 |     J --> K[Generate PKCE Parameters]
+232 |     K --> L[Request Authorization]
+233 |     L --> M[User Authorization]
+234 |     M --> N[Exchange Code for Tokens]
+235 |     N --> O[Use Access Token]
+236 | ```
+237 | 
+238 | ### 2.5 Access Token Usage
+239 | 
+240 | #### 2.5.1 Token Requirements
+241 | 
+242 | Access token handling **MUST** conform to
+243 | [OAuth 2.1 Section 5](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12#section-5)
+244 | requirements for resource requests. Specifically:
+245 | 
+246 | 1. MCP client **MUST** use the Authorization request header field
+247 |    [Section 5.1.1](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12#section-5.1.1):
+248 | 
+249 | ```
+250 | Authorization: Bearer <access-token>
+251 | ```
+252 | 
+253 | Note that authorization **MUST** be included in every HTTP request from client to server,
+254 | even if they are part of the same logical session.
+255 | 
+256 | 2. Access tokens **MUST NOT** be included in the URI query string
+257 | 
+258 | Example request:
+259 | 
+260 | ```http
+261 | GET /v1/contexts HTTP/1.1
+262 | Host: mcp.example.com
+263 | Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+264 | ```
+265 | 
+266 | #### 2.5.2 Token Handling
+267 | 
+268 | Resource servers **MUST** validate access tokens as described in
+269 | [Section 5.2](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12#section-5.2).
+270 | If validation fails, servers **MUST** respond according to
+271 | [Section 5.3](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12#section-5.3)
+272 | error handling requirements. Invalid or expired tokens **MUST** receive a HTTP 401
+273 | response.
+274 | 
+275 | ### 2.6 Security Considerations
+276 | 
+277 | The following security requirements **MUST** be implemented:
+278 | 
+279 | 1. Clients **MUST** securely store tokens following OAuth 2.0 best practices
+280 | 2. Servers **SHOULD** enforce token expiration and rotation
+281 | 3. All authorization endpoints **MUST** be served over HTTPS
+282 | 4. Servers **MUST** validate redirect URIs to prevent open redirect vulnerabilities
+283 | 5. Redirect URIs **MUST** be either localhost URLs or HTTPS URLs
+284 | 
+285 | ### 2.7 Error Handling
+286 | 
+287 | Servers **MUST** return appropriate HTTP status codes for authorization errors:
+288 | 
+289 | | Status Code | Description  | Usage                                      |
+290 | | ----------- | ------------ | ------------------------------------------ |
+291 | | 401         | Unauthorized | Authorization required or token invalid    |
+292 | | 403         | Forbidden    | Invalid scopes or insufficient permissions |
+293 | | 400         | Bad Request  | Malformed authorization request            |
+294 | 
+295 | ### 2.8 Implementation Requirements
+296 | 
+297 | 1. Implementations **MUST** follow OAuth 2.1 security best practices
+298 | 2. PKCE is **REQUIRED** for all clients
+299 | 3. Token rotation **SHOULD** be implemented for enhanced security
+300 | 4. Token lifetimes **SHOULD** be limited based on security requirements
+301 | 
+302 | ### 2.9 Third-Party Authorization Flow
+303 | 
+304 | #### 2.9.1 Overview
+305 | 
+306 | MCP servers **MAY** support delegated authorization through third-party authorization
+307 | servers. In this flow, the MCP server acts as both an OAuth client (to the third-party
+308 | auth server) and an OAuth authorization server (to the MCP client).
+309 | 
+310 | #### 2.9.2 Flow Description
+311 | 
+312 | The third-party authorization flow comprises these steps:
+313 | 
+314 | 1. MCP client initiates standard OAuth flow with MCP server
+315 | 2. MCP server redirects user to third-party authorization server
+316 | 3. User authorizes with third-party server
+317 | 4. Third-party server redirects back to MCP server with authorization code
+318 | 5. MCP server exchanges code for third-party access token
+319 | 6. MCP server generates its own access token bound to the third-party session
+320 | 7. MCP server completes original OAuth flow with MCP client
+321 | 
+322 | ```mermaid
+323 | sequenceDiagram
+324 |     participant B as User-Agent (Browser)
+325 |     participant C as MCP Client
+326 |     participant M as MCP Server
+327 |     participant T as Third-Party Auth Server
+328 | 
+329 |     C->>M: Initial OAuth Request
+330 |     M->>B: Redirect to Third-Party /authorize
+331 |     B->>T: Authorization Request
+332 |     Note over T: User authorizes
+333 |     T->>B: Redirect to MCP Server callback
+334 |     B->>M: Authorization code
+335 |     M->>T: Exchange code for token
+336 |     T->>M: Third-party access token
+337 |     Note over M: Generate bound MCP token
+338 |     M->>B: Redirect to MCP Client callback
+339 |     B->>C: MCP authorization code
+340 |     C->>M: Exchange code for token
+341 |     M->>C: MCP access token
+342 | ```
+343 | 
+344 | #### 2.9.3 Session Binding Requirements
+345 | 
+346 | MCP servers implementing third-party authorization **MUST**:
+347 | 
+348 | 1. Maintain secure mapping between third-party tokens and issued MCP tokens
+349 | 2. Validate third-party token status before honoring MCP tokens
+350 | 3. Implement appropriate token lifecycle management
+351 | 4. Handle third-party token expiration and renewal
+352 | 
+353 | #### 2.9.4 Security Considerations
+354 | 
+355 | When implementing third-party authorization, servers **MUST**:
+356 | 
+357 | 1. Validate all redirect URIs
+358 | 2. Securely store third-party credentials
+359 | 3. Implement appropriate session timeout handling
+360 | 4. Consider security implications of token chaining
+361 | 5. Implement proper error handling for third-party auth failures
+362 | 
+363 | ## 3. Best Practices
+364 | 
+365 | #### 3.1 Local clients as Public OAuth 2.1 Clients
+366 | 
+367 | We strongly recommend that local clients implement OAuth 2.1 as a public client:
+368 | 
+369 | 1. Utilizing code challenges (PKCE) for authorization requests to prevent interception
+370 |    attacks
+371 | 2. Implementing secure token storage appropriate for the local system
+372 | 3. Following token refresh best practices to maintain sessions
+373 | 4. Properly handling token expiration and renewal
+374 | 
+375 | #### 3.2 Authorization Metadata Discovery
+376 | 
+377 | We strongly recommend that all clients implement metadata discovery. This reduces the
+378 | need for users to provide endpoints manually or clients to fallback to the defined
+379 | defaults.
+380 | 
+381 | #### 3.3 Dynamic Client Registration
+382 | 
+383 | Since clients do not know the set of MCP servers in advance, we strongly recommend the
+384 | implementation of dynamic client registration. This allows applications to automatically
+385 | register with the MCP server, and removes the need for users to obtain client ids
+386 | manually.
+387 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/basic/lifecycle.md:
+--------------------------------------------------------------------------------
+  1 | ---
+  2 | title: Lifecycle
+  3 | type: docs
+  4 | weight: 30
+  5 | ---
+  6 | 
+  7 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+  8 | 
+  9 | The Model Context Protocol (MCP) defines a rigorous lifecycle for client-server
+ 10 | connections that ensures proper capability negotiation and state management.
+ 11 | 
+ 12 | 1. **Initialization**: Capability negotiation and protocol version agreement
+ 13 | 2. **Operation**: Normal protocol communication
+ 14 | 3. **Shutdown**: Graceful termination of the connection
+ 15 | 
+ 16 | ```mermaid
+ 17 | sequenceDiagram
+ 18 |     participant Client
+ 19 |     participant Server
+ 20 | 
+ 21 |     Note over Client,Server: Initialization Phase
+ 22 |     activate Client
+ 23 |     Client->>+Server: initialize request
+ 24 |     Server-->>Client: initialize response
+ 25 |     Client--)Server: initialized notification
+ 26 | 
+ 27 |     Note over Client,Server: Operation Phase
+ 28 |     rect rgb(200, 220, 250)
+ 29 |         note over Client,Server: Normal protocol operations
+ 30 |     end
+ 31 | 
+ 32 |     Note over Client,Server: Shutdown
+ 33 |     Client--)-Server: Disconnect
+ 34 |     deactivate Server
+ 35 |     Note over Client,Server: Connection closed
+ 36 | ```
+ 37 | 
+ 38 | ## Lifecycle Phases
+ 39 | 
+ 40 | ### Initialization
+ 41 | 
+ 42 | The initialization phase **MUST** be the first interaction between client and server.
+ 43 | During this phase, the client and server:
+ 44 | 
+ 45 | - Establish protocol version compatibility
+ 46 | - Exchange and negotiate capabilities
+ 47 | - Share implementation details
+ 48 | 
+ 49 | The client **MUST** initiate this phase by sending an `initialize` request containing:
+ 50 | 
+ 51 | - Protocol version supported
+ 52 | - Client capabilities
+ 53 | - Client implementation information
+ 54 | 
+ 55 | ```json
+ 56 | {
+ 57 |   "jsonrpc": "2.0",
+ 58 |   "id": 1,
+ 59 |   "method": "initialize",
+ 60 |   "params": {
+ 61 |     "protocolVersion": "2024-11-05",
+ 62 |     "capabilities": {
+ 63 |       "roots": {
+ 64 |         "listChanged": true
+ 65 |       },
+ 66 |       "sampling": {}
+ 67 |     },
+ 68 |     "clientInfo": {
+ 69 |       "name": "ExampleClient",
+ 70 |       "version": "1.0.0"
+ 71 |     }
+ 72 |   }
+ 73 | }
+ 74 | ```
+ 75 | 
+ 76 | The initialize request **MUST NOT** be part of a JSON-RPC
+ 77 | [batch](https://www.jsonrpc.org/specification#batch), as other requests and notifications
+ 78 | are not possible until initialization has completed. This also permits backwards
+ 79 | compatibility with prior protocol versions that do not explicitly support JSON-RPC
+ 80 | batches.
+ 81 | 
+ 82 | The server **MUST** respond with its own capabilities and information:
+ 83 | 
+ 84 | ```json
+ 85 | {
+ 86 |   "jsonrpc": "2.0",
+ 87 |   "id": 1,
+ 88 |   "result": {
+ 89 |     "protocolVersion": "2024-11-05",
+ 90 |     "capabilities": {
+ 91 |       "logging": {},
+ 92 |       "prompts": {
+ 93 |         "listChanged": true
+ 94 |       },
+ 95 |       "resources": {
+ 96 |         "subscribe": true,
+ 97 |         "listChanged": true
+ 98 |       },
+ 99 |       "tools": {
+100 |         "listChanged": true
+101 |       }
+102 |     },
+103 |     "serverInfo": {
+104 |       "name": "ExampleServer",
+105 |       "version": "1.0.0"
+106 |     }
+107 |   }
+108 | }
+109 | ```
+110 | 
+111 | After successful initialization, the client **MUST** send an `initialized` notification
+112 | to indicate it is ready to begin normal operations:
+113 | 
+114 | ```json
+115 | {
+116 |   "jsonrpc": "2.0",
+117 |   "method": "notifications/initialized"
+118 | }
+119 | ```
+120 | 
+121 | - The client **SHOULD NOT** send requests other than
+122 |   [pings]({{< ref "utilities/ping" >}}) before the server has responded to the
+123 |   `initialize` request.
+124 | - The server **SHOULD NOT** send requests other than
+125 |   [pings]({{< ref "utilities/ping" >}}) and
+126 |   [logging]({{< ref "../server/utilities/logging" >}}) before receiving the `initialized`
+127 |   notification.
+128 | 
+129 | #### Version Negotiation
+130 | 
+131 | In the `initialize` request, the client **MUST** send a protocol version it supports.
+132 | This **SHOULD** be the _latest_ version supported by the client.
+133 | 
+134 | If the server supports the requested protocol version, it **MUST** respond with the same
+135 | version. Otherwise, the server **MUST** respond with another protocol version it
+136 | supports. This **SHOULD** be the _latest_ version supported by the server.
+137 | 
+138 | If the client does not support the version in the server's response, it **SHOULD**
+139 | disconnect.
+140 | 
+141 | #### Capability Negotiation
+142 | 
+143 | Client and server capabilities establish which optional protocol features will be
+144 | available during the session.
+145 | 
+146 | Key capabilities include:
+147 | 
+148 | | Category | Capability     | Description                                                                |
+149 | | -------- | -------------- | -------------------------------------------------------------------------- |
+150 | | Client   | `roots`        | Ability to provide filesystem [roots]({{< ref "../client/roots" >}})       |
+151 | | Client   | `sampling`     | Support for LLM [sampling]({{< ref "../client/sampling" >}}) requests      |
+152 | | Client   | `experimental` | Describes support for non-standard experimental features                   |
+153 | | Server   | `prompts`      | Offers [prompt templates]({{< ref "../server/prompts" >}})                 |
+154 | | Server   | `resources`    | Provides readable [resources]({{< ref "../server/resources" >}})           |
+155 | | Server   | `tools`        | Exposes callable [tools]({{< ref "../server/tools" >}})                    |
+156 | | Server   | `logging`      | Emits structured [log messages]({{< ref "../server/utilities/logging" >}}) |
+157 | | Server   | `experimental` | Describes support for non-standard experimental features                   |
+158 | 
+159 | Capability objects can describe sub-capabilities like:
+160 | 
+161 | - `listChanged`: Support for list change notifications (for prompts, resources, and
+162 |   tools)
+163 | - `subscribe`: Support for subscribing to individual items' changes (resources only)
+164 | 
+165 | ### Operation
+166 | 
+167 | During the operation phase, the client and server exchange messages according to the
+168 | negotiated capabilities.
+169 | 
+170 | Both parties **SHOULD**:
+171 | 
+172 | - Respect the negotiated protocol version
+173 | - Only use capabilities that were successfully negotiated
+174 | 
+175 | ### Shutdown
+176 | 
+177 | During the shutdown phase, one side (usually the client) cleanly terminates the protocol
+178 | connection. No specific shutdown messages are defined—instead, the underlying transport
+179 | mechanism should be used to signal connection termination:
+180 | 
+181 | #### stdio
+182 | 
+183 | For the stdio [transport]({{< ref "transports" >}}), the client **SHOULD** initiate
+184 | shutdown by:
+185 | 
+186 | 1. First, closing the input stream to the child process (the server)
+187 | 2. Waiting for the server to exit, or sending `SIGTERM` if the server does not exit
+188 |    within a reasonable time
+189 | 3. Sending `SIGKILL` if the server does not exit within a reasonable time after `SIGTERM`
+190 | 
+191 | The server **MAY** initiate shutdown by closing its output stream to the client and
+192 | exiting.
+193 | 
+194 | #### HTTP
+195 | 
+196 | For HTTP [transports]({{< ref "transports" >}}), shutdown is indicated by closing the
+197 | associated HTTP connection(s).
+198 | 
+199 | ## Timeouts
+200 | 
+201 | Implementations **SHOULD** establish timeouts for all sent requests, to prevent hung
+202 | connections and resource exhaustion. When the request has not received a success or error
+203 | response within the timeout period, the sender **SHOULD** issue a [cancellation
+204 | notification]({{< ref "utilities/cancellation" >}}) for that request and stop waiting for
+205 | a response.
+206 | 
+207 | SDKs and other middleware **SHOULD** allow these timeouts to be configured on a
+208 | per-request basis.
+209 | 
+210 | Implementations **MAY** choose to reset the timeout clock when receiving a [progress
+211 | notification]({{< ref "utilities/progress" >}}) corresponding to the request, as this
+212 | implies that work is actually happening. However, implementations **SHOULD** always
+213 | enforce a maximum timeout, regardless of progress notifications, to limit the impact of a
+214 | misbehaving client or server.
+215 | 
+216 | ## Error Handling
+217 | 
+218 | Implementations **SHOULD** be prepared to handle these error cases:
+219 | 
+220 | - Protocol version mismatch
+221 | - Failure to negotiate required capabilities
+222 | - Request [timeouts](#timeouts)
+223 | 
+224 | Example initialization error:
+225 | 
+226 | ```json
+227 | {
+228 |   "jsonrpc": "2.0",
+229 |   "id": 1,
+230 |   "error": {
+231 |     "code": -32602,
+232 |     "message": "Unsupported protocol version",
+233 |     "data": {
+234 |       "supported": ["2024-11-05"],
+235 |       "requested": "1.0.0"
+236 |     }
+237 |   }
+238 | }
+239 | ```
+240 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/basic/transports.md:
+--------------------------------------------------------------------------------
+  1 | ---
+  2 | title: Transports
+  3 | type: docs
+  4 | weight: 10
+  5 | ---
+  6 | 
+  7 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+  8 | 
+  9 | MCP uses JSON-RPC to encode messages. JSON-RPC messages **MUST** be UTF-8 encoded.
+ 10 | 
+ 11 | The protocol currently defines two standard transport mechanisms for client-server
+ 12 | communication:
+ 13 | 
+ 14 | 1. [stdio](#stdio), communication over standard in and standard out
+ 15 | 2. [Streamable HTTP](#streamable-http)
+ 16 | 
+ 17 | Clients **SHOULD** support stdio whenever possible.
+ 18 | 
+ 19 | It is also possible for clients and servers to implement
+ 20 | [custom transports](#custom-transports) in a pluggable fashion.
+ 21 | 
+ 22 | ## stdio
+ 23 | 
+ 24 | In the **stdio** transport:
+ 25 | 
+ 26 | - The client launches the MCP server as a subprocess.
+ 27 | - The server reads JSON-RPC messages from its standard input (`stdin`) and sends messages
+ 28 |   to its standard output (`stdout`).
+ 29 | - Messages may be JSON-RPC requests, notifications, responses—or a JSON-RPC
+ 30 |   [batch](https://www.jsonrpc.org/specification#batch) containing one or more requests
+ 31 |   and/or notifications.
+ 32 | - Messages are delimited by newlines, and **MUST NOT** contain embedded newlines.
+ 33 | - The server **MAY** write UTF-8 strings to its standard error (`stderr`) for logging
+ 34 |   purposes. Clients **MAY** capture, forward, or ignore this logging.
+ 35 | - The server **MUST NOT** write anything to its `stdout` that is not a valid MCP message.
+ 36 | - The client **MUST NOT** write anything to the server's `stdin` that is not a valid MCP
+ 37 |   message.
+ 38 | 
+ 39 | ```mermaid
+ 40 | sequenceDiagram
+ 41 |     participant Client
+ 42 |     participant Server Process
+ 43 | 
+ 44 |     Client->>+Server Process: Launch subprocess
+ 45 |     loop Message Exchange
+ 46 |         Client->>Server Process: Write to stdin
+ 47 |         Server Process->>Client: Write to stdout
+ 48 |         Server Process--)Client: Optional logs on stderr
+ 49 |     end
+ 50 |     Client->>Server Process: Close stdin, terminate subprocess
+ 51 |     deactivate Server Process
+ 52 | ```
+ 53 | 
+ 54 | ## Streamable HTTP
+ 55 | 
+ 56 | {{< callout type="info" >}} This replaces the [HTTP+SSE
+ 57 | transport]({{< ref "/specification/2024-11-05/basic/transports#http-with-sse" >}}) from
+ 58 | protocol version 2024-11-05. See the [backwards compatibility](#backwards-compatibility)
+ 59 | guide below. {{< /callout >}}
+ 60 | 
+ 61 | In the **Streamable HTTP** transport, the server operates as an independent process that
+ 62 | can handle multiple client connections. This transport uses HTTP POST and GET requests.
+ 63 | Server can optionally make use of
+ 64 | [Server-Sent Events](https://en.wikipedia.org/wiki/Server-sent_events) (SSE) to stream
+ 65 | multiple server messages. This permits basic MCP servers, as well as more feature-rich
+ 66 | servers supporting streaming and server-to-client notifications and requests.
+ 67 | 
+ 68 | The server **MUST** provide a single HTTP endpoint path (hereafter referred to as the
+ 69 | **MCP endpoint**) that supports both POST and GET methods. For example, this could be a
+ 70 | URL like `https://example.com/mcp`.
+ 71 | 
+ 72 | ### Sending Messages to the Server
+ 73 | 
+ 74 | Every JSON-RPC message sent from the client **MUST** be a new HTTP POST request to the
+ 75 | MCP endpoint.
+ 76 | 
+ 77 | 1. The client **MUST** use HTTP POST to send JSON-RPC messages to the MCP endpoint.
+ 78 | 2. The client **MUST** include an `Accept` header, listing both `application/json` and
+ 79 |    `text/event-stream` as supported content types.
+ 80 | 3. The body of the POST request **MUST** be one of the following:
+ 81 |    - A single JSON-RPC _request_, _notification_, or _response_
+ 82 |    - An array [batching](https://www.jsonrpc.org/specification#batch) one or more
+ 83 |      _requests and/or notifications_
+ 84 |    - An array [batching](https://www.jsonrpc.org/specification#batch) one or more
+ 85 |      _responses_
+ 86 | 4. If the input consists solely of (any number of) JSON-RPC _responses_ or
+ 87 |    _notifications_:
+ 88 |    - If the server accepts the input, the server **MUST** return HTTP status code 202
+ 89 |      Accepted with no body.
+ 90 |    - If the server cannot accept the input, it **MUST** return an HTTP error status code
+ 91 |      (e.g., 400 Bad Request). The HTTP response body **MAY** comprise a JSON-RPC _error
+ 92 |      response_ that has no `id`.
+ 93 | 5. If the input contains any number of JSON-RPC _requests_, the server **MUST** either
+ 94 |    return `Content-Type: text/event-stream`, to initiate an SSE stream, or
+ 95 |    `Content-Type: application/json`, to return one JSON object. The client **MUST**
+ 96 |    support both these cases.
+ 97 | 6. If the server initiates an SSE stream:
+ 98 |    - The SSE stream **SHOULD** eventually include one JSON-RPC _response_ per each
+ 99 |      JSON-RPC _request_ sent in the POST body. These _responses_ **MAY** be
+100 |      [batched](https://www.jsonrpc.org/specification#batch).
+101 |    - The server **MAY** send JSON-RPC _requests_ and _notifications_ before sending a
+102 |      JSON-RPC _response_. These messages **SHOULD** relate to the originating client
+103 |      _request_. These _requests_ and _notifications_ **MAY** be
+104 |      [batched](https://www.jsonrpc.org/specification#batch).
+105 |    - The server **SHOULD NOT** close the SSE stream before sending a JSON-RPC _response_
+106 |      per each received JSON-RPC _request_, unless the [session](#session-management)
+107 |      expires.
+108 |    - After all JSON-RPC _responses_ have been sent, the server **SHOULD** close the SSE
+109 |      stream.
+110 |    - Disconnection **MAY** occur at any time (e.g., due to network conditions).
+111 |      Therefore:
+112 |      - Disconnection **SHOULD NOT** be interpreted as the client cancelling its request.
+113 |      - To cancel, the client **SHOULD** explicitly send an MCP `CancelledNotification`.
+114 |      - To avoid message loss due to disconnection, the server **MAY** make the stream
+115 |        [resumable](#resumability-and-redelivery).
+116 | 
+117 | ### Listening for Messages from the Server
+118 | 
+119 | 1. The client **MAY** issue an HTTP GET to the MCP endpoint. This can be used to open an
+120 |    SSE stream, allowing the server to communicate to the client, without the client first
+121 |    sending data via HTTP POST.
+122 | 2. The client **MUST** include an `Accept` header, listing `text/event-stream` as a
+123 |    supported content type.
+124 | 3. The server **MUST** either return `Content-Type: text/event-stream` in response to
+125 |    this HTTP GET, or else return HTTP 405 Method Not Allowed, indicating that the server
+126 |    does not offer an SSE stream at this endpoint.
+127 | 4. If the server initiates an SSE stream:
+128 |    - The server **MAY** send JSON-RPC _requests_ and _notifications_ on the stream. These
+129 |      _requests_ and _notifications_ **MAY** be
+130 |      [batched](https://www.jsonrpc.org/specification#batch).
+131 |    - These messages **SHOULD** be unrelated to any concurrently-running JSON-RPC
+132 |      _request_ from the client.
+133 |    - The server **MUST NOT** send a JSON-RPC _response_ on the stream **unless**
+134 |      [resuming](#resumability-and-redelivery) a stream associated with a previous client
+135 |      request.
+136 |    - The server **MAY** close the SSE stream at any time.
+137 |    - The client **MAY** close the SSE stream at any time.
+138 | 
+139 | ### Multiple Connections
+140 | 
+141 | 1. The client **MAY** remain connected to multiple SSE streams simultaneously.
+142 | 2. The server **MUST** send each of its JSON-RPC messages on only one of the connected
+143 |    streams; that is, it **MUST NOT** broadcast the same message across multiple streams.
+144 |    - The risk of message loss **MAY** be mitigated by making the stream
+145 |      [resumable](#resumability-and-redelivery).
+146 | 
+147 | ### Resumability and Redelivery
+148 | 
+149 | To support resuming broken connections, and redelivering messages that might otherwise be
+150 | lost:
+151 | 
+152 | 1. Servers **MAY** attach an `id` field to their SSE events, as described in the
+153 |    [SSE standard](https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation).
+154 |    - If present, the ID **MUST** be globally unique across all streams within that
+155 |      [session](#session-management)—or all streams with that specific client, if session
+156 |      management is not in use.
+157 | 2. If the client wishes to resume after a broken connection, it **SHOULD** issue an HTTP
+158 |    GET to the MCP endpoint, and include the
+159 |    [`Last-Event-ID`](https://html.spec.whatwg.org/multipage/server-sent-events.html#the-last-event-id-header)
+160 |    header to indicate the last event ID it received.
+161 |    - The server **MAY** use this header to replay messages that would have been sent
+162 |      after the last event ID, _on the stream that was disconnected_, and to resume the
+163 |      stream from that point.
+164 |    - The server **MUST NOT** replay messages that would have been delivered on a
+165 |      different stream.
+166 | 
+167 | In other words, these event IDs should be assigned by servers on a _per-stream_ basis, to
+168 | act as a cursor within that particular stream.
+169 | 
+170 | ### Session Management
+171 | 
+172 | An MCP "session" consists of logically related interactions between a client and a
+173 | server, beginning with the [initialization phase]({{< ref "lifecycle" >}}). To support
+174 | servers which want to establish stateful sessions:
+175 | 
+176 | 1. A server using the Streamable HTTP transport **MAY** assign a session ID at
+177 |    initialization time, by including it in an `Mcp-Session-Id` header on the HTTP
+178 |    response containing the `InitializeResult`.
+179 |    - The session ID **SHOULD** be globally unique and cryptographically secure (e.g., a
+180 |      securely generated UUID, a JWT, or a cryptographic hash).
+181 |    - The session ID **MUST** only contain visible ASCII characters (ranging from 0x21 to
+182 |      0x7E).
+183 | 2. If an `Mcp-Session-Id` is returned by the server during initialization, clients using
+184 |    the Streamable HTTP transport **MUST** include it in the `Mcp-Session-Id` header on
+185 |    all of their subsequent HTTP requests.
+186 |    - Servers that require a session ID **SHOULD** respond to requests without an
+187 |      `Mcp-Session-Id` header (other than initialization) with HTTP 400 Bad Request.
+188 | 3. The server **MAY** terminate the session at any time, after which it **MUST** respond
+189 |    to requests containing that session ID with HTTP 404 Not Found.
+190 | 4. When a client receives HTTP 404 in response to a request containing an
+191 |    `Mcp-Session-Id`, it **MUST** start a new session by sending a new `InitializeRequest`
+192 |    without a session ID attached.
+193 | 5. Clients that no longer need a particular session (e.g., because the user is leaving
+194 |    the client application) **SHOULD** send an HTTP DELETE to the MCP endpoint with the
+195 |    `Mcp-Session-Id` header, to explicitly terminate the session.
+196 |    - The server **MAY** respond to this request with HTTP 405 Method Not Allowed,
+197 |      indicating that the server does not allow clients to terminate sessions.
+198 | 
+199 | ### Sequence Diagram
+200 | 
+201 | ```mermaid
+202 | sequenceDiagram
+203 |     participant Client
+204 |     participant Server
+205 | 
+206 |     note over Client, Server: initialization
+207 | 
+208 |     Client->>+Server: POST InitializeRequest
+209 |     Server->>-Client: InitializeResponse<br>Mcp-Session-Id: 1868a90c...
+210 | 
+211 |     Client->>+Server: POST InitializedNotification<br>Mcp-Session-Id: 1868a90c...
+212 |     Server->>-Client: 202 Accepted
+213 | 
+214 |     note over Client, Server: client requests
+215 |     Client->>+Server: POST ... request ...<br>Mcp-Session-Id: 1868a90c...
+216 | 
+217 |     alt single HTTP response
+218 |       Server->>Client: ... response ...
+219 |     else server opens SSE stream
+220 |       loop while connection remains open
+221 |           Server-)Client: ... SSE messages from server ...
+222 |       end
+223 |       Server-)Client: SSE event: ... response ...
+224 |     end
+225 |     deactivate Server
+226 | 
+227 |     note over Client, Server: client notifications/responses
+228 |     Client->>+Server: POST ... notification/response ...<br>Mcp-Session-Id: 1868a90c...
+229 |     Server->>-Client: 202 Accepted
+230 | 
+231 |     note over Client, Server: server requests
+232 |     Client->>+Server: GET<br>Mcp-Session-Id: 1868a90c...
+233 |     loop while connection remains open
+234 |         Server-)Client: ... SSE messages from server ...
+235 |     end
+236 |     deactivate Server
+237 | 
+238 | ```
+239 | 
+240 | ### Backwards Compatibility
+241 | 
+242 | Clients and servers can maintain backwards compatibility with the deprecated [HTTP+SSE
+243 | transport]({{< ref "/specification/2024-11-05/basic/transports#http-with-sse" >}}) (from
+244 | protocol version 2024-11-05) as follows:
+245 | 
+246 | **Servers** wanting to support older clients should:
+247 | 
+248 | - Continue to host both the SSE and POST endpoints of the old transport, alongside the
+249 |   new "MCP endpoint" defined for the Streamable HTTP transport.
+250 |   - It is also possible to combine the old POST endpoint and the new MCP endpoint, but
+251 |     this may introduce unneeded complexity.
+252 | 
+253 | **Clients** wanting to support older servers should:
+254 | 
+255 | 1. Accept an MCP server URL from the user, which may point to either a server using the
+256 |    old transport or the new transport.
+257 | 2. Attempt to POST an `InitializeRequest` to the server URL, with an `Accept` header as
+258 |    defined above:
+259 |    - If it succeeds, the client can assume this is a server supporting the new Streamable
+260 |      HTTP transport.
+261 |    - If it fails with an HTTP 4xx status code (e.g., 405 Method Not Allowed or 404 Not
+262 |      Found):
+263 |      - Issue a GET request to the server URL, expecting that this will open an SSE stream
+264 |        and return an `endpoint` event as the first event.
+265 |      - When the `endpoint` event arrives, the client can assume this is a server running
+266 |        the old HTTP+SSE transport, and should use that transport for all subsequent
+267 |        communication.
+268 | 
+269 | ## Custom Transports
+270 | 
+271 | Clients and servers **MAY** implement additional custom transport mechanisms to suit
+272 | their specific needs. The protocol is transport-agnostic and can be implemented over any
+273 | communication channel that supports bidirectional message exchange.
+274 | 
+275 | Implementers who choose to support custom transports **MUST** ensure they preserve the
+276 | JSON-RPC message format and lifecycle requirements defined by MCP. Custom transports
+277 | **SHOULD** document their specific connection establishment and message exchange patterns
+278 | to aid interoperability.
+279 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/basic/utilities/_index.md:
+--------------------------------------------------------------------------------
+ 1 | ---
+ 2 | title: Utilities
+ 3 | ---
+ 4 | 
+ 5 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+ 6 | 
+ 7 | These optional features enhance the base protocol functionality with various utilities.
+ 8 | 
+ 9 | {{< cards >}} {{< card link="ping" title="Ping" icon="status-online" >}}
+10 | {{< card link="cancellation" title="Cancellation" icon="x" >}}
+11 | {{< card link="progress" title="Progress" icon="clock" >}} {{< /cards >}}
+12 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/basic/utilities/cancellation.md:
+--------------------------------------------------------------------------------
+ 1 | ---
+ 2 | title: Cancellation
+ 3 | weight: 10
+ 4 | ---
+ 5 | 
+ 6 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+ 7 | 
+ 8 | The Model Context Protocol (MCP) supports optional cancellation of in-progress requests
+ 9 | through notification messages. Either side can send a cancellation notification to
+10 | indicate that a previously-issued request should be terminated.
+11 | 
+12 | ## Cancellation Flow
+13 | 
+14 | When a party wants to cancel an in-progress request, it sends a `notifications/cancelled`
+15 | notification containing:
+16 | 
+17 | - The ID of the request to cancel
+18 | - An optional reason string that can be logged or displayed
+19 | 
+20 | ```json
+21 | {
+22 |   "jsonrpc": "2.0",
+23 |   "method": "notifications/cancelled",
+24 |   "params": {
+25 |     "requestId": "123",
+26 |     "reason": "User requested cancellation"
+27 |   }
+28 | }
+29 | ```
+30 | 
+31 | ## Behavior Requirements
+32 | 
+33 | 1. Cancellation notifications **MUST** only reference requests that:
+34 |    - Were previously issued in the same direction
+35 |    - Are believed to still be in-progress
+36 | 2. The `initialize` request **MUST NOT** be cancelled by clients
+37 | 3. Receivers of cancellation notifications **SHOULD**:
+38 |    - Stop processing the cancelled request
+39 |    - Free associated resources
+40 |    - Not send a response for the cancelled request
+41 | 4. Receivers **MAY** ignore cancellation notifications if:
+42 |    - The referenced request is unknown
+43 |    - Processing has already completed
+44 |    - The request cannot be cancelled
+45 | 5. The sender of the cancellation notification **SHOULD** ignore any response to the
+46 |    request that arrives afterward
+47 | 
+48 | ## Timing Considerations
+49 | 
+50 | Due to network latency, cancellation notifications may arrive after request processing
+51 | has completed, and potentially after a response has already been sent.
+52 | 
+53 | Both parties **MUST** handle these race conditions gracefully:
+54 | 
+55 | ```mermaid
+56 | sequenceDiagram
+57 |    participant Client
+58 |    participant Server
+59 | 
+60 |    Client->>Server: Request (ID: 123)
+61 |    Note over Server: Processing starts
+62 |    Client--)Server: notifications/cancelled (ID: 123)
+63 |    alt
+64 |       Note over Server: Processing may have<br/>completed before<br/>cancellation arrives
+65 |    else If not completed
+66 |       Note over Server: Stop processing
+67 |    end
+68 | ```
+69 | 
+70 | ## Implementation Notes
+71 | 
+72 | - Both parties **SHOULD** log cancellation reasons for debugging
+73 | - Application UIs **SHOULD** indicate when cancellation is requested
+74 | 
+75 | ## Error Handling
+76 | 
+77 | Invalid cancellation notifications **SHOULD** be ignored:
+78 | 
+79 | - Unknown request IDs
+80 | - Already completed requests
+81 | - Malformed notifications
+82 | 
+83 | This maintains the "fire and forget" nature of notifications while allowing for race
+84 | conditions in asynchronous communication.
+85 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/basic/utilities/ping.md:
+--------------------------------------------------------------------------------
+ 1 | ---
+ 2 | title: Ping
+ 3 | weight: 5
+ 4 | ---
+ 5 | 
+ 6 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+ 7 | 
+ 8 | The Model Context Protocol includes an optional ping mechanism that allows either party
+ 9 | to verify that their counterpart is still responsive and the connection is alive.
+10 | 
+11 | ## Overview
+12 | 
+13 | The ping functionality is implemented through a simple request/response pattern. Either
+14 | the client or server can initiate a ping by sending a `ping` request.
+15 | 
+16 | ## Message Format
+17 | 
+18 | A ping request is a standard JSON-RPC request with no parameters:
+19 | 
+20 | ```json
+21 | {
+22 |   "jsonrpc": "2.0",
+23 |   "id": "123",
+24 |   "method": "ping"
+25 | }
+26 | ```
+27 | 
+28 | ## Behavior Requirements
+29 | 
+30 | 1. The receiver **MUST** respond promptly with an empty response:
+31 | 
+32 | ```json
+33 | {
+34 |   "jsonrpc": "2.0",
+35 |   "id": "123",
+36 |   "result": {}
+37 | }
+38 | ```
+39 | 
+40 | 2. If no response is received within a reasonable timeout period, the sender **MAY**:
+41 |    - Consider the connection stale
+42 |    - Terminate the connection
+43 |    - Attempt reconnection procedures
+44 | 
+45 | ## Usage Patterns
+46 | 
+47 | ```mermaid
+48 | sequenceDiagram
+49 |     participant Sender
+50 |     participant Receiver
+51 | 
+52 |     Sender->>Receiver: ping request
+53 |     Receiver->>Sender: empty response
+54 | ```
+55 | 
+56 | ## Implementation Considerations
+57 | 
+58 | - Implementations **SHOULD** periodically issue pings to detect connection health
+59 | - The frequency of pings **SHOULD** be configurable
+60 | - Timeouts **SHOULD** be appropriate for the network environment
+61 | - Excessive pinging **SHOULD** be avoided to reduce network overhead
+62 | 
+63 | ## Error Handling
+64 | 
+65 | - Timeouts **SHOULD** be treated as connection failures
+66 | - Multiple failed pings **MAY** trigger connection reset
+67 | - Implementations **SHOULD** log ping failures for diagnostics
+68 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/basic/utilities/progress.md:
+--------------------------------------------------------------------------------
+ 1 | ---
+ 2 | title: Progress
+ 3 | weight: 30
+ 4 | ---
+ 5 | 
+ 6 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+ 7 | 
+ 8 | The Model Context Protocol (MCP) supports optional progress tracking for long-running
+ 9 | operations through notification messages. Either side can send progress notifications to
+10 | provide updates about operation status.
+11 | 
+12 | ## Progress Flow
+13 | 
+14 | When a party wants to _receive_ progress updates for a request, it includes a
+15 | `progressToken` in the request metadata.
+16 | 
+17 | - Progress tokens **MUST** be a string or integer value
+18 | - Progress tokens can be chosen by the sender using any means, but **MUST** be unique
+19 |   across all active requests.
+20 | 
+21 | ```json
+22 | {
+23 |   "jsonrpc": "2.0",
+24 |   "id": 1,
+25 |   "method": "some_method",
+26 |   "params": {
+27 |     "_meta": {
+28 |       "progressToken": "abc123"
+29 |     }
+30 |   }
+31 | }
+32 | ```
+33 | 
+34 | The receiver **MAY** then send progress notifications containing:
+35 | 
+36 | - The original progress token
+37 | - The current progress value so far
+38 | - An optional "total" value
+39 | - An optional "message" value
+40 | 
+41 | ```json
+42 | {
+43 |   "jsonrpc": "2.0",
+44 |   "method": "notifications/progress",
+45 |   "params": {
+46 |     "progressToken": "abc123",
+47 |     "progress": 50,
+48 |     "total": 100,
+49 |     "message": "Reticulating splines..."
+50 |   }
+51 | }
+52 | ```
+53 | 
+54 | - The `progress` value **MUST** increase with each notification, even if the total is
+55 |   unknown.
+56 | - The `progress` and the `total` values **MAY** be floating point.
+57 | - The `message` field **SHOULD** provide relevant human readable progress information.
+58 | 
+59 | ## Behavior Requirements
+60 | 
+61 | 1. Progress notifications **MUST** only reference tokens that:
+62 | 
+63 |    - Were provided in an active request
+64 |    - Are associated with an in-progress operation
+65 | 
+66 | 2. Receivers of progress requests **MAY**:
+67 |    - Choose not to send any progress notifications
+68 |    - Send notifications at whatever frequency they deem appropriate
+69 |    - Omit the total value if unknown
+70 | 
+71 | ```mermaid
+72 | sequenceDiagram
+73 |     participant Sender
+74 |     participant Receiver
+75 | 
+76 |     Note over Sender,Receiver: Request with progress token
+77 |     Sender->>Receiver: Method request with progressToken
+78 | 
+79 |     Note over Sender,Receiver: Progress updates
+80 |     loop Progress Updates
+81 |         Receiver-->>Sender: Progress notification (0.2/1.0)
+82 |         Receiver-->>Sender: Progress notification (0.6/1.0)
+83 |         Receiver-->>Sender: Progress notification (1.0/1.0)
+84 |     end
+85 | 
+86 |     Note over Sender,Receiver: Operation complete
+87 |     Receiver->>Sender: Method response
+88 | ```
+89 | 
+90 | ## Implementation Notes
+91 | 
+92 | - Senders and receivers **SHOULD** track active progress tokens
+93 | - Both parties **SHOULD** implement rate limiting to prevent flooding
+94 | - Progress notifications **MUST** stop after completion
+95 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/changelog.md:
+--------------------------------------------------------------------------------
+ 1 | ---
+ 2 | title: Key Changes
+ 3 | type: docs
+ 4 | weight: 5
+ 5 | ---
+ 6 | 
+ 7 | This document lists changes made to the Model Context Protocol (MCP) specification since
+ 8 | the previous revision, [2024-11-05]({{< ref "../2024-11-05" >}}).
+ 9 | 
+10 | ## Major changes
+11 | 
+12 | 1. Added a comprehensive **[authorization framework]({{< ref "basic/authorization" >}})**
+13 |    based on OAuth 2.1 (PR
+14 |    [#133](https://github.com/modelcontextprotocol/specification/pull/133))
+15 | 1. Replaced the previous HTTP+SSE transport with a more flexible **[Streamable HTTP
+16 |    transport]({{< ref "basic/transports#streamable-http" >}})** (PR
+17 |    [#206](https://github.com/modelcontextprotocol/specification/pull/206))
+18 | 1. Added support for JSON-RPC **[batching](https://www.jsonrpc.org/specification#batch)**
+19 |    (PR [#228](https://github.com/modelcontextprotocol/specification/pull/228))
+20 | 1. Added comprehensive **tool annotations** for better describing tool behavior, like
+21 |    whether it is read-only or destructive (PR
+22 |    [#185](https://github.com/modelcontextprotocol/specification/pull/185))
+23 | 
+24 | ## Other schema changes
+25 | 
+26 | - Added `message` field to `ProgressNotification` to provide descriptive status updates
+27 | - Added support for audio data, joining the existing text and image content types
+28 | - Added `completions` capability to explicitly indicate support for argument
+29 |   autocompletion suggestions
+30 | 
+31 | See
+32 | [the updated schema](http://github.com/modelcontextprotocol/specification/tree/main/schema/2025-03-26/schema.ts)
+33 | for more details.
+34 | 
+35 | ## Full changelog
+36 | 
+37 | For a complete list of all changes that have been made since the last protocol revision,
+38 | [see GitHub](https://github.com/modelcontextprotocol/specification/compare/2024-11-05...2025-03-26).
+39 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/client/_index.md:
+--------------------------------------------------------------------------------
+ 1 | ---
+ 2 | title: Client Features
+ 3 | cascade:
+ 4 |   type: docs
+ 5 | weight: 40
+ 6 | ---
+ 7 | 
+ 8 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+ 9 | 
+10 | Clients can implement additional features to enrich connected MCP servers:
+11 | 
+12 | {{< cards >}} {{< card link="roots" title="Roots" icon="folder" >}}
+13 | {{< card link="sampling" title="Sampling" icon="annotation" >}} {{< /cards >}}
+14 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/client/roots.md:
+--------------------------------------------------------------------------------
+  1 | ---
+  2 | title: Roots
+  3 | type: docs
+  4 | weight: 40
+  5 | ---
+  6 | 
+  7 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+  8 | 
+  9 | The Model Context Protocol (MCP) provides a standardized way for clients to expose
+ 10 | filesystem "roots" to servers. Roots define the boundaries of where servers can operate
+ 11 | within the filesystem, allowing them to understand which directories and files they have
+ 12 | access to. Servers can request the list of roots from supporting clients and receive
+ 13 | notifications when that list changes.
+ 14 | 
+ 15 | ## User Interaction Model
+ 16 | 
+ 17 | Roots in MCP are typically exposed through workspace or project configuration interfaces.
+ 18 | 
+ 19 | For example, implementations could offer a workspace/project picker that allows users to
+ 20 | select directories and files the server should have access to. This can be combined with
+ 21 | automatic workspace detection from version control systems or project files.
+ 22 | 
+ 23 | However, implementations are free to expose roots through any interface pattern that
+ 24 | suits their needs&mdash;the protocol itself does not mandate any specific user
+ 25 | interaction model.
+ 26 | 
+ 27 | ## Capabilities
+ 28 | 
+ 29 | Clients that support roots **MUST** declare the `roots` capability during
+ 30 | [initialization]({{< ref "../basic/lifecycle#initialization" >}}):
+ 31 | 
+ 32 | ```json
+ 33 | {
+ 34 |   "capabilities": {
+ 35 |     "roots": {
+ 36 |       "listChanged": true
+ 37 |     }
+ 38 |   }
+ 39 | }
+ 40 | ```
+ 41 | 
+ 42 | `listChanged` indicates whether the client will emit notifications when the list of roots
+ 43 | changes.
+ 44 | 
+ 45 | ## Protocol Messages
+ 46 | 
+ 47 | ### Listing Roots
+ 48 | 
+ 49 | To retrieve roots, servers send a `roots/list` request:
+ 50 | 
+ 51 | **Request:**
+ 52 | 
+ 53 | ```json
+ 54 | {
+ 55 |   "jsonrpc": "2.0",
+ 56 |   "id": 1,
+ 57 |   "method": "roots/list"
+ 58 | }
+ 59 | ```
+ 60 | 
+ 61 | **Response:**
+ 62 | 
+ 63 | ```json
+ 64 | {
+ 65 |   "jsonrpc": "2.0",
+ 66 |   "id": 1,
+ 67 |   "result": {
+ 68 |     "roots": [
+ 69 |       {
+ 70 |         "uri": "file:///home/user/projects/myproject",
+ 71 |         "name": "My Project"
+ 72 |       }
+ 73 |     ]
+ 74 |   }
+ 75 | }
+ 76 | ```
+ 77 | 
+ 78 | ### Root List Changes
+ 79 | 
+ 80 | When roots change, clients that support `listChanged` **MUST** send a notification:
+ 81 | 
+ 82 | ```json
+ 83 | {
+ 84 |   "jsonrpc": "2.0",
+ 85 |   "method": "notifications/roots/list_changed"
+ 86 | }
+ 87 | ```
+ 88 | 
+ 89 | ## Message Flow
+ 90 | 
+ 91 | ```mermaid
+ 92 | sequenceDiagram
+ 93 |     participant Server
+ 94 |     participant Client
+ 95 | 
+ 96 |     Note over Server,Client: Discovery
+ 97 |     Server->>Client: roots/list
+ 98 |     Client-->>Server: Available roots
+ 99 | 
+100 |     Note over Server,Client: Changes
+101 |     Client--)Server: notifications/roots/list_changed
+102 |     Server->>Client: roots/list
+103 |     Client-->>Server: Updated roots
+104 | ```
+105 | 
+106 | ## Data Types
+107 | 
+108 | ### Root
+109 | 
+110 | A root definition includes:
+111 | 
+112 | - `uri`: Unique identifier for the root. This **MUST** be a `file://` URI in the current
+113 |   specification.
+114 | - `name`: Optional human-readable name for display purposes.
+115 | 
+116 | Example roots for different use cases:
+117 | 
+118 | #### Project Directory
+119 | 
+120 | ```json
+121 | {
+122 |   "uri": "file:///home/user/projects/myproject",
+123 |   "name": "My Project"
+124 | }
+125 | ```
+126 | 
+127 | #### Multiple Repositories
+128 | 
+129 | ```json
+130 | [
+131 |   {
+132 |     "uri": "file:///home/user/repos/frontend",
+133 |     "name": "Frontend Repository"
+134 |   },
+135 |   {
+136 |     "uri": "file:///home/user/repos/backend",
+137 |     "name": "Backend Repository"
+138 |   }
+139 | ]
+140 | ```
+141 | 
+142 | ## Error Handling
+143 | 
+144 | Clients **SHOULD** return standard JSON-RPC errors for common failure cases:
+145 | 
+146 | - Client does not support roots: `-32601` (Method not found)
+147 | - Internal errors: `-32603`
+148 | 
+149 | Example error:
+150 | 
+151 | ```json
+152 | {
+153 |   "jsonrpc": "2.0",
+154 |   "id": 1,
+155 |   "error": {
+156 |     "code": -32601,
+157 |     "message": "Roots not supported",
+158 |     "data": {
+159 |       "reason": "Client does not have roots capability"
+160 |     }
+161 |   }
+162 | }
+163 | ```
+164 | 
+165 | ## Security Considerations
+166 | 
+167 | 1. Clients **MUST**:
+168 | 
+169 |    - Only expose roots with appropriate permissions
+170 |    - Validate all root URIs to prevent path traversal
+171 |    - Implement proper access controls
+172 |    - Monitor root accessibility
+173 | 
+174 | 2. Servers **SHOULD**:
+175 |    - Handle cases where roots become unavailable
+176 |    - Respect root boundaries during operations
+177 |    - Validate all paths against provided roots
+178 | 
+179 | ## Implementation Guidelines
+180 | 
+181 | 1. Clients **SHOULD**:
+182 | 
+183 |    - Prompt users for consent before exposing roots to servers
+184 |    - Provide clear user interfaces for root management
+185 |    - Validate root accessibility before exposing
+186 |    - Monitor for root changes
+187 | 
+188 | 2. Servers **SHOULD**:
+189 |    - Check for roots capability before usage
+190 |    - Handle root list changes gracefully
+191 |    - Respect root boundaries in operations
+192 |    - Cache root information appropriately
+193 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/client/sampling.md:
+--------------------------------------------------------------------------------
+  1 | ---
+  2 | title: Sampling
+  3 | type: docs
+  4 | weight: 40
+  5 | ---
+  6 | 
+  7 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+  8 | 
+  9 | The Model Context Protocol (MCP) provides a standardized way for servers to request LLM
+ 10 | sampling ("completions" or "generations") from language models via clients. This flow
+ 11 | allows clients to maintain control over model access, selection, and permissions while
+ 12 | enabling servers to leverage AI capabilities&mdash;with no server API keys necessary.
+ 13 | Servers can request text, audio, or image-based interactions and optionally include
+ 14 | context from MCP servers in their prompts.
+ 15 | 
+ 16 | ## User Interaction Model
+ 17 | 
+ 18 | Sampling in MCP allows servers to implement agentic behaviors, by enabling LLM calls to
+ 19 | occur _nested_ inside other MCP server features.
+ 20 | 
+ 21 | Implementations are free to expose sampling through any interface pattern that suits
+ 22 | their needs&mdash;the protocol itself does not mandate any specific user interaction
+ 23 | model.
+ 24 | 
+ 25 | {{< callout type="warning" >}} For trust & safety and security, there **SHOULD** always
+ 26 | be a human in the loop with the ability to deny sampling requests.
+ 27 | 
+ 28 | Applications **SHOULD**:
+ 29 | 
+ 30 | - Provide UI that makes it easy and intuitive to review sampling requests
+ 31 | - Allow users to view and edit prompts before sending
+ 32 | - Present generated responses for review before delivery {{< /callout >}}
+ 33 | 
+ 34 | ## Capabilities
+ 35 | 
+ 36 | Clients that support sampling **MUST** declare the `sampling` capability during
+ 37 | [initialization]({{< ref "../basic/lifecycle#initialization" >}}):
+ 38 | 
+ 39 | ```json
+ 40 | {
+ 41 |   "capabilities": {
+ 42 |     "sampling": {}
+ 43 |   }
+ 44 | }
+ 45 | ```
+ 46 | 
+ 47 | ## Protocol Messages
+ 48 | 
+ 49 | ### Creating Messages
+ 50 | 
+ 51 | To request a language model generation, servers send a `sampling/createMessage` request:
+ 52 | 
+ 53 | **Request:**
+ 54 | 
+ 55 | ```json
+ 56 | {
+ 57 |   "jsonrpc": "2.0",
+ 58 |   "id": 1,
+ 59 |   "method": "sampling/createMessage",
+ 60 |   "params": {
+ 61 |     "messages": [
+ 62 |       {
+ 63 |         "role": "user",
+ 64 |         "content": {
+ 65 |           "type": "text",
+ 66 |           "text": "What is the capital of France?"
+ 67 |         }
+ 68 |       }
+ 69 |     ],
+ 70 |     "modelPreferences": {
+ 71 |       "hints": [
+ 72 |         {
+ 73 |           "name": "claude-3-sonnet"
+ 74 |         }
+ 75 |       ],
+ 76 |       "intelligencePriority": 0.8,
+ 77 |       "speedPriority": 0.5
+ 78 |     },
+ 79 |     "systemPrompt": "You are a helpful assistant.",
+ 80 |     "maxTokens": 100
+ 81 |   }
+ 82 | }
+ 83 | ```
+ 84 | 
+ 85 | **Response:**
+ 86 | 
+ 87 | ```json
+ 88 | {
+ 89 |   "jsonrpc": "2.0",
+ 90 |   "id": 1,
+ 91 |   "result": {
+ 92 |     "role": "assistant",
+ 93 |     "content": {
+ 94 |       "type": "text",
+ 95 |       "text": "The capital of France is Paris."
+ 96 |     },
+ 97 |     "model": "claude-3-sonnet-20240307",
+ 98 |     "stopReason": "endTurn"
+ 99 |   }
+100 | }
+101 | ```
+102 | 
+103 | ## Message Flow
+104 | 
+105 | ```mermaid
+106 | sequenceDiagram
+107 |     participant Server
+108 |     participant Client
+109 |     participant User
+110 |     participant LLM
+111 | 
+112 |     Note over Server,Client: Server initiates sampling
+113 |     Server->>Client: sampling/createMessage
+114 | 
+115 |     Note over Client,User: Human-in-the-loop review
+116 |     Client->>User: Present request for approval
+117 |     User-->>Client: Review and approve/modify
+118 | 
+119 |     Note over Client,LLM: Model interaction
+120 |     Client->>LLM: Forward approved request
+121 |     LLM-->>Client: Return generation
+122 | 
+123 |     Note over Client,User: Response review
+124 |     Client->>User: Present response for approval
+125 |     User-->>Client: Review and approve/modify
+126 | 
+127 |     Note over Server,Client: Complete request
+128 |     Client-->>Server: Return approved response
+129 | ```
+130 | 
+131 | ## Data Types
+132 | 
+133 | ### Messages
+134 | 
+135 | Sampling messages can contain:
+136 | 
+137 | #### Text Content
+138 | 
+139 | ```json
+140 | {
+141 |   "type": "text",
+142 |   "text": "The message content"
+143 | }
+144 | ```
+145 | 
+146 | #### Image Content
+147 | 
+148 | ```json
+149 | {
+150 |   "type": "image",
+151 |   "data": "base64-encoded-image-data",
+152 |   "mimeType": "image/jpeg"
+153 | }
+154 | ```
+155 | 
+156 | #### Audio Content
+157 | 
+158 | ```json
+159 | {
+160 |   "type": "audio",
+161 |   "data": "base64-encoded-audio-data",
+162 |   "mimeType": "audio/wav"
+163 | }
+164 | ```
+165 | 
+166 | ### Model Preferences
+167 | 
+168 | Model selection in MCP requires careful abstraction since servers and clients may use
+169 | different AI providers with distinct model offerings. A server cannot simply request a
+170 | specific model by name since the client may not have access to that exact model or may
+171 | prefer to use a different provider's equivalent model.
+172 | 
+173 | To solve this, MCP implements a preference system that combines abstract capability
+174 | priorities with optional model hints:
+175 | 
+176 | #### Capability Priorities
+177 | 
+178 | Servers express their needs through three normalized priority values (0-1):
+179 | 
+180 | - `costPriority`: How important is minimizing costs? Higher values prefer cheaper models.
+181 | - `speedPriority`: How important is low latency? Higher values prefer faster models.
+182 | - `intelligencePriority`: How important are advanced capabilities? Higher values prefer
+183 |   more capable models.
+184 | 
+185 | #### Model Hints
+186 | 
+187 | While priorities help select models based on characteristics, `hints` allow servers to
+188 | suggest specific models or model families:
+189 | 
+190 | - Hints are treated as substrings that can match model names flexibly
+191 | - Multiple hints are evaluated in order of preference
+192 | - Clients **MAY** map hints to equivalent models from different providers
+193 | - Hints are advisory&mdash;clients make final model selection
+194 | 
+195 | For example:
+196 | 
+197 | ```json
+198 | {
+199 |   "hints": [
+200 |     { "name": "claude-3-sonnet" }, // Prefer Sonnet-class models
+201 |     { "name": "claude" } // Fall back to any Claude model
+202 |   ],
+203 |   "costPriority": 0.3, // Cost is less important
+204 |   "speedPriority": 0.8, // Speed is very important
+205 |   "intelligencePriority": 0.5 // Moderate capability needs
+206 | }
+207 | ```
+208 | 
+209 | The client processes these preferences to select an appropriate model from its available
+210 | options. For instance, if the client doesn't have access to Claude models but has Gemini,
+211 | it might map the sonnet hint to `gemini-1.5-pro` based on similar capabilities.
+212 | 
+213 | ## Error Handling
+214 | 
+215 | Clients **SHOULD** return errors for common failure cases:
+216 | 
+217 | Example error:
+218 | 
+219 | ```json
+220 | {
+221 |   "jsonrpc": "2.0",
+222 |   "id": 1,
+223 |   "error": {
+224 |     "code": -1,
+225 |     "message": "User rejected sampling request"
+226 |   }
+227 | }
+228 | ```
+229 | 
+230 | ## Security Considerations
+231 | 
+232 | 1. Clients **SHOULD** implement user approval controls
+233 | 2. Both parties **SHOULD** validate message content
+234 | 3. Clients **SHOULD** respect model preference hints
+235 | 4. Clients **SHOULD** implement rate limiting
+236 | 5. Both parties **MUST** handle sensitive data appropriately
+237 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/server/_index.md:
+--------------------------------------------------------------------------------
+ 1 | ---
+ 2 | title: Server Features
+ 3 | cascade:
+ 4 |   type: docs
+ 5 | weight: 30
+ 6 | ---
+ 7 | 
+ 8 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+ 9 | 
+10 | Servers provide the fundamental building blocks for adding context to language models via
+11 | MCP. These primitives enable rich interactions between clients, servers, and language
+12 | models:
+13 | 
+14 | - **Prompts**: Pre-defined templates or instructions that guide language model
+15 |   interactions
+16 | - **Resources**: Structured data or content that provides additional context to the model
+17 | - **Tools**: Executable functions that allow models to perform actions or retrieve
+18 |   information
+19 | 
+20 | Each primitive can be summarized in the following control hierarchy:
+21 | 
+22 | | Primitive | Control                | Description                                        | Example                         |
+23 | | --------- | ---------------------- | -------------------------------------------------- | ------------------------------- |
+24 | | Prompts   | User-controlled        | Interactive templates invoked by user choice       | Slash commands, menu options    |
+25 | | Resources | Application-controlled | Contextual data attached and managed by the client | File contents, git history      |
+26 | | Tools     | Model-controlled       | Functions exposed to the LLM to take actions       | API POST requests, file writing |
+27 | 
+28 | Explore these key primitives in more detail below:
+29 | 
+30 | {{< cards >}} {{< card link="prompts" title="Prompts" icon="chat-alt-2" >}}
+31 | {{< card link="resources" title="Resources" icon="document" >}}
+32 | {{< card link="tools" title="Tools" icon="adjustments" >}} {{< /cards >}}
+33 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/server/prompts.md:
+--------------------------------------------------------------------------------
+  1 | ---
+  2 | title: Prompts
+  3 | weight: 10
+  4 | ---
+  5 | 
+  6 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+  7 | 
+  8 | The Model Context Protocol (MCP) provides a standardized way for servers to expose prompt
+  9 | templates to clients. Prompts allow servers to provide structured messages and
+ 10 | instructions for interacting with language models. Clients can discover available
+ 11 | prompts, retrieve their contents, and provide arguments to customize them.
+ 12 | 
+ 13 | ## User Interaction Model
+ 14 | 
+ 15 | Prompts are designed to be **user-controlled**, meaning they are exposed from servers to
+ 16 | clients with the intention of the user being able to explicitly select them for use.
+ 17 | 
+ 18 | Typically, prompts would be triggered through user-initiated commands in the user
+ 19 | interface, which allows users to naturally discover and invoke available prompts.
+ 20 | 
+ 21 | For example, as slash commands:
+ 22 | 
+ 23 | ![Example of prompt exposed as slash command](slash-command.png)
+ 24 | 
+ 25 | However, implementors are free to expose prompts through any interface pattern that suits
+ 26 | their needs&mdash;the protocol itself does not mandate any specific user interaction
+ 27 | model.
+ 28 | 
+ 29 | ## Capabilities
+ 30 | 
+ 31 | Servers that support prompts **MUST** declare the `prompts` capability during
+ 32 | [initialization]({{< ref "../basic/lifecycle#initialization" >}}):
+ 33 | 
+ 34 | /draft`json { "capabilities": { "prompts": { "listChanged": true } } }
+ 35 | 
+ 36 | ````
+ 37 | 
+ 38 | `listChanged` indicates whether the server will emit notifications when the list of
+ 39 | available prompts changes.
+ 40 | 
+ 41 | ## Protocol Messages
+ 42 | 
+ 43 | ### Listing Prompts
+ 44 | 
+ 45 | To retrieve available prompts, clients send a `prompts/list` request. This operation
+ 46 | supports [pagination]({{< ref "utilities/pagination" >}}).
+ 47 | 
+ 48 | **Request:**
+ 49 | 
+ 50 | ```json
+ 51 | {
+ 52 |   "jsonrpc": "2.0",
+ 53 |   "id": 1,
+ 54 |   "method": "prompts/list",
+ 55 |   "params": {
+ 56 |     "cursor": "optional-cursor-value"
+ 57 |   }
+ 58 | }
+ 59 | ````
+ 60 | 
+ 61 | **Response:**
+ 62 | 
+ 63 | ```json
+ 64 | {
+ 65 |   "jsonrpc": "2.0",
+ 66 |   "id": 1,
+ 67 |   "result": {
+ 68 |     "prompts": [
+ 69 |       {
+ 70 |         "name": "code_review",
+ 71 |         "description": "Asks the LLM to analyze code quality and suggest improvements",
+ 72 |         "arguments": [
+ 73 |           {
+ 74 |             "name": "code",
+ 75 |             "description": "The code to review",
+ 76 |             "required": true
+ 77 |           }
+ 78 |         ]
+ 79 |       }
+ 80 |     ],
+ 81 |     "nextCursor": "next-page-cursor"
+ 82 |   }
+ 83 | }
+ 84 | ```
+ 85 | 
+ 86 | ### Getting a Prompt
+ 87 | 
+ 88 | To retrieve a specific prompt, clients send a `prompts/get` request. Arguments may be
+ 89 | auto-completed through [the completion API]({{< ref "utilities/completion" >}}).
+ 90 | 
+ 91 | **Request:**
+ 92 | 
+ 93 | ```json
+ 94 | {
+ 95 |   "jsonrpc": "2.0",
+ 96 |   "id": 2,
+ 97 |   "method": "prompts/get",
+ 98 |   "params": {
+ 99 |     "name": "code_review",
+100 |     "arguments": {
+101 |       "code": "def hello():\n    print('world')"
+102 |     }
+103 |   }
+104 | }
+105 | ```
+106 | 
+107 | **Response:**
+108 | 
+109 | ```json
+110 | {
+111 |   "jsonrpc": "2.0",
+112 |   "id": 2,
+113 |   "result": {
+114 |     "description": "Code review prompt",
+115 |     "messages": [
+116 |       {
+117 |         "role": "user",
+118 |         "content": {
+119 |           "type": "text",
+120 |           "text": "Please review this Python code:\ndef hello():\n    print('world')"
+121 |         }
+122 |       }
+123 |     ]
+124 |   }
+125 | }
+126 | ```
+127 | 
+128 | ### List Changed Notification
+129 | 
+130 | When the list of available prompts changes, servers that declared the `listChanged`
+131 | capability **SHOULD** send a notification:
+132 | 
+133 | ```json
+134 | {
+135 |   "jsonrpc": "2.0",
+136 |   "method": "notifications/prompts/list_changed"
+137 | }
+138 | ```
+139 | 
+140 | ## Message Flow
+141 | 
+142 | ```mermaid
+143 | sequenceDiagram
+144 |     participant Client
+145 |     participant Server
+146 | 
+147 |     Note over Client,Server: Discovery
+148 |     Client->>Server: prompts/list
+149 |     Server-->>Client: List of prompts
+150 | 
+151 |     Note over Client,Server: Usage
+152 |     Client->>Server: prompts/get
+153 |     Server-->>Client: Prompt content
+154 | 
+155 |     opt listChanged
+156 |       Note over Client,Server: Changes
+157 |       Server--)Client: prompts/list_changed
+158 |       Client->>Server: prompts/list
+159 |       Server-->>Client: Updated prompts
+160 |     end
+161 | ```
+162 | 
+163 | ## Data Types
+164 | 
+165 | ### Prompt
+166 | 
+167 | A prompt definition includes:
+168 | 
+169 | - `name`: Unique identifier for the prompt
+170 | - `description`: Optional human-readable description
+171 | - `arguments`: Optional list of arguments for customization
+172 | 
+173 | ### PromptMessage
+174 | 
+175 | Messages in a prompt can contain:
+176 | 
+177 | - `role`: Either "user" or "assistant" to indicate the speaker
+178 | - `content`: One of the following content types:
+179 | 
+180 | #### Text Content
+181 | 
+182 | Text content represents plain text messages:
+183 | 
+184 | ```json
+185 | {
+186 |   "type": "text",
+187 |   "text": "The text content of the message"
+188 | }
+189 | ```
+190 | 
+191 | This is the most common content type used for natural language interactions.
+192 | 
+193 | #### Image Content
+194 | 
+195 | Image content allows including visual information in messages:
+196 | 
+197 | ```json
+198 | {
+199 |   "type": "image",
+200 |   "data": "base64-encoded-image-data",
+201 |   "mimeType": "image/png"
+202 | }
+203 | ```
+204 | 
+205 | The image data **MUST** be base64-encoded and include a valid MIME type. This enables
+206 | multi-modal interactions where visual context is important.
+207 | 
+208 | #### Audio Content
+209 | 
+210 | Audio content allows including audio information in messages:
+211 | 
+212 | ```json
+213 | {
+214 |   "type": "audio",
+215 |   "data": "base64-encoded-audio-data",
+216 |   "mimeType": "audio/wav"
+217 | }
+218 | ```
+219 | 
+220 | The audio data MUST be base64-encoded and include a valid MIME type. This enables
+221 | multi-modal interactions where audio context is important.
+222 | 
+223 | #### Embedded Resources
+224 | 
+225 | Embedded resources allow referencing server-side resources directly in messages:
+226 | 
+227 | ```json
+228 | {
+229 |   "type": "resource",
+230 |   "resource": {
+231 |     "uri": "resource://example",
+232 |     "mimeType": "text/plain",
+233 |     "text": "Resource content"
+234 |   }
+235 | }
+236 | ```
+237 | 
+238 | Resources can contain either text or binary (blob) data and **MUST** include:
+239 | 
+240 | - A valid resource URI
+241 | - The appropriate MIME type
+242 | - Either text content or base64-encoded blob data
+243 | 
+244 | Embedded resources enable prompts to seamlessly incorporate server-managed content like
+245 | documentation, code samples, or other reference materials directly into the conversation
+246 | flow.
+247 | 
+248 | ## Error Handling
+249 | 
+250 | Servers **SHOULD** return standard JSON-RPC errors for common failure cases:
+251 | 
+252 | - Invalid prompt name: `-32602` (Invalid params)
+253 | - Missing required arguments: `-32602` (Invalid params)
+254 | - Internal errors: `-32603` (Internal error)
+255 | 
+256 | ## Implementation Considerations
+257 | 
+258 | 1. Servers **SHOULD** validate prompt arguments before processing
+259 | 2. Clients **SHOULD** handle pagination for large prompt lists
+260 | 3. Both parties **SHOULD** respect capability negotiation
+261 | 
+262 | ## Security
+263 | 
+264 | Implementations **MUST** carefully validate all prompt inputs and outputs to prevent
+265 | injection attacks or unauthorized access to resources.
+266 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/server/resource-picker.png:
+--------------------------------------------------------------------------------
+https://raw.githubusercontent.com/modelcontextprotocol/specification/main/docs/specification/2025-03-26/server/resource-picker.png
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/server/resources.md:
+--------------------------------------------------------------------------------
+  1 | ---
+  2 | title: Resources
+  3 | type: docs
+  4 | weight: 20
+  5 | ---
+  6 | 
+  7 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+  8 | 
+  9 | The Model Context Protocol (MCP) provides a standardized way for servers to expose
+ 10 | resources to clients. Resources allow servers to share data that provides context to
+ 11 | language models, such as files, database schemas, or application-specific information.
+ 12 | Each resource is uniquely identified by a
+ 13 | [URI](https://datatracker.ietf.org/doc/html/rfc3986).
+ 14 | 
+ 15 | ## User Interaction Model
+ 16 | 
+ 17 | Resources in MCP are designed to be **application-driven**, with host applications
+ 18 | determining how to incorporate context based on their needs.
+ 19 | 
+ 20 | For example, applications could:
+ 21 | 
+ 22 | - Expose resources through UI elements for explicit selection, in a tree or list view
+ 23 | - Allow the user to search through and filter available resources
+ 24 | - Implement automatic context inclusion, based on heuristics or the AI model's selection
+ 25 | 
+ 26 | ![Example of resource context picker](resource-picker.png)
+ 27 | 
+ 28 | However, implementations are free to expose resources through any interface pattern that
+ 29 | suits their needs&mdash;the protocol itself does not mandate any specific user
+ 30 | interaction model.
+ 31 | 
+ 32 | ## Capabilities
+ 33 | 
+ 34 | Servers that support resources **MUST** declare the `resources` capability:
+ 35 | 
+ 36 | ```json
+ 37 | {
+ 38 |   "capabilities": {
+ 39 |     "resources": {
+ 40 |       "subscribe": true,
+ 41 |       "listChanged": true
+ 42 |     }
+ 43 |   }
+ 44 | }
+ 45 | ```
+ 46 | 
+ 47 | The capability supports two optional features:
+ 48 | 
+ 49 | - `subscribe`: whether the client can subscribe to be notified of changes to individual
+ 50 |   resources.
+ 51 | - `listChanged`: whether the server will emit notifications when the list of available
+ 52 |   resources changes.
+ 53 | 
+ 54 | Both `subscribe` and `listChanged` are optional&mdash;servers can support neither,
+ 55 | either, or both:
+ 56 | 
+ 57 | ```json
+ 58 | {
+ 59 |   "capabilities": {
+ 60 |     "resources": {} // Neither feature supported
+ 61 |   }
+ 62 | }
+ 63 | ```
+ 64 | 
+ 65 | ```json
+ 66 | {
+ 67 |   "capabilities": {
+ 68 |     "resources": {
+ 69 |       "subscribe": true // Only subscriptions supported
+ 70 |     }
+ 71 |   }
+ 72 | }
+ 73 | ```
+ 74 | 
+ 75 | ```json
+ 76 | {
+ 77 |   "capabilities": {
+ 78 |     "resources": {
+ 79 |       "listChanged": true // Only list change notifications supported
+ 80 |     }
+ 81 |   }
+ 82 | }
+ 83 | ```
+ 84 | 
+ 85 | ## Protocol Messages
+ 86 | 
+ 87 | ### Listing Resources
+ 88 | 
+ 89 | To discover available resources, clients send a `resources/list` request. This operation
+ 90 | supports [pagination]({{< ref "utilities/pagination" >}}).
+ 91 | 
+ 92 | **Request:**
+ 93 | 
+ 94 | ```json
+ 95 | {
+ 96 |   "jsonrpc": "2.0",
+ 97 |   "id": 1,
+ 98 |   "method": "resources/list",
+ 99 |   "params": {
+100 |     "cursor": "optional-cursor-value"
+101 |   }
+102 | }
+103 | ```
+104 | 
+105 | **Response:**
+106 | 
+107 | ```json
+108 | {
+109 |   "jsonrpc": "2.0",
+110 |   "id": 1,
+111 |   "result": {
+112 |     "resources": [
+113 |       {
+114 |         "uri": "file:///project/src/main.rs",
+115 |         "name": "main.rs",
+116 |         "description": "Primary application entry point",
+117 |         "mimeType": "text/x-rust"
+118 |       }
+119 |     ],
+120 |     "nextCursor": "next-page-cursor"
+121 |   }
+122 | }
+123 | ```
+124 | 
+125 | ### Reading Resources
+126 | 
+127 | To retrieve resource contents, clients send a `resources/read` request:
+128 | 
+129 | **Request:**
+130 | 
+131 | ```json
+132 | {
+133 |   "jsonrpc": "2.0",
+134 |   "id": 2,
+135 |   "method": "resources/read",
+136 |   "params": {
+137 |     "uri": "file:///project/src/main.rs"
+138 |   }
+139 | }
+140 | ```
+141 | 
+142 | **Response:**
+143 | 
+144 | ```json
+145 | {
+146 |   "jsonrpc": "2.0",
+147 |   "id": 2,
+148 |   "result": {
+149 |     "contents": [
+150 |       {
+151 |         "uri": "file:///project/src/main.rs",
+152 |         "mimeType": "text/x-rust",
+153 |         "text": "fn main() {\n    println!(\"Hello world!\");\n}"
+154 |       }
+155 |     ]
+156 |   }
+157 | }
+158 | ```
+159 | 
+160 | ### Resource Templates
+161 | 
+162 | Resource templates allow servers to expose parameterized resources using
+163 | [URI templates](https://datatracker.ietf.org/doc/html/rfc6570). Arguments may be
+164 | auto-completed through [the completion API]({{< ref "utilities/completion" >}}).
+165 | 
+166 | **Request:**
+167 | 
+168 | ```json
+169 | {
+170 |   "jsonrpc": "2.0",
+171 |   "id": 3,
+172 |   "method": "resources/templates/list"
+173 | }
+174 | ```
+175 | 
+176 | **Response:**
+177 | 
+178 | ```json
+179 | {
+180 |   "jsonrpc": "2.0",
+181 |   "id": 3,
+182 |   "result": {
+183 |     "resourceTemplates": [
+184 |       {
+185 |         "uriTemplate": "file:///{path}",
+186 |         "name": "Project Files",
+187 |         "description": "Access files in the project directory",
+188 |         "mimeType": "application/octet-stream"
+189 |       }
+190 |     ]
+191 |   }
+192 | }
+193 | ```
+194 | 
+195 | ### List Changed Notification
+196 | 
+197 | When the list of available resources changes, servers that declared the `listChanged`
+198 | capability **SHOULD** send a notification:
+199 | 
+200 | ```json
+201 | {
+202 |   "jsonrpc": "2.0",
+203 |   "method": "notifications/resources/list_changed"
+204 | }
+205 | ```
+206 | 
+207 | ### Subscriptions
+208 | 
+209 | The protocol supports optional subscriptions to resource changes. Clients can subscribe
+210 | to specific resources and receive notifications when they change:
+211 | 
+212 | **Subscribe Request:**
+213 | 
+214 | ```json
+215 | {
+216 |   "jsonrpc": "2.0",
+217 |   "id": 4,
+218 |   "method": "resources/subscribe",
+219 |   "params": {
+220 |     "uri": "file:///project/src/main.rs"
+221 |   }
+222 | }
+223 | ```
+224 | 
+225 | **Update Notification:**
+226 | 
+227 | ```json
+228 | {
+229 |   "jsonrpc": "2.0",
+230 |   "method": "notifications/resources/updated",
+231 |   "params": {
+232 |     "uri": "file:///project/src/main.rs"
+233 |   }
+234 | }
+235 | ```
+236 | 
+237 | ## Message Flow
+238 | 
+239 | ```mermaid
+240 | sequenceDiagram
+241 |     participant Client
+242 |     participant Server
+243 | 
+244 |     Note over Client,Server: Resource Discovery
+245 |     Client->>Server: resources/list
+246 |     Server-->>Client: List of resources
+247 | 
+248 |     Note over Client,Server: Resource Access
+249 |     Client->>Server: resources/read
+250 |     Server-->>Client: Resource contents
+251 | 
+252 |     Note over Client,Server: Subscriptions
+253 |     Client->>Server: resources/subscribe
+254 |     Server-->>Client: Subscription confirmed
+255 | 
+256 |     Note over Client,Server: Updates
+257 |     Server--)Client: notifications/resources/updated
+258 |     Client->>Server: resources/read
+259 |     Server-->>Client: Updated contents
+260 | ```
+261 | 
+262 | ## Data Types
+263 | 
+264 | ### Resource
+265 | 
+266 | A resource definition includes:
+267 | 
+268 | - `uri`: Unique identifier for the resource
+269 | - `name`: Human-readable name
+270 | - `description`: Optional description
+271 | - `mimeType`: Optional MIME type
+272 | - `size`: Optional size in bytes
+273 | 
+274 | ### Resource Contents
+275 | 
+276 | Resources can contain either text or binary data:
+277 | 
+278 | #### Text Content
+279 | 
+280 | ```json
+281 | {
+282 |   "uri": "file:///example.txt",
+283 |   "mimeType": "text/plain",
+284 |   "text": "Resource content"
+285 | }
+286 | ```
+287 | 
+288 | #### Binary Content
+289 | 
+290 | ```json
+291 | {
+292 |   "uri": "file:///example.png",
+293 |   "mimeType": "image/png",
+294 |   "blob": "base64-encoded-data"
+295 | }
+296 | ```
+297 | 
+298 | ## Common URI Schemes
+299 | 
+300 | The protocol defines several standard URI schemes. This list not
+301 | exhaustive&mdash;implementations are always free to use additional, custom URI schemes.
+302 | 
+303 | ### https://
+304 | 
+305 | Used to represent a resource available on the web.
+306 | 
+307 | Servers **SHOULD** use this scheme only when the client is able to fetch and load the
+308 | resource directly from the web on its own—that is, it doesn’t need to read the resource
+309 | via the MCP server.
+310 | 
+311 | For other use cases, servers **SHOULD** prefer to use another URI scheme, or define a
+312 | custom one, even if the server will itself be downloading resource contents over the
+313 | internet.
+314 | 
+315 | ### file://
+316 | 
+317 | Used to identify resources that behave like a filesystem. However, the resources do not
+318 | need to map to an actual physical filesystem.
+319 | 
+320 | MCP servers **MAY** identify file:// resources with an
+321 | [XDG MIME type](https://specifications.freedesktop.org/shared-mime-info-spec/0.14/ar01s02.html#id-1.3.14),
+322 | like `inode/directory`, to represent non-regular files (such as directories) that don’t
+323 | otherwise have a standard MIME type.
+324 | 
+325 | ### git://
+326 | 
+327 | Git version control integration.
+328 | 
+329 | ## Error Handling
+330 | 
+331 | Servers **SHOULD** return standard JSON-RPC errors for common failure cases:
+332 | 
+333 | - Resource not found: `-32002`
+334 | - Internal errors: `-32603`
+335 | 
+336 | Example error:
+337 | 
+338 | ```json
+339 | {
+340 |   "jsonrpc": "2.0",
+341 |   "id": 5,
+342 |   "error": {
+343 |     "code": -32002,
+344 |     "message": "Resource not found",
+345 |     "data": {
+346 |       "uri": "file:///nonexistent.txt"
+347 |     }
+348 |   }
+349 | }
+350 | ```
+351 | 
+352 | ## Security Considerations
+353 | 
+354 | 1. Servers **MUST** validate all resource URIs
+355 | 2. Access controls **SHOULD** be implemented for sensitive resources
+356 | 3. Binary data **MUST** be properly encoded
+357 | 4. Resource permissions **SHOULD** be checked before operations
+358 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/server/slash-command.png:
+--------------------------------------------------------------------------------
+https://raw.githubusercontent.com/modelcontextprotocol/specification/main/docs/specification/2025-03-26/server/slash-command.png
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/server/tools.md:
+--------------------------------------------------------------------------------
+  1 | ---
+  2 | title: Tools
+  3 | type: docs
+  4 | weight: 40
+  5 | ---
+  6 | 
+  7 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+  8 | 
+  9 | The Model Context Protocol (MCP) allows servers to expose tools that can be invoked by
+ 10 | language models. Tools enable models to interact with external systems, such as querying
+ 11 | databases, calling APIs, or performing computations. Each tool is uniquely identified by
+ 12 | a name and includes metadata describing its schema.
+ 13 | 
+ 14 | ## User Interaction Model
+ 15 | 
+ 16 | Tools in MCP are designed to be **model-controlled**, meaning that the language model can
+ 17 | discover and invoke tools automatically based on its contextual understanding and the
+ 18 | user's prompts.
+ 19 | 
+ 20 | However, implementations are free to expose tools through any interface pattern that
+ 21 | suits their needs&mdash;the protocol itself does not mandate any specific user
+ 22 | interaction model.
+ 23 | 
+ 24 | {{< callout type="warning" >}} For trust & safety and security, there **SHOULD** always
+ 25 | be a human in the loop with the ability to deny tool invocations.
+ 26 | 
+ 27 | Applications **SHOULD**:
+ 28 | 
+ 29 | - Provide UI that makes clear which tools are being exposed to the AI model
+ 30 | - Insert clear visual indicators when tools are invoked
+ 31 | - Present confirmation prompts to the user for operations, to ensure a human is in the
+ 32 |   loop {{< /callout >}}
+ 33 | 
+ 34 | ## Capabilities
+ 35 | 
+ 36 | Servers that support tools **MUST** declare the `tools` capability:
+ 37 | 
+ 38 | ```json
+ 39 | {
+ 40 |   "capabilities": {
+ 41 |     "tools": {
+ 42 |       "listChanged": true
+ 43 |     }
+ 44 |   }
+ 45 | }
+ 46 | ```
+ 47 | 
+ 48 | `listChanged` indicates whether the server will emit notifications when the list of
+ 49 | available tools changes.
+ 50 | 
+ 51 | ## Protocol Messages
+ 52 | 
+ 53 | ### Listing Tools
+ 54 | 
+ 55 | To discover available tools, clients send a `tools/list` request. This operation supports
+ 56 | [pagination]({{< ref "utilities/pagination" >}}).
+ 57 | 
+ 58 | **Request:**
+ 59 | 
+ 60 | ```json
+ 61 | {
+ 62 |   "jsonrpc": "2.0",
+ 63 |   "id": 1,
+ 64 |   "method": "tools/list",
+ 65 |   "params": {
+ 66 |     "cursor": "optional-cursor-value"
+ 67 |   }
+ 68 | }
+ 69 | ```
+ 70 | 
+ 71 | **Response:**
+ 72 | 
+ 73 | ```json
+ 74 | {
+ 75 |   "jsonrpc": "2.0",
+ 76 |   "id": 1,
+ 77 |   "result": {
+ 78 |     "tools": [
+ 79 |       {
+ 80 |         "name": "get_weather",
+ 81 |         "description": "Get current weather information for a location",
+ 82 |         "inputSchema": {
+ 83 |           "type": "object",
+ 84 |           "properties": {
+ 85 |             "location": {
+ 86 |               "type": "string",
+ 87 |               "description": "City name or zip code"
+ 88 |             }
+ 89 |           },
+ 90 |           "required": ["location"]
+ 91 |         }
+ 92 |       }
+ 93 |     ],
+ 94 |     "nextCursor": "next-page-cursor"
+ 95 |   }
+ 96 | }
+ 97 | ```
+ 98 | 
+ 99 | ### Calling Tools
+100 | 
+101 | To invoke a tool, clients send a `tools/call` request:
+102 | 
+103 | **Request:**
+104 | 
+105 | ```json
+106 | {
+107 |   "jsonrpc": "2.0",
+108 |   "id": 2,
+109 |   "method": "tools/call",
+110 |   "params": {
+111 |     "name": "get_weather",
+112 |     "arguments": {
+113 |       "location": "New York"
+114 |     }
+115 |   }
+116 | }
+117 | ```
+118 | 
+119 | **Response:**
+120 | 
+121 | ```json
+122 | {
+123 |   "jsonrpc": "2.0",
+124 |   "id": 2,
+125 |   "result": {
+126 |     "content": [
+127 |       {
+128 |         "type": "text",
+129 |         "text": "Current weather in New York:\nTemperature: 72°F\nConditions: Partly cloudy"
+130 |       }
+131 |     ],
+132 |     "isError": false
+133 |   }
+134 | }
+135 | ```
+136 | 
+137 | ### List Changed Notification
+138 | 
+139 | When the list of available tools changes, servers that declared the `listChanged`
+140 | capability **SHOULD** send a notification:
+141 | 
+142 | ```json
+143 | {
+144 |   "jsonrpc": "2.0",
+145 |   "method": "notifications/tools/list_changed"
+146 | }
+147 | ```
+148 | 
+149 | ## Message Flow
+150 | 
+151 | ```mermaid
+152 | sequenceDiagram
+153 |     participant LLM
+154 |     participant Client
+155 |     participant Server
+156 | 
+157 |     Note over Client,Server: Discovery
+158 |     Client->>Server: tools/list
+159 |     Server-->>Client: List of tools
+160 | 
+161 |     Note over Client,LLM: Tool Selection
+162 |     LLM->>Client: Select tool to use
+163 | 
+164 |     Note over Client,Server: Invocation
+165 |     Client->>Server: tools/call
+166 |     Server-->>Client: Tool result
+167 |     Client->>LLM: Process result
+168 | 
+169 |     Note over Client,Server: Updates
+170 |     Server--)Client: tools/list_changed
+171 |     Client->>Server: tools/list
+172 |     Server-->>Client: Updated tools
+173 | ```
+174 | 
+175 | ## Data Types
+176 | 
+177 | ### Tool
+178 | 
+179 | A tool definition includes:
+180 | 
+181 | - `name`: Unique identifier for the tool
+182 | - `description`: Human-readable description of functionality
+183 | - `inputSchema`: JSON Schema defining expected parameters
+184 | - `annotations`: optional properties describing tool behavior
+185 | 
+186 | {{< callout type="warning" >}} For trust & safety and security, clients **MUST** consider
+187 | tool annotations to be untrusted unless they come from trusted servers. {{< /callout >}}
+188 | 
+189 | ### Tool Result
+190 | 
+191 | Tool results can contain multiple content items of different types:
+192 | 
+193 | #### Text Content
+194 | 
+195 | ```json
+196 | {
+197 |   "type": "text",
+198 |   "text": "Tool result text"
+199 | }
+200 | ```
+201 | 
+202 | #### Image Content
+203 | 
+204 | ```json
+205 | {
+206 |   "type": "image",
+207 |   "data": "base64-encoded-data",
+208 |   "mimeType": "image/png"
+209 | }
+210 | ```
+211 | 
+212 | #### Audio Content
+213 | 
+214 | ```json
+215 | {
+216 |   "type": "audio",
+217 |   "data": "base64-encoded-audio-data",
+218 |   "mimeType": "audio/wav"
+219 | }
+220 | ```
+221 | 
+222 | #### Embedded Resources
+223 | 
+224 | [Resources]({{< ref "resources" >}}) **MAY** be embedded, to provide additional context
+225 | or data, behind a URI that can be subscribed to or fetched again by the client later:
+226 | 
+227 | ```json
+228 | {
+229 |   "type": "resource",
+230 |   "resource": {
+231 |     "uri": "resource://example",
+232 |     "mimeType": "text/plain",
+233 |     "text": "Resource content"
+234 |   }
+235 | }
+236 | ```
+237 | 
+238 | ## Error Handling
+239 | 
+240 | Tools use two error reporting mechanisms:
+241 | 
+242 | 1. **Protocol Errors**: Standard JSON-RPC errors for issues like:
+243 | 
+244 |    - Unknown tools
+245 |    - Invalid arguments
+246 |    - Server errors
+247 | 
+248 | 2. **Tool Execution Errors**: Reported in tool results with `isError: true`:
+249 |    - API failures
+250 |    - Invalid input data
+251 |    - Business logic errors
+252 | 
+253 | Example protocol error:
+254 | 
+255 | ```json
+256 | {
+257 |   "jsonrpc": "2.0",
+258 |   "id": 3,
+259 |   "error": {
+260 |     "code": -32602,
+261 |     "message": "Unknown tool: invalid_tool_name"
+262 |   }
+263 | }
+264 | ```
+265 | 
+266 | Example tool execution error:
+267 | 
+268 | ```json
+269 | {
+270 |   "jsonrpc": "2.0",
+271 |   "id": 4,
+272 |   "result": {
+273 |     "content": [
+274 |       {
+275 |         "type": "text",
+276 |         "text": "Failed to fetch weather data: API rate limit exceeded"
+277 |       }
+278 |     ],
+279 |     "isError": true
+280 |   }
+281 | }
+282 | ```
+283 | 
+284 | ## Security Considerations
+285 | 
+286 | 1. Servers **MUST**:
+287 | 
+288 |    - Validate all tool inputs
+289 |    - Implement proper access controls
+290 |    - Rate limit tool invocations
+291 |    - Sanitize tool outputs
+292 | 
+293 | 2. Clients **SHOULD**:
+294 |    - Prompt for user confirmation on sensitive operations
+295 |    - Show tool inputs to the user before calling the server, to avoid malicious or
+296 |      accidental data exfiltration
+297 |    - Validate tool results before passing to LLM
+298 |    - Implement timeouts for tool calls
+299 |    - Log tool usage for audit purposes
+300 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/server/utilities/_index.md:
+--------------------------------------------------------------------------------
+ 1 | ---
+ 2 | title: Utilities
+ 3 | ---
+ 4 | 
+ 5 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+ 6 | 
+ 7 | These optional features can be used to enhance server functionality.
+ 8 | 
+ 9 | {{< cards >}} {{< card link="completion" title="Completion" icon="at-symbol" >}}
+10 | {{< card link="logging" title="Logging" icon="terminal" >}}
+11 | {{< card link="pagination" title="Pagination" icon="collection" >}} {{< /cards >}}
+12 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/server/utilities/completion.md:
+--------------------------------------------------------------------------------
+  1 | ---
+  2 | title: Completion
+  3 | ---
+  4 | 
+  5 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+  6 | 
+  7 | The Model Context Protocol (MCP) provides a standardized way for servers to offer
+  8 | argument autocompletion suggestions for prompts and resource URIs. This enables rich,
+  9 | IDE-like experiences where users receive contextual suggestions while entering argument
+ 10 | values.
+ 11 | 
+ 12 | ## User Interaction Model
+ 13 | 
+ 14 | Completion in MCP is designed to support interactive user experiences similar to IDE code
+ 15 | completion.
+ 16 | 
+ 17 | For example, applications may show completion suggestions in a dropdown or popup menu as
+ 18 | users type, with the ability to filter and select from available options.
+ 19 | 
+ 20 | However, implementations are free to expose completion through any interface pattern that
+ 21 | suits their needs&mdash;the protocol itself does not mandate any specific user
+ 22 | interaction model.
+ 23 | 
+ 24 | ## Capabilities
+ 25 | 
+ 26 | Servers that support completions **MUST** declare the `completions` capability:
+ 27 | 
+ 28 | ```json
+ 29 | {
+ 30 |   "capabilities": {
+ 31 |     "completions": {}
+ 32 |   }
+ 33 | }
+ 34 | ```
+ 35 | 
+ 36 | ## Protocol Messages
+ 37 | 
+ 38 | ### Requesting Completions
+ 39 | 
+ 40 | To get completion suggestions, clients send a `completion/complete` request specifying
+ 41 | what is being completed through a reference type:
+ 42 | 
+ 43 | **Request:**
+ 44 | 
+ 45 | ```json
+ 46 | {
+ 47 |   "jsonrpc": "2.0",
+ 48 |   "id": 1,
+ 49 |   "method": "completion/complete",
+ 50 |   "params": {
+ 51 |     "ref": {
+ 52 |       "type": "ref/prompt",
+ 53 |       "name": "code_review"
+ 54 |     },
+ 55 |     "argument": {
+ 56 |       "name": "language",
+ 57 |       "value": "py"
+ 58 |     }
+ 59 |   }
+ 60 | }
+ 61 | ```
+ 62 | 
+ 63 | **Response:**
+ 64 | 
+ 65 | ```json
+ 66 | {
+ 67 |   "jsonrpc": "2.0",
+ 68 |   "id": 1,
+ 69 |   "result": {
+ 70 |     "completion": {
+ 71 |       "values": ["python", "pytorch", "pyside"],
+ 72 |       "total": 10,
+ 73 |       "hasMore": true
+ 74 |     }
+ 75 |   }
+ 76 | }
+ 77 | ```
+ 78 | 
+ 79 | ### Reference Types
+ 80 | 
+ 81 | The protocol supports two types of completion references:
+ 82 | 
+ 83 | | Type           | Description                 | Example                                             |
+ 84 | | -------------- | --------------------------- | --------------------------------------------------- |
+ 85 | | `ref/prompt`   | References a prompt by name | `{"type": "ref/prompt", "name": "code_review"}`     |
+ 86 | | `ref/resource` | References a resource URI   | `{"type": "ref/resource", "uri": "file:///{path}"}` |
+ 87 | 
+ 88 | ### Completion Results
+ 89 | 
+ 90 | Servers return an array of completion values ranked by relevance, with:
+ 91 | 
+ 92 | - Maximum 100 items per response
+ 93 | - Optional total number of available matches
+ 94 | - Boolean indicating if additional results exist
+ 95 | 
+ 96 | ## Message Flow
+ 97 | 
+ 98 | ```mermaid
+ 99 | sequenceDiagram
+100 |     participant Client
+101 |     participant Server
+102 | 
+103 |     Note over Client: User types argument
+104 |     Client->>Server: completion/complete
+105 |     Server-->>Client: Completion suggestions
+106 | 
+107 |     Note over Client: User continues typing
+108 |     Client->>Server: completion/complete
+109 |     Server-->>Client: Refined suggestions
+110 | ```
+111 | 
+112 | ## Data Types
+113 | 
+114 | ### CompleteRequest
+115 | 
+116 | - `ref`: A `PromptReference` or `ResourceReference`
+117 | - `argument`: Object containing:
+118 |   - `name`: Argument name
+119 |   - `value`: Current value
+120 | 
+121 | ### CompleteResult
+122 | 
+123 | - `completion`: Object containing:
+124 |   - `values`: Array of suggestions (max 100)
+125 |   - `total`: Optional total matches
+126 |   - `hasMore`: Additional results flag
+127 | 
+128 | ## Error Handling
+129 | 
+130 | Servers **SHOULD** return standard JSON-RPC errors for common failure cases:
+131 | 
+132 | - Method not found: `-32601` (Capability not supported)
+133 | - Invalid prompt name: `-32602` (Invalid params)
+134 | - Missing required arguments: `-32602` (Invalid params)
+135 | - Internal errors: `-32603` (Internal error)
+136 | 
+137 | ## Implementation Considerations
+138 | 
+139 | 1. Servers **SHOULD**:
+140 | 
+141 |    - Return suggestions sorted by relevance
+142 |    - Implement fuzzy matching where appropriate
+143 |    - Rate limit completion requests
+144 |    - Validate all inputs
+145 | 
+146 | 2. Clients **SHOULD**:
+147 |    - Debounce rapid completion requests
+148 |    - Cache completion results where appropriate
+149 |    - Handle missing or partial results gracefully
+150 | 
+151 | ## Security
+152 | 
+153 | Implementations **MUST**:
+154 | 
+155 | - Validate all completion inputs
+156 | - Implement appropriate rate limiting
+157 | - Control access to sensitive suggestions
+158 | - Prevent completion-based information disclosure
+159 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/server/utilities/logging.md:
+--------------------------------------------------------------------------------
+  1 | ---
+  2 | title: Logging
+  3 | ---
+  4 | 
+  5 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+  6 | 
+  7 | The Model Context Protocol (MCP) provides a standardized way for servers to send
+  8 | structured log messages to clients. Clients can control logging verbosity by setting
+  9 | minimum log levels, with servers sending notifications containing severity levels,
+ 10 | optional logger names, and arbitrary JSON-serializable data.
+ 11 | 
+ 12 | ## User Interaction Model
+ 13 | 
+ 14 | Implementations are free to expose logging through any interface pattern that suits their
+ 15 | needs&mdash;the protocol itself does not mandate any specific user interaction model.
+ 16 | 
+ 17 | ## Capabilities
+ 18 | 
+ 19 | Servers that emit log message notifications **MUST** declare the `logging` capability:
+ 20 | 
+ 21 | ```json
+ 22 | {
+ 23 |   "capabilities": {
+ 24 |     "logging": {}
+ 25 |   }
+ 26 | }
+ 27 | ```
+ 28 | 
+ 29 | ## Log Levels
+ 30 | 
+ 31 | The protocol follows the standard syslog severity levels specified in
+ 32 | [RFC 5424](https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1):
+ 33 | 
+ 34 | | Level     | Description                      | Example Use Case           |
+ 35 | | --------- | -------------------------------- | -------------------------- |
+ 36 | | debug     | Detailed debugging information   | Function entry/exit points |
+ 37 | | info      | General informational messages   | Operation progress updates |
+ 38 | | notice    | Normal but significant events    | Configuration changes      |
+ 39 | | warning   | Warning conditions               | Deprecated feature usage   |
+ 40 | | error     | Error conditions                 | Operation failures         |
+ 41 | | critical  | Critical conditions              | System component failures  |
+ 42 | | alert     | Action must be taken immediately | Data corruption detected   |
+ 43 | | emergency | System is unusable               | Complete system failure    |
+ 44 | 
+ 45 | ## Protocol Messages
+ 46 | 
+ 47 | ### Setting Log Level
+ 48 | 
+ 49 | To configure the minimum log level, clients **MAY** send a `logging/setLevel` request:
+ 50 | 
+ 51 | **Request:**
+ 52 | 
+ 53 | ```json
+ 54 | {
+ 55 |   "jsonrpc": "2.0",
+ 56 |   "id": 1,
+ 57 |   "method": "logging/setLevel",
+ 58 |   "params": {
+ 59 |     "level": "info"
+ 60 |   }
+ 61 | }
+ 62 | ```
+ 63 | 
+ 64 | ### Log Message Notifications
+ 65 | 
+ 66 | Servers send log messages using `notifications/message` notifications:
+ 67 | 
+ 68 | ```json
+ 69 | {
+ 70 |   "jsonrpc": "2.0",
+ 71 |   "method": "notifications/message",
+ 72 |   "params": {
+ 73 |     "level": "error",
+ 74 |     "logger": "database",
+ 75 |     "data": {
+ 76 |       "error": "Connection failed",
+ 77 |       "details": {
+ 78 |         "host": "localhost",
+ 79 |         "port": 5432
+ 80 |       }
+ 81 |     }
+ 82 |   }
+ 83 | }
+ 84 | ```
+ 85 | 
+ 86 | ## Message Flow
+ 87 | 
+ 88 | ```mermaid
+ 89 | sequenceDiagram
+ 90 |     participant Client
+ 91 |     participant Server
+ 92 | 
+ 93 |     Note over Client,Server: Configure Logging
+ 94 |     Client->>Server: logging/setLevel (info)
+ 95 |     Server-->>Client: Empty Result
+ 96 | 
+ 97 |     Note over Client,Server: Server Activity
+ 98 |     Server--)Client: notifications/message (info)
+ 99 |     Server--)Client: notifications/message (warning)
+100 |     Server--)Client: notifications/message (error)
+101 | 
+102 |     Note over Client,Server: Level Change
+103 |     Client->>Server: logging/setLevel (error)
+104 |     Server-->>Client: Empty Result
+105 |     Note over Server: Only sends error level<br/>and above
+106 | ```
+107 | 
+108 | ## Error Handling
+109 | 
+110 | Servers **SHOULD** return standard JSON-RPC errors for common failure cases:
+111 | 
+112 | - Invalid log level: `-32602` (Invalid params)
+113 | - Configuration errors: `-32603` (Internal error)
+114 | 
+115 | ## Implementation Considerations
+116 | 
+117 | 1. Servers **SHOULD**:
+118 | 
+119 |    - Rate limit log messages
+120 |    - Include relevant context in data field
+121 |    - Use consistent logger names
+122 |    - Remove sensitive information
+123 | 
+124 | 2. Clients **MAY**:
+125 |    - Present log messages in the UI
+126 |    - Implement log filtering/search
+127 |    - Display severity visually
+128 |    - Persist log messages
+129 | 
+130 | ## Security
+131 | 
+132 | 1. Log messages **MUST NOT** contain:
+133 | 
+134 |    - Credentials or secrets
+135 |    - Personal identifying information
+136 |    - Internal system details that could aid attacks
+137 | 
+138 | 2. Implementations **SHOULD**:
+139 |    - Rate limit messages
+140 |    - Validate all data fields
+141 |    - Control log access
+142 |    - Monitor for sensitive content
+143 | 
+
+
+--------------------------------------------------------------------------------
+/docs/specification/2025-03-26/server/utilities/pagination.md:
+--------------------------------------------------------------------------------
+ 1 | ---
+ 2 | title: Pagination
+ 3 | ---
+ 4 | 
+ 5 | {{< callout type="info" >}} **Protocol Revision**: 2025-03-26 {{< /callout >}}
+ 6 | 
+ 7 | The Model Context Protocol (MCP) supports paginating list operations that may return
+ 8 | large result sets. Pagination allows servers to yield results in smaller chunks rather
+ 9 | than all at once.
+10 | 
+11 | Pagination is especially important when connecting to external services over the
+12 | internet, but also useful for local integrations to avoid performance issues with large
+13 | data sets.
+14 | 
+15 | ## Pagination Model
+16 | 
+17 | Pagination in MCP uses an opaque cursor-based approach, instead of numbered pages.
+18 | 
+19 | - The **cursor** is an opaque string token, representing a position in the result set
+20 | - **Page size** is determined by the server, and **MAY NOT** be fixed
+21 | 
+22 | ## Response Format
+23 | 
+24 | Pagination starts when the server sends a **response** that includes:
+25 | 
+26 | - The current page of results
+27 | - An optional `nextCursor` field if more results exist
+28 | 
+29 | ```json
+30 | {
+31 |   "jsonrpc": "2.0",
+32 |   "id": "123",
+33 |   "result": {
+34 |     "resources": [...],
+35 |     "nextCursor": "eyJwYWdlIjogM30="
+36 |   }
+37 | }
+38 | ```
+39 | 
+40 | ## Request Format
+41 | 
+42 | After receiving a cursor, the client can _continue_ paginating by issuing a request
+43 | including that cursor:
+44 | 
+45 | ```json
+46 | {
+47 |   "jsonrpc": "2.0",
+48 |   "method": "resources/list",
+49 |   "params": {
+50 |     "cursor": "eyJwYWdlIjogMn0="
+51 |   }
+52 | }
+53 | ```
+54 | 
+55 | ## Pagination Flow
+56 | 
+57 | ```mermaid
+58 | sequenceDiagram
+59 |     participant Client
+60 |     participant Server
+61 | 
+62 |     Client->>Server: List Request (no cursor)
+63 |     loop Pagination Loop
+64 |       Server-->>Client: Page of results + nextCursor
+65 |       Client->>Server: List Request (with cursor)
+66 |     end
+67 | ```
+68 | 
+69 | ## Operations Supporting Pagination
+70 | 
+71 | The following MCP operations support pagination:
+72 | 
+73 | - `resources/list` - List available resources
+74 | - `resources/templates/list` - List resource templates
+75 | - `prompts/list` - List available prompts
+76 | - `tools/list` - List available tools
+77 | 
+78 | ## Implementation Guidelines
+79 | 
+80 | 1. Servers **SHOULD**:
+81 | 
+82 |    - Provide stable cursors
+83 |    - Handle invalid cursors gracefully
+84 | 
+85 | 2. Clients **SHOULD**:
+86 | 
+87 |    - Treat a missing `nextCursor` as the end of results
+88 |    - Support both paginated and non-paginated flows
+89 | 
+90 | 3. Clients **MUST** treat cursors as opaque tokens:
+91 |    - Don't make assumptions about cursor format
+92 |    - Don't attempt to parse or modify cursors
+93 |    - Don't persist cursors across sessions
+94 | 
+95 | ## Error Handling
+96 | 
+97 | Invalid cursors **SHOULD** result in an error with code -32602 (Invalid params).
+98 | 
+
+
+--------------------------------------------------------------------------------
