@@ -1,6 +1,6 @@
 {
   "name": "kintone-mcp-server",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -15,8 +15,8 @@
   "license": "MIT",
   "description": "MCP server for kintone",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.3",
-    "axios": "^1.7.9"
+    "@kintone/rest-api-client": "^5.7.1",
+    "@modelcontextprotocol/sdk": "^1.5.0"
   },
   "engines": {
     "node": ">=18"

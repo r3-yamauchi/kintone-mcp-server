@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import axios from 'axios';
+import { KintoneRestAPIClient, KintoneRestAPIError } from '@kintone/rest-api-client';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -27,239 +27,140 @@ class KintoneRecord {
     }
 }
 
-// リポジトリクラス
+// リポジトリクラス（npmパッケージ @kintone/rest-api-client を使用）
 class KintoneRepository {
     constructor(credentials) {
         this.credentials = credentials;
-        this.baseUrl = `https://${credentials.domain}`;
-        this.headers = {
-            'X-Cybozu-Authorization': this.credentials.auth,
-            'Content-Type': 'application/json'
-        };
+        this.client = new KintoneRestAPIClient({
+            baseUrl: `https://${credentials.domain}`,
+            auth: {
+                username: credentials.username,
+                password: credentials.password,
+            },
+        });
+    }
+
+    // エラーハンドリングを共通化
+    handleKintoneError(error, operation) {
+        if (error instanceof KintoneRestAPIError) {
+            console.error('Kintone API Error:', {
+                status: error.status,
+                code: error.code,
+                message: error.message,
+                errors: error.errors,
+            });
+            throw new Error(`Kintone API Error: ${error.code} - ${error.message}`);
+        }
+        console.error('Unexpected Error:', error);
+        throw new Error(`Failed to ${operation}: ${error.message}`);
     }
 
     async getRecord(appId, recordId) {
         try {
-            // デバッグ用のログ
             console.error(`Fetching record: ${appId}/${recordId}`);
-            console.error(`URL: ${this.baseUrl}/k/v1/record.json`);
-
-            const headers = {
-                ...this.headers,
-                'X-HTTP-Method-Override': 'GET'
-            };
-            console.error(`Headers:`, headers);
-
-            const response = await axios.post(`${this.baseUrl}/k/v1/record.json`, {
+            const response = await this.client.record.getRecord({
                 app: appId,
-                id: recordId
-            }, {
-                headers: headers
+                id: recordId,
             });
-
-            // デバッグ用のログ
-            console.error('Response:', response.data);
-
-            return new KintoneRecord(appId, recordId, response.data.record);
+            console.error('Response:', response);
+            return new KintoneRecord(appId, recordId, response.record);
         } catch (error) {
-            // エラー詳細のログ
-            console.error('Error details:', {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status,
-                headers: error.response?.headers
-            });
-            throw new Error(`Failed to get record: ${error.message}`);
+            this.handleKintoneError(error, `get record ${appId}/${recordId}`);
         }
     }
 
     async searchRecords(appId, query, fields = []) {
         try {
-            const requestData = {
-                app: appId,
-            };
-
+            const params = { app: appId };
             if (query) {
-                requestData.query = query;
+                params.condition = query;
             }
-
             if (fields.length > 0) {
-                requestData.fields = fields;
+                params.fields = fields;
             }
-
-            // デバッグ用のログ
             console.error(`Searching records: ${appId}`);
-            console.error(`Request data:`, requestData);
-
-            const headers = {
-                ...this.headers,
-                'X-HTTP-Method-Override': 'GET'
-            };
-
-            const response = await axios.post(`${this.baseUrl}/k/v1/records.json`,
-                requestData,
-                { headers: headers }
-            );
-
-            return response.data.records.map(record => {
-                // レコードIDの取得（undefinedの場合は'unknown'を使用）
-                const recordId = record?.$id?.value || 'unknown';
+            console.error(`Request data:`, params);
+            
+            const records = await this.client.record.getAllRecords(params);
+            console.error(`Found ${records.length} records`);
+            
+            return records.map((record) => {
+                const recordId = record.$id.value || 'unknown';
                 return new KintoneRecord(appId, recordId, record);
             });
         } catch (error) {
-            console.error('Error details:', {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status
-            });
-            throw new Error(`Failed to search records: ${error.message}`);
+            this.handleKintoneError(error, `search records ${appId}`);
         }
     }
 
     async createRecord(appId, fields) {
         try {
-            // デバッグ用のログ
             console.error(`Creating record in app: ${appId}`);
-            console.error(`Fields:`, fields);
-
-            const response = await axios.post(`${this.baseUrl}/k/v1/record.json`, {
+            const response = await this.client.record.addRecord({
                 app: appId,
-                record: fields
-            }, {
-                headers: this.headers
+                record: fields,
             });
-            return response.data.id;
+            return response.id;
         } catch (error) {
-            console.error('Error details:', {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status
-            });
-            throw new Error(`Failed to create record: ${error.message}`);
+            this.handleKintoneError(error, `create record in app ${appId}`);
         }
     }
 
     async updateRecord(record) {
         try {
-            // デバッグ用のログ
             console.error(`Updating record: ${record.appId}/${record.recordId}`);
-            console.error(`Fields:`, record.fields);
-
-            await axios.put(`${this.baseUrl}/k/v1/record.json`, {
+            const response = await this.client.record.updateRecord({
                 app: record.appId,
                 id: record.recordId,
                 record: record.fields
-            }, {
-                headers: this.headers
             });
+            console.error('Update response:', response);
+            return response;
         } catch (error) {
-            console.error('Error details:', {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status
-            });
-            throw new Error(`Failed to update record: ${error.message}`);
+            this.handleKintoneError(error, `update record ${record.appId}/${record.recordId}`);
         }
     }
 
     async getAppsInfo(appName) {
         try {
-            // デバッグ用のログ
             console.error(`Fetching apps info: ${appName}`);
-            console.error(`URL: ${this.baseUrl}/k/v1/apps.json`);
-
-            const headers = {
-                ...this.headers,
-                'X-HTTP-Method-Override': 'GET'
-            };
-            console.error(`Headers:`, headers);
-
-            const response = await axios.post(`${this.baseUrl}/k/v1/apps.json`, {
-                name: appName
-            }, {
-                headers: headers
+            const response = await this.client.app.getApps({
+                name: appName,
             });
-
-            // デバッグ用のログ
-            console.error('Response:', response.data);
-
-            return response.data;
+            console.error('Response:', response);
+            return response;
         } catch (error) {
-            // エラー詳細のログ
-            console.error('Error details:', {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status,
-                headers: error.response?.headers
-            });
-            throw new Error(`Failed to get apps info: ${error.message}`);
+            this.handleKintoneError(error, `get apps info ${appName}`);
         }
     }
 
     async uploadFile(fileName, fileData) {
         try {
-            // デバッグ用のログ
             console.error(`Uploading file: ${fileName}`);
-
-            const headers = {
-                ...this.headers,
-                'Content-Type': 'application/json'
-            };
-
-            const response = await axios.post(`${this.baseUrl}/k/v1/file.json`, {
+            const buffer = Buffer.from(fileData, 'base64');
+            const response = await this.client.file.uploadFile({
                 file: {
                     name: fileName,
-                    data: fileData
+                    data: buffer
                 }
-            }, {
-                headers: headers
             });
-
-            // デバッグ用のログ
-            console.error('File upload response:', response.data);
-
-            return response.data;
+            console.error('File upload response:', response);
+            return response;
         } catch (error) {
-            console.error('Error details:', {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status
-            });
-            throw new Error(`Failed to upload file: ${error.message}`);
+            this.handleKintoneError(error, `upload file ${fileName}`);
         }
     }
 
     async downloadFile(fileKey) {
         try {
-            // デバッグ用のログ
             console.error(`Downloading file with key: ${fileKey}`);
-
-            const headers = {
-                ...this.headers,
-                'X-HTTP-Method-Override': 'GET'
-            };
-
-            const response = await axios.post(`${this.baseUrl}/k/v1/file.json`, {
-                fileKey: fileKey
-            }, {
-                headers: headers,
-                responseType: 'arraybuffer' // バイナリデータを取得
-            });
-
-            // デバッグ用のログ
+            const response = await this.client.file.downloadFile({ fileKey: fileKey });
             console.error('File download response:', response);
-
-            return response.data;
+            return response;
         } catch (error) {
-            console.error('Error details:', {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status
-            });
-            throw new Error(`Failed to download file: ${error.message}`);
+            this.handleKintoneError(error, `download file with key ${fileKey}`);
         }
     }
-
 }
 
 class KintoneMCPServer {
@@ -267,7 +168,7 @@ class KintoneMCPServer {
         this.server = new Server(
             {
                 name: 'kintone-mcp-server',
-                version: '0.1.0',
+                version: '2.0.0',
             },
             {
                 capabilities: {
@@ -401,10 +302,10 @@ class KintoneMCPServer {
 
         // 環境変数のバリデーション
         const requiredEnvVars = ['KINTONE_DOMAIN', 'KINTONE_USERNAME', 'KINTONE_PASSWORD'];
-        const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+        const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]?.trim());
 
         if (missingEnvVars.length > 0) {
-            throw new Error('Missing required environment variables: ' + missingEnvVars.join(', '));
+            throw new Error('Missing or empty required environment variables: ' + missingEnvVars.join(', '));
         }
 
         this.credentials = new KintoneCredentials(
@@ -564,138 +465,119 @@ class KintoneMCPServer {
         // ツールの実行
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
             try {
-                // デバッグ用のログ
                 console.error('Tool request:', {
                     name: request.params.name,
-                    arguments: request.params.arguments
+                    arguments: request.params.arguments,
                 });
 
-                switch (request.params.name) {
-                    case 'get_record': {
-                        const record = await this.repository.getRecord(
-                            request.params.arguments.app_id,
-                            request.params.arguments.record_id
-                        );
-                        return {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: JSON.stringify(record.fields, null, 2),
-                                },
-                            ],
-                        };
-                    }
+                const result = await this.executeToolRequest(request);
+                return this.formatSuccessResponse(result);
 
-                    case 'search_records': {
-                        const records = await this.repository.searchRecords(
-                            request.params.arguments.app_id,
-                            request.params.arguments.query,
-                            request.params.arguments.fields
-                        );
-                        return {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: JSON.stringify(
-                                        records.map((r) => r.fields),
-                                        null,
-                                        2
-                                    ),
-                                },
-                            ],
-                        };
-                    }
-
-                    case 'create_record': {
-                        const recordId = await this.repository.createRecord(
-                            request.params.arguments.app_id,
-                            request.params.arguments.fields
-                        );
-                        return {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: JSON.stringify({ record_id: recordId }, null, 2),
-                                },
-                            ],
-                        };
-                    }
-
-                    case 'update_record': {
-                        await this.repository.updateRecord(
-                            new KintoneRecord(
-                                request.params.arguments.app_id,
-                                request.params.arguments.record_id,
-                                request.params.arguments.fields
-                            )
-                        );
-                        return {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: JSON.stringify({ success: true }, null, 2),
-                                },
-                            ],
-                        };
-                    }
-
-                    case 'get_apps_info': {
-                        const appsInfo = await this.repository.getAppsInfo(
-                            request.params.arguments.app_name
-                        );
-                        return {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: JSON.stringify(appsInfo, null, 2),
-                                },
-                            ],
-                        };
-                    }
-
-                    case 'upload_file': {
-                        const response = await this.repository.uploadFile(
-                            request.params.arguments.file_name,
-                            request.params.arguments.file_data
-                        );
-                        return {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: JSON.stringify({ file_key: response.fileKey }, null, 2),
-                                },
-                            ],
-                        };
-                    }
-
-                    case 'download_file': {
-                        const fileData = await this.repository.downloadFile(
-                            request.params.arguments.file_key
-                        );
-                        return {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: fileData.toString('base64'),
-                                },
-                            ],
-                        };
-                    }
-
-                    default:
-                        throw new McpError(
-                            ErrorCode.MethodNotFound,
-                            `Unknown tool: ${request.params.name}`
-                        );
-                }
             } catch (error) {
                 console.error('Error in tool execution:', error);
-                throw new McpError(
-                    ErrorCode.InternalError,
-                    error.message
-                );
+                this.handleToolError(error);
             }
         });
+    }
+
+    // ツールリクエストの実行を担当
+    async executeToolRequest(request) {
+        const { name, arguments: args } = request.params;
+
+        switch (name) {
+            case 'get_record': {
+                const record = await this.repository.getRecord(args.app_id, args.record_id);
+                return record.fields;  // KintoneRecord ではなく fields を返す
+            }
+            case 'search_records':
+                const records = await this.repository.searchRecords(
+                    args.app_id,
+                    args.query,
+                    args.fields
+                );
+                return records.map(r => r.fields);
+
+            case 'create_record':
+                const recordId = await this.repository.createRecord(
+                    args.app_id,
+                    args.fields
+                );
+                return { record_id: recordId };
+
+            case 'update_record':
+                const response = await this.repository.updateRecord(
+                    new KintoneRecord(
+                        args.app_id,
+                        args.record_id,
+                        args.fields
+                    )
+                );
+                return { success: true, revision: response.revision };
+
+            case 'get_apps_info':
+                return this.repository.getAppsInfo(args.app_name);
+
+            case 'upload_file':
+                const uploadResponse = await this.repository.uploadFile(
+                    args.file_name,
+                    args.file_data
+                );
+                return { file_key: uploadResponse.fileKey };
+
+            case 'download_file':
+                const fileData = await this.repository.downloadFile(
+                    args.file_key
+                );
+                return fileData;
+
+            default:
+                throw new McpError(
+                    ErrorCode.MethodNotFound,
+                    `Unknown tool: ${name}`
+                );
+        }
+    }
+
+    // 成功レスポンスのフォーマット
+    formatSuccessResponse(result) {
+        // ファイルダウンロードの場合は特別な処理
+        if (Buffer.isBuffer(result)) {
+            return {
+                content: [
+                    {
+                        type: 'text',
+                        text: result.toString('base64'),
+                    },
+                ],
+            };
+        }
+
+        // 通常のレスポンス
+        return {
+            content: [
+                {
+                    type: 'text',
+                    text: JSON.stringify(result, null, 2),
+                },
+            ],
+        };
+    }
+
+    // エラーハンドリング
+    handleToolError(error) {
+        let errorCode = ErrorCode.InternalError;
+        let errorMessage = error.message;
+
+        if (error instanceof McpError) {
+            throw error;
+        } else if (error instanceof KintoneRestAPIError) {
+            // Kintone API のエラーコードに応じて適切な MCP エラーコードを設定
+            errorCode = error.status >= 500 ? 
+                ErrorCode.InternalError : 
+                ErrorCode.InvalidRequest;
+        }
+
+        throw new McpError(errorCode, errorMessage);
     }
 
     async run() {
