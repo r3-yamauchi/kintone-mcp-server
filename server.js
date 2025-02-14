@@ -299,6 +299,226 @@ class KintoneRepository {
             this.handleKintoneError(error, `update space guests ${spaceId}`);
         }
     }
+
+    async createApp(name, space = null, thread = null) {
+        try {
+            console.error(`Creating new app: ${name}`);
+            const params = { name };
+            if (space) params.space = space;
+            if (thread) params.thread = thread;
+            
+            const response = await this.client.app.addApp(params);
+            console.error('App creation response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `create app ${name}`);
+        }
+    }
+
+    // フィールドコードのバリデーション
+    validateFieldCode(fieldCode) {
+        const validPattern = /^[a-zA-Z0-9ぁ-んァ-ヶー一-龠々＿_･・＄￥]+$/;
+        if (!validPattern.test(fieldCode)) {
+            throw new Error(
+                `フィールドコード "${fieldCode}" に使用できない文字が含まれています。\n\n` +
+                '使用可能な文字は以下の通りです：\n' +
+                '- ひらがな\n' +
+                '- カタカナ（半角／全角）\n' +
+                '- 漢字\n' +
+                '- 英数字（半角／全角）\n' +
+                '- 記号：\n' +
+                '  - 半角の「_」（アンダースコア）\n' +
+                '  - 全角の「＿」（アンダースコア）\n' +
+                '  - 半角の「･」（中黒）\n' +
+                '  - 全角の「・」（中黒）\n' +
+                '  - 全角の通貨記号（＄や￥など）'
+            );
+        }
+        return true;
+    }
+
+    // 選択肢フィールドの定数を追加
+    static FIELD_TYPES_REQUIRING_OPTIONS = [
+        'CHECK_BOX',
+        'RADIO_BUTTON',
+        'DROP_DOWN',
+        'MULTI_SELECT'
+    ];
+
+    // 選択肢フィールドのoptionsバリデーション
+    validateOptions(fieldType, options) {
+        // 選択肢フィールドの場合のみチェック
+        if (!KintoneRepository.FIELD_TYPES_REQUIRING_OPTIONS.includes(fieldType)) {
+            return true;
+        }
+
+        // optionsの必須チェック
+        if (!options) {
+            throw new Error(`フィールドタイプ "${fieldType}" には options の指定が必須です。`);
+        }
+
+        // optionsの形式チェック
+        if (typeof options !== 'object' || Array.isArray(options)) {
+            throw new Error('options はオブジェクト形式で指定する必要があります。');
+        }
+
+        // 各選択肢のバリデーション
+        Object.entries(options).forEach(([key, value]) => {
+            // labelの存在チェック
+            if (!value.label) {
+                throw new Error(`選択肢 "${key}" の label が指定されていません。label に "${key}" という値を指定する必要があります。`);
+            }
+
+            // labelと選択肢キーの一致チェック
+            if (value.label !== key) {
+                throw new Error(`選択肢 "${key}" の label "${value.label}" が一致しません。label に "${key}" という値を指定する必要があります。`);
+            }
+
+            // indexの存在チェック
+            if (typeof value.index === 'undefined') {
+                throw new Error(`選択肢 "${key}" の index が指定されていません。 0以上の数値を指定してください。`);
+            }
+
+            // indexが0以上の数値であることのチェック
+            if (typeof value.index !== 'number' || value.index < 0 || !Number.isInteger(value.index)) {
+                throw new Error(`選択肢 "${key}" の index は 0以上の数値を指定してください。`);
+            }
+        });
+
+        return true;
+    }
+
+    static CALC_FIELD_TYPE = 'CALC';
+
+    validateCalcField(fieldType, expression) {
+        if (fieldType === KintoneRepository.CALC_FIELD_TYPE) {
+            if (expression === undefined) {
+                throw new Error('計算フィールドには expression の指定が必須です。空でない文字列で kintoneで使用できる計算式を指定する必要があります。');
+            }
+            if (typeof expression !== 'string' || expression.trim() === '') {
+                throw new Error('expression は空でない文字列で kintoneで使用できる計算式を指定する必要があります。');
+            }
+        }
+        return true;
+    }
+
+    // 静的定数を追加
+    static LINK_FIELD_TYPE = 'LINK';
+    static VALID_LINK_PROTOCOLS = ['WEB', 'CALL', 'MAIL'];
+
+    // リンクフィールドのバリデーションメソッドを追加
+    validateLinkField(fieldType, protocol) {
+        if (fieldType === KintoneRepository.LINK_FIELD_TYPE) {
+            const msg = `指定可能な値: ${KintoneRepository.VALID_LINK_PROTOCOLS.join(', ')}`;
+            if (!protocol) {
+                throw new Error(
+                    `リンクフィールドには protocol の指定が必須です。\n${msg}`
+                );
+            }
+            if (!KintoneRepository.VALID_LINK_PROTOCOLS.includes(protocol)) {
+                throw new Error(
+                    `protocol の値が不正です: "${protocol}"\n${msg}`
+                );
+            }
+        }
+        return true;
+    }
+
+    async addFields(appId, properties) {
+        try {
+            console.error(`Adding fields to app ${appId}`);
+            console.error('Field properties:', properties);
+            
+            // フィールドコードの整合性チェックとバリデーション
+            for (const [propertyKey, fieldConfig] of Object.entries(properties)) {
+                // フィールドコードのバリデーション
+                this.validateFieldCode(propertyKey);
+
+                // codeプロパティの存在チェック
+                if (!fieldConfig.code) {
+                    throw new Error(
+                        `フィールド "${propertyKey}" の code プロパティが指定されていません。`
+                    );
+                }
+
+                // プロパティキーとcodeの一致チェック
+                if (fieldConfig.code !== propertyKey) {
+                    throw new Error(
+                        `フィールドコードの不一致: プロパティキー "${propertyKey}" と ` +
+                        `フィールド設定内のcode "${fieldConfig.code}" が一致しません。\n` +
+                        `kintone APIの仕様により、これらは完全に一致している必要があります。`
+                    );
+                }
+
+                // 選択肢フィールドのoptionsバリデーション
+                if (fieldConfig.type && fieldConfig.options) {
+                    this.validateOptions(fieldConfig.type, fieldConfig.options);
+                }
+
+                if (fieldConfig.type) {
+                    this.validateCalcField(fieldConfig.type, fieldConfig.expression);
+                    this.validateLinkField(fieldConfig.type, fieldConfig.protocol);
+                }
+            }
+            
+            const response = await this.client.app.addFormFields({
+                app: appId,
+                properties: properties,
+                revision: -1 // 最新のリビジョンを使用
+            });
+            console.error('Field addition response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `add fields to app ${appId}`);
+        }
+    }
+
+    async deployApp(apps) {
+        try {
+            console.error(`Deploying apps:`, apps);
+            const response = await this.client.app.deployApp({
+                apps: apps.map(appId => ({
+                    app: appId,
+                    revision: -1 // 最新のリビジョンを使用
+                }))
+            });
+            console.error('Deploy response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `deploy apps ${apps.join(', ')}`);
+        }
+    }
+
+    async getDeployStatus(apps) {
+        try {
+            console.error(`Checking deploy status for apps:`, apps);
+            const response = await this.client.app.getDeployStatus({
+                apps: apps
+            });
+            console.error('Deploy status:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get deploy status for apps ${apps.join(', ')}`);
+        }
+    }
+
+    async updateAppSettings(appId, settings) {
+        try {
+            console.error(`Updating app settings for app ${appId}`);
+            console.error('Settings:', settings);
+
+            const params = {
+                app: appId,
+                ...settings
+            };
+
+            const response = await this.client.app.updateAppSettings(params);
+            console.error('Update response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `update app settings for app ${appId}`);
+        }
+    }
 }
 
 class KintoneMCPServer {
@@ -306,7 +526,7 @@ class KintoneMCPServer {
         this.server = new Server(
             {
                 name: 'kintone-mcp-server',
-                version: '2.0.0',
+                version: '3.0.0',
             },
             {
                 capabilities: {
@@ -433,7 +653,7 @@ class KintoneMCPServer {
                                 required: ['file_name', 'file_data'],
                             },
                         },
-                        add_comment: {
+                        add_record_comment: {
                             description: 'kintoneレコードにコメントを追加します',
                             inputSchema: {
                                 type: 'object',
@@ -699,6 +919,181 @@ class KintoneMCPServer {
                                 required: ['space_id', 'guests'],
                             },
                         },
+                        create_app: {
+                            description: '新しいkintoneアプリを作成します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    name: {
+                                        type: 'string',
+                                        description: 'アプリの名前',
+                                    },
+                                    space: {
+                                        type: 'number',
+                                        description: 'スペースID（オプション）',
+                                    },
+                                    thread: {
+                                        type: 'number',
+                                        description: 'スレッドID（オプション）',
+                                    },
+                                },
+                                required: ['name'],
+                            },
+                        },
+                        add_fields: {
+                            description: 'kintoneアプリにフィールドを追加します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    app_id: {
+                                        type: 'number',
+                                        description: 'アプリID',
+                                    },
+                                    properties: {
+                                        type: 'object',
+                                        description: 'フィールドの設定',
+                                    },
+                                },
+                                required: ['app_id', 'properties'],
+                            },
+                        },
+                        deploy_app: {
+                            description: 'kintoneアプリの設定をデプロイ（本番運用開始・運用環境へ反映）します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    apps: {
+                                        type: 'array',
+                                        items: {
+                                            type: 'number',
+                                        },
+                                        description: 'デプロイ対象のアプリID配列',
+                                    },
+                                },
+                                required: ['apps'],
+                            },
+                        },
+                        get_deploy_status: {
+                            description: 'kintoneアプリのデプロイ状態（アプリ設定の運用環境への反映状況）を確認します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    apps: {
+                                        type: 'array',
+                                        items: {
+                                            type: 'number',
+                                        },
+                                        description: '確認対象のアプリID配列',
+                                    },
+                                },
+                                required: ['apps'],
+                            },
+                        },
+                        update_app_settings: {
+                            description: 'kintoneアプリの一般設定を変更します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    app_id: {
+                                        type: 'number',
+                                        description: 'アプリID',
+                                    },
+                                    name: {
+                                        type: 'string',
+                                        description: 'アプリの名前（1文字以上64文字以内）',
+                                    },
+                                    description: {
+                                        type: 'string',
+                                        description: 'アプリの説明（10,000文字以内、HTMLタグ使用可）',
+                                    },
+                                    icon: {
+                                        type: 'object',
+                                        properties: {
+                                            type: {
+                                                type: 'string',
+                                                enum: ['PRESET', 'FILE'],
+                                                description: 'アイコンの種類',
+                                            },
+                                            key: {
+                                                type: 'string',
+                                                description: 'PRESTETアイコンの識別子',
+                                            },
+                                            file: {
+                                                type: 'object',
+                                                properties: {
+                                                    fileKey: {
+                                                        type: 'string',
+                                                        description: 'アップロード済みファイルのキー',
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                    theme: {
+                                        type: 'string',
+                                        enum: ['WHITE', 'RED', 'GREEN', 'BLUE', 'YELLOW', 'BLACK'],
+                                        description: 'デザインテーマ',
+                                    },
+                                    titleField: {
+                                        type: 'object',
+                                        properties: {
+                                            selectionMode: {
+                                                type: 'string',
+                                                enum: ['AUTO', 'MANUAL'],
+                                                description: 'タイトルフィールドの選択方法',
+                                            },
+                                            code: {
+                                                type: 'string',
+                                                description: 'MANUALモード時のフィールドコード',
+                                            },
+                                        },
+                                    },
+                                    enableThumbnails: {
+                                        type: 'boolean',
+                                        description: 'サムネイル表示の有効化',
+                                    },
+                                    enableBulkDeletion: {
+                                        type: 'boolean',
+                                        description: 'レコード一括削除の有効化',
+                                    },
+                                    enableComments: {
+                                        type: 'boolean',
+                                        description: 'コメント機能の有効化',
+                                    },
+                                    enableDuplicateRecord: {
+                                        type: 'boolean',
+                                        description: 'レコード再利用機能の有効化',
+                                    },
+                                    enableInlineRecordEditing: {
+                                        type: 'boolean',
+                                        description: 'インライン編集の有効化',
+                                    },
+                                    numberPrecision: {
+                                        type: 'object',
+                                        properties: {
+                                            digits: {
+                                                type: 'string',
+                                                description: '全体の桁数（1-30）',
+                                            },
+                                            decimalPlaces: {
+                                                type: 'string',
+                                                description: '小数部の桁数（0-10）',
+                                            },
+                                            roundingMode: {
+                                                type: 'string',
+                                                enum: ['HALF_EVEN', 'UP', 'DOWN'],
+                                                description: '数値の丸めかた',
+                                            },
+                                        },
+                                    },
+                                    firstMonthOfFiscalYear: {
+                                        type: 'string',
+                                        description: '第一四半期の開始月（1-12）',
+                                    },
+                                },
+                                required: ['app_id'],
+                            },
+                        }
                     },
                 },
             }
@@ -864,7 +1259,7 @@ class KintoneMCPServer {
                     },
                 },
                 {
-                    name: 'add_comment',
+                    name: 'add_record_comment',
                     description: 'kintoneレコードにコメントを追加します',
                     inputSchema: {
                         type: 'object',
@@ -1140,6 +1535,186 @@ class KintoneMCPServer {
                         required: ['space_id', 'guests'],
                     },
                 },
+                {
+                    name: 'create_app',
+                    description: '新しいkintoneアプリを作成します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            name: {
+                                type: 'string',
+                                description: 'アプリの名前',
+                            },
+                            space: {
+                                type: 'number',
+                                description: 'スペースID（オプション）',
+                            },
+                            thread: {
+                                type: 'number',
+                                description: 'スレッドID（オプション）',
+                            },
+                        },
+                        required: ['name'],
+                    },
+                },
+                {
+                    name: 'add_fields',
+                    description: 'kintoneアプリにフィールドを追加します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            app_id: {
+                                type: 'number',
+                                description: 'アプリID',
+                            },
+                            properties: {
+                                type: 'object',
+                                description: 'フィールドの設定',
+                            },
+                        },
+                        required: ['app_id', 'properties'],
+                    },
+                },
+                {
+                    name: 'deploy_app',
+                    description: 'kintoneアプリの設定をデプロイします',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            apps: {
+                                type: 'array',
+                                items: {
+                                    type: 'number',
+                                },
+                                description: 'デプロイ対象のアプリID配列',
+                            },
+                        },
+                        required: ['apps'],
+                    },
+                },
+                {
+                    name: 'get_deploy_status',
+                    description: 'kintoneアプリのデプロイ状態を確認します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            apps: {
+                                type: 'array',
+                                items: {
+                                    type: 'number',
+                                },
+                                description: '確認対象のアプリID配列',
+                            },
+                        },
+                        required: ['apps'],
+                    },
+                },
+                {
+                    name: 'update_app_settings',
+                    description: 'kintoneアプリの一般設定を変更します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            app_id: {
+                                type: 'number',
+                                description: 'アプリID',
+                            },
+                            name: {
+                                type: 'string',
+                                description: 'アプリの名前（1文字以上64文字以内）',
+                            },
+                            description: {
+                                type: 'string',
+                                description: 'アプリの説明（10,000文字以内、HTMLタグ使用可）',
+                            },
+                            icon: {
+                                type: 'object',
+                                properties: {
+                                    type: {
+                                        type: 'string',
+                                        enum: ['PRESET', 'FILE'],
+                                        description: 'アイコンの種類',
+                                    },
+                                    key: {
+                                        type: 'string',
+                                        description: 'PRESTETアイコンの識別子',
+                                    },
+                                    file: {
+                                        type: 'object',
+                                        properties: {
+                                            fileKey: {
+                                                type: 'string',
+                                                description: 'アップロード済みファイルのキー',
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            theme: {
+                                type: 'string',
+                                enum: ['WHITE', 'RED', 'GREEN', 'BLUE', 'YELLOW', 'BLACK'],
+                                description: 'デザインテーマ',
+                            },
+                            titleField: {
+                                type: 'object',
+                                properties: {
+                                    selectionMode: {
+                                        type: 'string',
+                                        enum: ['AUTO', 'MANUAL'],
+                                        description: 'タイトルフィールドの選択方法',
+                                    },
+                                    code: {
+                                        type: 'string',
+                                        description: 'MANUALモード時のフィールドコード',
+                                    },
+                                },
+                            },
+                            enableThumbnails: {
+                                type: 'boolean',
+                                description: 'サムネイル表示の有効化',
+                            },
+                            enableBulkDeletion: {
+                                type: 'boolean',
+                                description: 'レコード一括削除の有効化',
+                            },
+                            enableComments: {
+                                type: 'boolean',
+                                description: 'コメント機能の有効化',
+                            },
+                            enableDuplicateRecord: {
+                                type: 'boolean',
+                                description: 'レコード再利用機能の有効化',
+                            },
+                            enableInlineRecordEditing: {
+                                type: 'boolean',
+                                description: 'インライン編集の有効化',
+                            },
+                            numberPrecision: {
+                                type: 'object',
+                                properties: {
+                                    digits: {
+                                        type: 'string',
+                                        description: '全体の桁数（1-30）',
+                                    },
+                                    decimalPlaces: {
+                                        type: 'string',
+                                        description: '小数部の桁数（0-10）',
+                                    },
+                                    roundingMode: {
+                                        type: 'string',
+                                        enum: ['HALF_EVEN', 'UP', 'DOWN'],
+                                        description: '数値の丸めかた',
+                                    },
+                                },
+                            },
+                            firstMonthOfFiscalYear: {
+                                type: 'string',
+                                description: '第一四半期の開始月（1-12）',
+                            },
+                        },
+                        required: ['app_id'],
+                    },
+                }
             ],
         }));
 
@@ -1211,7 +1786,7 @@ class KintoneMCPServer {
                 );
                 return fileData;
 
-            case 'add_comment': {
+            case 'add_record_comment': {
                 const commentId = await this.repository.addRecordComment(
                     args.app_id,
                     args.record_id,
@@ -1276,6 +1851,52 @@ class KintoneMCPServer {
                 await this.repository.updateSpaceGuests(args.space_id, args.guests);
                 return { success: true };
 
+            case 'create_app': {
+                const response = await this.repository.createApp(
+                    args.name,
+                    args.space,
+                    args.thread
+                );
+                return {
+                    app: response.app,
+                    revision: response.revision
+                };
+            }
+
+            case 'add_fields': {
+                const response = await this.repository.addFields(
+                    args.app_id,
+                    args.properties
+                );
+                return {
+                    revision: response.revision
+                };
+            }
+
+            case 'deploy_app': {
+                const response = await this.repository.deployApp(args.apps);
+                return response;
+            }
+
+            case 'get_deploy_status': {
+                return this.repository.getDeployStatus(args.apps);
+            }
+
+            case 'update_app_settings': {
+                const settings = { ...args };
+                delete settings.app_id;  // app_idをsettingsから除外
+                
+                // undefined のプロパティを削除
+                Object.keys(settings).forEach(key => {
+                    if (settings[key] === undefined) {
+                        delete settings[key];
+                    }
+                });
+
+                const response = await this.repository.updateAppSettings(args.app_id, settings);
+                return { revision: response.revision };
+            }
+
             default:
                 throw new McpError(
                     ErrorCode.MethodNotFound,
@@ -1330,6 +1951,118 @@ class KintoneMCPServer {
         const transport = new StdioServerTransport();
         await this.server.connect(transport);
         console.error('Kintone MCP server running on stdio');
+    }
+
+    get capabilities() {
+        return {
+            // ... existing code ...
+            
+            update_app_settings: {
+                description: 'kintoneアプリの一般設定を変更します',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        app_id: {
+                            type: 'number',
+                            description: 'アプリID',
+                        },
+                        name: {
+                            type: 'string',
+                            description: 'アプリの名前（1文字以上64文字以内）',
+                        },
+                        description: {
+                            type: 'string',
+                            description: 'アプリの説明（10,000文字以内、HTMLタグ使用可）',
+                        },
+                        icon: {
+                            type: 'object',
+                            properties: {
+                                type: {
+                                    type: 'string',
+                                    enum: ['PRESET', 'FILE'],
+                                    description: 'アイコンの種類',
+                                },
+                                key: {
+                                    type: 'string',
+                                    description: 'PRESTETアイコンの識別子',
+                                },
+                                file: {
+                                    type: 'object',
+                                    properties: {
+                                        fileKey: {
+                                            type: 'string',
+                                            description: 'アップロード済みファイルのキー',
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        theme: {
+                            type: 'string',
+                            enum: ['WHITE', 'RED', 'GREEN', 'BLUE', 'YELLOW', 'BLACK'],
+                            description: 'デザインテーマ',
+                        },
+                        titleField: {
+                            type: 'object',
+                            properties: {
+                                selectionMode: {
+                                    type: 'string',
+                                    enum: ['AUTO', 'MANUAL'],
+                                    description: 'タイトルフィールドの選択方法',
+                                },
+                                code: {
+                                    type: 'string',
+                                    description: 'MANUALモード時のフィールドコード',
+                                },
+                            },
+                        },
+                        enableThumbnails: {
+                            type: 'boolean',
+                            description: 'サムネイル表示の有効化',
+                        },
+                        enableBulkDeletion: {
+                            type: 'boolean',
+                            description: 'レコード一括削除の有効化',
+                        },
+                        enableComments: {
+                            type: 'boolean',
+                            description: 'コメント機能の有効化',
+                        },
+                        enableDuplicateRecord: {
+                            type: 'boolean',
+                            description: 'レコード再利用機能の有効化',
+                        },
+                        enableInlineRecordEditing: {
+                            type: 'boolean',
+                            description: 'インライン編集の有効化',
+                        },
+                        numberPrecision: {
+                            type: 'object',
+                            properties: {
+                                digits: {
+                                    type: 'string',
+                                    description: '全体の桁数（1-30）',
+                                },
+                                decimalPlaces: {
+                                    type: 'string',
+                                    description: '小数部の桁数（0-10）',
+                                },
+                                roundingMode: {
+                                    type: 'string',
+                                    enum: ['HALF_EVEN', 'UP', 'DOWN'],
+                                    description: '数値の丸めかた',
+                                },
+                            },
+                        },
+                        firstMonthOfFiscalYear: {
+                            type: 'string',
+                            description: '第一四半期の開始月（1-12）',
+                        },
+                    },
+                    required: ['app_id'],
+                },
+            }
+        };
     }
 }
 

@@ -16,7 +16,7 @@ Node.js 18 以降を使用してください。
 
 ### 3. npm installする
 
-```
+```bash
 npm i
 ```
 
@@ -60,7 +60,7 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 - `search_records`: kintoneアプリのレコードを検索
 - `create_record`: kintoneアプリに新しいレコードを作成
 - `update_record`: kintoneアプリの既存レコードを更新
-- `add_comment`: kintoneレコードにコメントを追加
+- `add_record_comment`: kintoneレコードにコメントを追加
 
 #### ファイル操作
 
@@ -70,6 +70,14 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 #### アプリ情報
 
 - `get_apps_info`: 検索キーワードを指定して該当する複数のkintoneアプリの情報を取得
+
+#### アプリ操作
+
+- `create_app`: kintoneアプリの新規作成
+- `add_fields`: kintoneアプリへのフィールド追加
+- `deploy_app`: kintoneアプリの本番運用開始（運用環境へ反映）
+- `get_deploy_status`: アプリ設定の運用環境への反映状況を確認する
+- `update_app_settings`: アプリの一般設定を変更
 
 #### スペース操作
 
@@ -90,7 +98,7 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 
 他にも kintone用の MCP server を公開されている方がおられますので、参考にしながらご自身でオリジナルの MCP server を作ってみるのも良いかもしれません。
 
-** 「kintone」はサイボウズ株式会社の登録商標です。**
+**「kintone」はサイボウズ株式会社の登録商標です。**
 
 ここに記載している内容は情報提供を目的としており、個別のサポートはできません。
 設定内容についてのご質問やご自身の環境で動作しないといったお問い合わせをいただいても対応はできませんので、ご了承ください。
