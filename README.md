@@ -1,4 +1,5 @@
 # MCP server for kintone サンプル
+[![smithery badge](https://smithery.ai/badge/@r3-yamauchi/kintone-mcp-server)](https://smithery.ai/server/@r3-yamauchi/kintone-mcp-server)
 
 これは [kintone](https://kintone.cybozu.co.jp/) との連携目的で使用できる [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) サーバーの簡易なサンプルです。生成AIを用いて自動作成したものを現状有姿で提供します。
 この MCP server を使うと [Claude Desktop](https://claude.ai/download)アプリから kintoneデータへアクセス・更新できます。
@@ -102,3 +103,5 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 
 ここに記載している内容は情報提供を目的としており、個別のサポートはできません。
 設定内容についてのご質問やご自身の環境で動作しないといったお問い合わせをいただいても対応はできませんので、ご了承ください。
+
+</readme>
