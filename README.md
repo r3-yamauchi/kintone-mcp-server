@@ -2,7 +2,8 @@
 
 これは [kintone](https://kintone.cybozu.co.jp/) との連携目的で使用できる [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) サーバーの簡易なサンプルです。生成AIを用いて自動作成したものを現状有姿で提供します。
 この MCP server を使うと [Claude Desktop](https://claude.ai/download)アプリから kintoneデータへアクセス・更新できます。
-現状 Claude Pro プランのサブスクリプションが必要です。
+クライアントとして Claudeデスクトップアプリを使用する場合は Claude Pro プランのサブスクリプションが必要です。
+Windsurf や CLINE で使用することもできます。
 
 ## 使い方
 
@@ -35,7 +36,7 @@ claude_desktop_config.json という設定ファイルを探して、以下を�
         "KINTONE_PASSWORD": "kintoneユーザーのパスワード（平文）"
       },
       "args": [
-        "C:/[kintone-mcp-serverを配置したパス]/server.js"
+        "[kintone-mcp-serverを配置したパス]/server.js"
       ]
     }
   }
@@ -64,8 +65,8 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 
 #### ファイル操作
 
-- `upload_file`: kintoneアプリにファイルをアップロード
-- `download_file`: kintoneアプリからファイルをダウンロード
+- `upload_file`: kintoneにファイルをアップロード
+- `download_file`: kintoneからファイルをダウンロード
 
 #### アプリ情報
 
