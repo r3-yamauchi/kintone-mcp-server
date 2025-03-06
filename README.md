@@ -79,6 +79,7 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 - `add_fields`: kintoneアプリへのフィールド追加
 - `deploy_app`: kintoneアプリの本番運用開始（運用環境へ反映）
 - `get_deploy_status`: アプリ設定の運用環境への反映状況を確認する
+- `update_form_layout`: kintoneアプリのフォームレイアウトを変更
 - `update_app_settings`: アプリの一般設定を変更
 
 #### スペース操作

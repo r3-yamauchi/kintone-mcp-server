@@ -530,6 +530,25 @@ class KintoneRepository {
             this.handleKintoneError(error, `get form layout for app ${appId}`);
         }
     }
+
+    async updateFormLayout(appId, layout, revision = -1) {
+        try {
+            console.error(`Updating form layout for app: ${appId}`);
+            console.error('Layout:', layout);
+            
+            const params = {
+                app: appId,
+                layout: layout,
+                revision: revision
+            };
+            
+            const response = await this.client.app.updateFormLayout(params);
+            console.error('Update form layout response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `update form layout for app ${appId}`);
+        }
+    }
 }
 
 class KintoneMCPServer {
@@ -1116,6 +1135,89 @@ class KintoneMCPServer {
                                     },
                                 },
                                 required: ['app_id'],
+                            },
+                        },
+                        update_form_layout: {
+                            description: 'kintoneアプリのフォームレイアウトを変更します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    app_id: {
+                                        type: 'number',
+                                        description: 'kintoneアプリのID',
+                                    },
+                                    layout: {
+                                        type: 'array',
+                                        description: 'フォームのレイアウト情報',
+                                        items: {
+                                            type: 'object',
+                                            properties: {
+                                                type: {
+                                                    type: 'string',
+                                                    enum: ['ROW', 'SUBTABLE', 'GROUP'],
+                                                    description: 'レイアウト要素のタイプ',
+                                                },
+                                                fields: {
+                                                    type: 'array',
+                                                    description: 'ROWタイプの場合のフィールド配列',
+                                                    items: {
+                                                        type: 'object',
+                                                        properties: {
+                                                            type: {
+                                                                type: 'string',
+                                                                enum: ['LABEL', 'SPACER', 'HR', 'REFERENCE_TABLE', 'FIELD'],
+                                                                description: 'フィールド要素のタイプ',
+                                                            },
+                                                            code: {
+                                                                type: 'string',
+                                                                description: 'FIELDタイプの場合のフィールドコード',
+                                                            },
+                                                            size: {
+                                                                type: 'object',
+                                                                description: 'フィールドのサイズ',
+                                                                properties: {
+                                                                    width: {
+                                                                        type: 'string',
+                                                                        description: '幅（"100%"など）',
+                                                                    },
+                                                                    height: {
+                                                                        type: 'string',
+                                                                        description: '高さ（"200px"など）',
+                                                                    },
+                                                                    innerHeight: {
+                                                                        type: 'string',
+                                                                        description: '内部高さ（"200px"など）',
+                                                                    },
+                                                                },
+                                                            },
+                                                            elementId: {
+                                                                type: 'string',
+                                                                description: '要素のID',
+                                                            },
+                                                            value: {
+                                                                type: 'string',
+                                                                description: 'LABELタイプの場合のラベルテキスト',
+                                                            },
+                                                        },
+                                                    },
+                                                },
+                                                code: {
+                                                    type: 'string',
+                                                    description: 'SUBTABLEタイプの場合のサブテーブルコード',
+                                                },
+                                                layout: {
+                                                    type: 'array',
+                                                    description: 'GROUPタイプの場合の内部レイアウト',
+                                                },
+                                            },
+                                        },
+                                    },
+                                    revision: {
+                                        type: 'number',
+                                        description: 'アプリのリビジョン番号（省略時は-1で最新リビジョンを使用）',
+                                    },
+                                },
+                                required: ['app_id', 'layout'],
                             },
                         }
                     },
@@ -1752,6 +1854,90 @@ class KintoneMCPServer {
                         },
                         required: ['app_id'],
                     },
+                },
+                {
+                    name: 'update_form_layout',
+                    description: 'kintoneアプリのフォームレイアウトを変更します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            app_id: {
+                                type: 'number',
+                                description: 'kintoneアプリのID',
+                            },
+                            layout: {
+                                type: 'array',
+                                description: 'フォームのレイアウト情報',
+                                items: {
+                                    type: 'object',
+                                    properties: {
+                                        type: {
+                                            type: 'string',
+                                            enum: ['ROW', 'SUBTABLE', 'GROUP'],
+                                            description: 'レイアウト要素のタイプ',
+                                        },
+                                        fields: {
+                                            type: 'array',
+                                            description: 'ROWタイプの場合のフィールド配列',
+                                            items: {
+                                                type: 'object',
+                                                properties: {
+                                                    type: {
+                                                        type: 'string',
+                                                        enum: ['LABEL', 'SPACER', 'HR', 'REFERENCE_TABLE', 'FIELD'],
+                                                        description: 'フィールド要素のタイプ',
+                                                    },
+                                                    code: {
+                                                        type: 'string',
+                                                        description: 'FIELDタイプの場合のフィールドコード',
+                                                    },
+                                                    size: {
+                                                        type: 'object',
+                                                        description: 'フィールドのサイズ',
+                                                        properties: {
+                                                            width: {
+                                                                type: 'string',
+                                                                description: '幅（"100%"など）',
+                                                            },
+                                                            height: {
+                                                                type: 'string',
+                                                                description: '高さ（"200px"など）',
+                                                            },
+                                                            innerHeight: {
+                                                                type: 'string',
+                                                                description: '内部高さ（"200px"など）',
+                                                            },
+                                                        },
+                                                    },
+                                                    elementId: {
+                                                        type: 'string',
+                                                        description: '要素のID',
+                                                    },
+                                                    value: {
+                                                        type: 'string',
+                                                        description: 'LABELタイプの場合のラベルテキスト',
+                                                    },
+                                                },
+                                            },
+                                        },
+                                        code: {
+                                            type: 'string',
+                                            description: 'SUBTABLEタイプの場合のサブテーブルコード',
+                                        },
+                                        layout: {
+                                            type: 'array',
+                                            description: 'GROUPタイプの場合の内部レイアウト',
+                                        },
+                                    },
+                                },
+                            },
+                            revision: {
+                                type: 'number',
+                                description: 'アプリのリビジョン番号（省略時は-1で最新リビジョンを使用）',
+                            },
+                        },
+                        required: ['app_id', 'layout'],
+                    },
                 }
             ],
         }));
@@ -1938,6 +2124,18 @@ class KintoneMCPServer {
             case 'get_form_layout': {
                 const layout = await this.repository.getFormLayout(args.app_id);
                 return layout;
+            }
+
+            case 'update_form_layout': {
+                const response = await this.repository.updateFormLayout(
+                    args.app_id,
+                    args.layout,
+                    args.revision
+                );
+                return { 
+                    success: true,
+                    revision: response.revision
+                };
             }
 
             default:
