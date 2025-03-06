@@ -71,6 +71,7 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 #### アプリ情報
 
 - `get_apps_info`: 検索キーワードを指定して該当する複数のkintoneアプリの情報を取得
+- `get_form_layout`: kintoneアプリのフォームレイアウトを取得
 
 #### アプリ操作
 

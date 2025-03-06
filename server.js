@@ -80,10 +80,10 @@ class KintoneRepository {
             }
             console.error(`Searching records: ${appId}`);
             console.error(`Request data:`, params);
-            
+
             const records = await this.client.record.getAllRecords(params);
             console.error(`Found ${records.length} records`);
-            
+
             return records.map((record) => {
                 const recordId = record.$id.value || 'unknown';
                 return new KintoneRecord(appId, recordId, record);
@@ -306,7 +306,7 @@ class KintoneRepository {
             const params = { name };
             if (space) params.space = space;
             if (thread) params.thread = thread;
-            
+
             const response = await this.client.app.addApp(params);
             console.error('App creation response:', response);
             return response;
@@ -428,7 +428,7 @@ class KintoneRepository {
         try {
             console.error(`Adding fields to app ${appId}`);
             console.error('Field properties:', properties);
-            
+
             // フィールドコードの整合性チェックとバリデーション
             for (const [propertyKey, fieldConfig] of Object.entries(properties)) {
                 // フィールドコードのバリデーション
@@ -460,7 +460,7 @@ class KintoneRepository {
                     this.validateLinkField(fieldConfig.type, fieldConfig.protocol);
                 }
             }
-            
+
             const response = await this.client.app.addFormFields({
                 app: appId,
                 properties: properties,
@@ -519,6 +519,17 @@ class KintoneRepository {
             this.handleKintoneError(error, `update app settings for app ${appId}`);
         }
     }
+
+    async getFormLayout(appId) {
+        try {
+            console.error(`Fetching form layout for app: ${appId}`);
+            const response = await this.client.app.getFormLayout({ app: appId });
+            console.error('Form layout response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get form layout for app ${appId}`);
+        }
+    }
 }
 
 class KintoneMCPServer {
@@ -526,7 +537,7 @@ class KintoneMCPServer {
         this.server = new Server(
             {
                 name: 'kintone-mcp-server',
-                version: '3.0.0',
+                version: '3.1.0',
             },
             {
                 capabilities: {
@@ -1089,6 +1100,19 @@ class KintoneMCPServer {
                                     firstMonthOfFiscalYear: {
                                         type: 'string',
                                         description: '第一四半期の開始月（1-12）',
+                                    },
+                                },
+                                required: ['app_id'],
+                            },
+                        },
+                        get_form_layout: {
+                            description: 'kintoneアプリのフォームレイアウトを取得します',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    app_id: {
+                                        type: 'number',
+                                        description: 'kintoneアプリのID',
                                     },
                                 },
                                 required: ['app_id'],
@@ -1714,6 +1738,20 @@ class KintoneMCPServer {
                         },
                         required: ['app_id'],
                     },
+                },
+                {
+                    name: 'get_form_layout',
+                    description: 'kintoneアプリのフォームレイアウトを取得します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            app_id: {
+                                type: 'number',
+                                description: 'kintoneアプリのID',
+                            },
+                        },
+                        required: ['app_id'],
+                    },
                 }
             ],
         }));
@@ -1885,7 +1923,7 @@ class KintoneMCPServer {
             case 'update_app_settings': {
                 const settings = { ...args };
                 delete settings.app_id;  // app_idをsettingsから除外
-                
+
                 // undefined のプロパティを削除
                 Object.keys(settings).forEach(key => {
                     if (settings[key] === undefined) {
@@ -1895,6 +1933,11 @@ class KintoneMCPServer {
 
                 const response = await this.repository.updateAppSettings(args.app_id, settings);
                 return { revision: response.revision };
+            }
+
+            case 'get_form_layout': {
+                const layout = await this.repository.getFormLayout(args.app_id);
+                return layout;
             }
 
             default:
@@ -1955,8 +1998,6 @@ class KintoneMCPServer {
 
     get capabilities() {
         return {
-            // ... existing code ...
-            
             update_app_settings: {
                 description: 'kintoneアプリの一般設定を変更します',
                 inputSchema: {
