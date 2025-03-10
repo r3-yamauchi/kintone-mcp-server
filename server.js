@@ -136,9 +136,22 @@ class KintoneRepository {
     async searchRecords(appId, query, fields = []) {
         try {
             const params = { app: appId };
+            
+            // クエリ文字列の処理
             if (query) {
-                params.condition = query;
+                // クエリ文字列が order や limit のみで構成されているかチェック
+                const hasCondition = /[^\s]+([ ]*=|[ ]*!=|[ ]*>|[ ]*<|[ ]*>=|[ ]*<=|[ ]*like|[ ]*in |[ ]*not[ ]+in)/.test(query);
+                const hasOrderOrLimit = /(order |limit )/i.test(query);
+                
+                // order や limit のみの場合、$id > 0 を先頭に挿入
+                if (!hasCondition && hasOrderOrLimit) {
+                    params.condition = `$id > 0 ${query}`;
+                    console.error(`Modified query: ${params.condition}`);
+                } else {
+                    params.condition = query;
+                }
             }
+            
             if (fields.length > 0) {
                 params.fields = fields;
             }
@@ -518,6 +531,9 @@ class KintoneRepository {
     // 静的定数を追加
     static LINK_FIELD_TYPE = 'LINK';
     static VALID_LINK_PROTOCOLS = ['WEB', 'CALL', 'MAIL'];
+    
+    // LOOKUPフィールドの定数を追加
+    static LOOKUP_FIELD_TYPE = 'LOOKUP';
 
     // リンクフィールドのバリデーションメソッドを追加
     validateLinkField(fieldType, protocol) {
@@ -533,6 +549,92 @@ class KintoneRepository {
                     `protocol の値が不正です: "${protocol}"\n${msg}`
                 );
             }
+        }
+        return true;
+    }
+
+    // 関連テーブルフィールドの定数を追加
+    static REFERENCE_TABLE_FIELD_TYPE = 'REFERENCE_TABLE';
+
+    // 関連テーブルフィールドのバリデーションメソッドを追加
+    validateReferenceTableField(fieldType, referenceTable) {
+        if (fieldType === KintoneRepository.REFERENCE_TABLE_FIELD_TYPE) {
+            // 必須項目のチェック
+            if (!referenceTable) {
+                throw new Error('関連テーブルフィールドには referenceTable の指定が必須です。');
+            }
+            
+            // relatedApp のチェック
+            if (!referenceTable.relatedApp) {
+                throw new Error('関連テーブルフィールドには relatedApp の指定が必須です。');
+            }
+            
+            // app または code のいずれかが必要
+            if (!referenceTable.relatedApp.app && !referenceTable.relatedApp.code) {
+                throw new Error('関連テーブルフィールドには参照先アプリのIDまたはコード（relatedApp.app または relatedApp.code）の指定が必須です。');
+            }
+            
+            // condition のチェック
+            if (!referenceTable.condition) {
+                throw new Error('関連テーブルフィールドには condition の指定が必須です。');
+            }
+            
+            if (!referenceTable.condition.field) {
+                throw new Error('関連テーブルフィールドには自アプリのフィールド（condition.field）の指定が必須です。');
+            }
+            
+            if (!referenceTable.condition.relatedField) {
+                throw new Error('関連テーブルフィールドには参照先アプリのフィールド（condition.relatedField）の指定が必須です。');
+            }
+            
+            // size の値チェック（指定されている場合）
+            if (referenceTable.size !== undefined) {
+                const validSizes = ['1', '3', '5', '10', '20', '30', '40', '50', 1, 3, 5, 10, 20, 30, 40, 50];
+                if (!validSizes.includes(referenceTable.size)) {
+                    throw new Error('関連テーブルフィールドの表示件数（size）には 1, 3, 5, 10, 20, 30, 40, 50 のいずれかを指定してください。');
+                }
+            }
+        }
+        return true;
+    }
+
+    // LOOKUPフィールドのバリデーションメソッドを追加
+    validateLookupField(fieldType, lookup) {
+        if (fieldType === KintoneRepository.LOOKUP_FIELD_TYPE) {
+            // 必須項目のチェック
+            if (!lookup) {
+                throw new Error('LOOKUPフィールドには lookup の指定が必須です。');
+            }
+            
+            // relatedApp のチェック
+            if (!lookup.relatedApp) {
+                throw new Error('LOOKUPフィールドには relatedApp の指定が必須です。');
+            }
+            
+            // app または code のいずれかが必要
+            if (!lookup.relatedApp.app && !lookup.relatedApp.code) {
+                throw new Error('LOOKUPフィールドには参照先アプリのIDまたはコード（relatedApp.app または relatedApp.code）の指定が必須です。');
+            }
+            
+            // relatedKeyField のチェック
+            if (!lookup.relatedKeyField) {
+                throw new Error('LOOKUPフィールドには relatedKeyField の指定が必須です。');
+            }
+            
+            // fieldMappings のチェック
+            if (!lookup.fieldMappings || !Array.isArray(lookup.fieldMappings) || lookup.fieldMappings.length === 0) {
+                throw new Error('LOOKUPフィールドには fieldMappings の指定が必須です。少なくとも1つのマッピングを含む配列である必要があります。');
+            }
+            
+            // 各フィールドマッピングのチェック
+            lookup.fieldMappings.forEach((mapping, index) => {
+                if (!mapping.field) {
+                    throw new Error(`LOOKUPフィールドの fieldMappings[${index}].field の指定が必須です。`);
+                }
+                if (!mapping.relatedField) {
+                    throw new Error(`LOOKUPフィールドの fieldMappings[${index}].relatedField の指定が必須です。`);
+                }
+            });
         }
         return true;
     }
@@ -578,14 +680,25 @@ class KintoneRepository {
                     convertedProperties[propertyKey] = fieldConfig;
                 }
 
-                // 選択肢フィールドのoptionsバリデーション
-                if (fieldConfig.type && fieldConfig.options) {
+                // 選択肢フィールドのoptionsの自動修正とバリデーション
+                if (fieldConfig.type && fieldConfig.options && 
+                    KintoneRepository.FIELD_TYPES_REQUIRING_OPTIONS.includes(fieldConfig.type)) {
+                    
+                    // 選択肢フィールドのoptionsを自動修正
+                    const optionsWarnings = this.autoCorrectOptions(fieldConfig.type, fieldConfig.options);
+                    if (optionsWarnings.length > 0) {
+                        warnings.push(...optionsWarnings);
+                    }
+                    
+                    // 修正後のoptionsをバリデーション
                     this.validateOptions(fieldConfig.type, fieldConfig.options);
                 }
 
                 if (fieldConfig.type) {
                     this.validateCalcField(fieldConfig.type, fieldConfig.expression);
                     this.validateLinkField(fieldConfig.type, fieldConfig.protocol);
+                    this.validateReferenceTableField(fieldConfig.type, fieldConfig.referenceTable);
+                    this.validateLookupField(fieldConfig.type, fieldConfig.lookup);
                 }
             }
 
@@ -610,6 +723,42 @@ class KintoneRepository {
         } catch (error) {
             this.handleKintoneError(error, `add fields to app ${appId}`);
         }
+    }
+
+    // 選択肢フィールドのoptionsを自動修正するメソッド
+    autoCorrectOptions(fieldType, options) {
+        const warnings = [];
+        
+        // 選択肢フィールドの場合のみ処理
+        if (!KintoneRepository.FIELD_TYPES_REQUIRING_OPTIONS.includes(fieldType)) {
+            return warnings;
+        }
+        
+        // 各選択肢のlabelとキー名の一致をチェックし、不一致の場合は自動修正
+        Object.entries(options).forEach(([key, value]) => {
+            // labelの存在チェック
+            if (!value.label) {
+                value.label = key;
+                warnings.push(
+                    `選択肢 "${key}" の label が指定されていないため、自動的に "${key}" を設定しました。\n` +
+                    `kintone APIの仕様により、label には "${key}" という値を指定する必要があります。`
+                );
+                return;
+            }
+            
+            // labelと選択肢キーの一致チェック
+            if (value.label !== key) {
+                const originalLabel = value.label;
+                value.label = key;
+                warnings.push(
+                    `選択肢 "${key}" の label "${originalLabel}" が一致しないため、自動的に "${key}" に修正しました。\n` +
+                    `kintone APIの仕様により、label には "${key}" という値を指定する必要があります。\n` +
+                    `注意: 表示名を変更したい場合は、フィールド作成後に別途設定が必要です。`
+                );
+            }
+        });
+        
+        return warnings;
     }
 
     async deployApp(apps) {
@@ -714,7 +863,7 @@ class KintoneMCPServer {
         this.server = new Server(
             {
                 name: 'kintone-mcp-server',
-                version: '3.2.0',
+                version: '3.3.0',
             },
             {
                 capabilities: {
@@ -758,6 +907,171 @@ class KintoneMCPServer {
                                     },
                                 },
                                 required: ['app_id'],
+                            },
+                        },
+                        create_choice_field: {
+                            description: "選択肢フィールド（RADIO_BUTTON, CHECK_BOX, MULTI_SELECT, DROP_DOWN）の設定を生成します",
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    field_type: {
+                                        type: 'string',
+                                        description: "フィールドタイプ（RADIO_BUTTON, CHECK_BOX, MULTI_SELECT, DROP_DOWN）",
+                                        enum: ["RADIO_BUTTON", "CHECK_BOX", "MULTI_SELECT", "DROP_DOWN"]
+                                    },
+                                    code: {
+                                        type: 'string',
+                                        description: "フィールドコード"
+                                    },
+                                    label: {
+                                        type: 'string',
+                                        description: "フィールドラベル"
+                                    },
+                                    choices: {
+                                        type: 'array',
+                                        items: {
+                                            type: 'string'
+                                        },
+                                        description: "選択肢のキー名の配列"
+                                    },
+                                    required: {
+                                        type: 'boolean',
+                                        description: "必須項目かどうか",
+                                        default: false
+                                    },
+                                    align: {
+                                        type: 'string',
+                                        description: "配置（RADIO_BUTTON と CHECK_BOX のみ）",
+                                        enum: ["HORIZONTAL", "VERTICAL"],
+                                        default: "HORIZONTAL"
+                                    }
+                                },
+                                required: ['field_type', 'code', 'label', 'choices']
+                            },
+                        },
+                        create_reference_table_field: {
+                            description: "関連テーブル（REFERENCE_TABLE）フィールドの設定を生成します",
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    code: {
+                                        type: 'string',
+                                        description: "フィールドコード"
+                                    },
+                                    label: {
+                                        type: 'string',
+                                        description: "フィールドラベル"
+                                    },
+                                    relatedAppId: {
+                                        type: ['string', 'number'],
+                                        description: "参照先アプリのID（relatedAppCodeが指定されている場合は無視されます）"
+                                    },
+                                    relatedAppCode: {
+                                        type: 'string',
+                                        description: "参照先アプリのコード（指定された場合はrelatedAppIdより優先されます）"
+                                    },
+                                    conditionField: {
+                                        type: 'string',
+                                        description: "このアプリの関連付けフィールドコード"
+                                    },
+                                    relatedConditionField: {
+                                        type: 'string',
+                                        description: "参照先アプリの関連付けフィールドコード"
+                                    },
+                                    filterCond: {
+                                        type: 'string',
+                                        description: "絞り込み条件（クエリ形式、オプション）"
+                                    },
+                                    displayFields: {
+                                        type: 'array',
+                                        items: {
+                                            type: 'string'
+                                        },
+                                        description: "表示するフィールドコードの配列（オプション）"
+                                    },
+                                    sort: {
+                                        type: 'string',
+                                        description: "ソート条件（クエリ形式、オプション）"
+                                    },
+                                    size: {
+                                        type: ['string', 'number'],
+                                        enum: [1, 3, 5, 10, 20, 30, 40, 50, '1', '3', '5', '10', '20', '30', '40', '50'],
+                                        description: "一度に表示する最大レコード数（1, 3, 5, 10, 20, 30, 40, 50のいずれか、オプション）"
+                                    },
+                                    noLabel: {
+                                        type: 'boolean',
+                                        description: "ラベル非表示設定（デフォルト: true）",
+                                        default: true
+                                    }
+                                },
+                                required: ['code', 'label', 'conditionField', 'relatedConditionField']
+                            },
+                        },
+                        create_lookup_field: {
+                            description: "ルックアップ（LOOKUP）フィールドの設定を生成します",
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    code: {
+                                        type: 'string',
+                                        description: "フィールドコード"
+                                    },
+                                    label: {
+                                        type: 'string',
+                                        description: "フィールドラベル"
+                                    },
+                                    relatedAppId: {
+                                        type: ['string', 'number'],
+                                        description: "参照先アプリのID（relatedAppCodeが指定されている場合は無視されます）"
+                                    },
+                                    relatedAppCode: {
+                                        type: 'string',
+                                        description: "参照先アプリのコード（指定された場合はrelatedAppIdより優先されます）"
+                                    },
+                                    relatedKeyField: {
+                                        type: 'string',
+                                        description: "参照先アプリのキーフィールドコード"
+                                    },
+                                    fieldMappings: {
+                                        type: 'array',
+                                        items: {
+                                            type: 'object',
+                                            properties: {
+                                                field: {
+                                                    type: 'string',
+                                                    description: "このアプリ側のフィールドコード"
+                                                },
+                                                relatedField: {
+                                                    type: 'string',
+                                                    description: "参照先アプリのフィールドコード"
+                                                }
+                                            },
+                                            required: ['field', 'relatedField']
+                                        },
+                                        description: "フィールドマッピングの配列（このアプリのフィールドと参照先アプリのフィールドの対応関係）"
+                                    },
+                                    lookupPickerFields: {
+                                        type: 'array',
+                                        items: {
+                                            type: 'string'
+                                        },
+                                        description: "ルックアップピッカーに表示するフィールドコードの配列（オプション）"
+                                    },
+                                    filterCond: {
+                                        type: 'string',
+                                        description: "参照先レコードの絞り込み条件（クエリ形式、オプション）"
+                                    },
+                                    sort: {
+                                        type: 'string',
+                                        description: "参照先レコードのソート条件（クエリ形式、オプション）"
+                                    },
+                                    required: {
+                                        type: 'boolean',
+                                        description: "必須項目かどうか",
+                                        default: false
+                                    }
+                                },
+                                required: ['code', 'label', 'relatedKeyField', 'fieldMappings']
                             },
                         },
                         create_record: {
@@ -1108,7 +1422,7 @@ class KintoneMCPServer {
                             },
                         },
                         create_app: {
-                            description: '新しいkintoneアプリを作成します。作成されたアプリはプレビュー環境に存在し、deploy_appを実行するまで運用環境では利用できません。',
+                            description: '新しいkintoneアプリを作成します。作成されたアプリはプレビュー環境に存在し、deploy_appを実行するまで運用環境では利用できません。\n\n【アプリ作成の流れ】\n1. create_app: アプリを作成（プレビュー環境に作成される）\n2. add_fields: フィールドを追加（プレビュー環境に追加される）\n3. update_form_layout: フォームレイアウトを設定（プレビュー環境に適用される）\n4. deploy_app: アプリをデプロイ（運用環境へ反映）\n5. get_deploy_status: デプロイ状態を確認（完了するまで待機）\n\n【返却値の例】\n```json\n{\n  "app": "123",\n  "revision": "1"\n}\n```\n\n【注意事項】\n- 作成されたアプリはプレビュー環境にのみ存在します\n- アプリIDは返却値の「app」プロパティに含まれます\n- 作成後はadd_fieldsでフィールドを追加し、update_form_layoutでレイアウトを設定してください\n- 運用環境で使用するにはdeploy_appでデプロイする必要があります',
                             inputSchema: {
                                 type: 'object',
                                 properties: {
@@ -1129,11 +1443,7 @@ class KintoneMCPServer {
                             },
                         },
                         add_fields: {
-                            description: `kintoneアプリにフィールドを追加します。追加されたフィールドはプレビュー環境に存在し、deploy_appを実行するまで運用環境では反映されません。
-選択肢フィールド（RADIO_BUTTON, CHECK_BOX, MULTI_SELECT, DROP_DOWN）を作成する際の重要な注意点：
-1. options オブジェクトの各キーと label の値は必ず一致させる必要があります
-2. index は文字列型の数値（"0", "1"など）で指定する必要があります
-3. 詳細は get_field_type_documentation ツールで確認できます`,
+                            description: 'kintoneアプリにフィールドを追加します。追加されたフィールドはプレビュー環境に存在し、deploy_appを実行するまで運用環境では反映されません。\n\n【フィールド追加の流れ】\n1. add_fields: フィールドを追加（プレビュー環境に追加される）\n2. update_form_layout: フォームレイアウトを設定（プレビュー環境に適用される）\n3. deploy_app: アプリをデプロイ（運用環境へ反映）\n4. get_deploy_status: デプロイ状態を確認（完了するまで待機）\n\n【選択肢フィールドの重要な注意点】\n1. options オブジェクトの各キーと label の値は必ず一致させる必要があります\n2. index は文字列型の数値（"0", "1"など）で指定する必要があります\n3. 詳細は get_field_type_documentation ツールで確認できます\n\n【フィールド設定の例】\n```json\n{\n  "status": {\n    "type": "RADIO_BUTTON",\n    "code": "status",\n    "label": "ステータス",\n    "options": {\n      "not_started": { "label": "not_started", "index": "0" },\n      "in_progress": { "label": "in_progress", "index": "1" }\n    }\n  },\n  "title": {\n    "type": "SINGLE_LINE_TEXT",\n    "code": "title",\n    "label": "タイトル",\n    "required": true\n  }\n}\n```\n\n【注意事項】\n- フィールドを追加しただけでは、フォームに表示されません。update_form_layoutでレイアウトを設定する必要があります\n- フィールドコードは一度設定すると変更できないため、慎重に設定してください\n- 選択肢フィールドの作成は create_choice_field ツールを使用すると簡単です\n- 関連テーブルフィールドの作成は create_reference_table_field ツールを使用すると簡単です',
                             inputSchema: {
                                 type: 'object',
                                 properties: {
@@ -1251,7 +1561,7 @@ class KintoneMCPServer {
                             },
                         },
                         get_preview_form_layout: {
-                            description: 'kintoneアプリのプレビュー環境（動作テスト環境）のフォームレイアウト情報を取得します。新規作成したアプリや、変更をデプロイする前のアプリのレイアウト情報を取得する場合に使用します。',
+                            description: 'kintoneアプリのプレビュー環境（動作テスト環境）のフォームレイアウト情報を取得します。新規作成したアプリや、変更をデプロイする前のアプリのレイアウト情報を取得する場合に使用します。\n\n【プレビュー環境とは】\nkintoneでは、アプリの設定変更は最初にプレビュー環境に適用され、デプロイ後に運用環境に反映されます。新規作成したアプリや、フィールド追加・レイアウト変更などを行った後は、このツールを使用してプレビュー環境のレイアウト情報を取得できます。\n\n【フォームレイアウトの階層構造】\n1. 最上位レベル: layout配列には、ROW、GROUP、SUBTABLEの要素を配置できます\n2. GROUP内: GROUPのlayout配列には、ROW要素のみ配置可能です（GROUP内にGROUPやSUBTABLEは配置できません）\n3. ROW内: ROWのfields配列には、LABEL、SPACER、HR、FIELD、REFERENCE_TABLEの要素を配置できます\n\n【返却値の例】\n```json\n{\n  "layout": [\n    {\n      "type": "ROW",\n      "fields": [\n        {\n          "type": "FIELD",\n          "code": "title",\n          "size": { "width": "100%" }\n        }\n      ]\n    },\n    {\n      "type": "GROUP",\n      "code": "customer_info",\n      "layout": [\n        {\n          "type": "ROW",\n          "fields": [\n            {\n              "type": "FIELD",\n              "code": "customer_name",\n              "size": { "width": "50%" }\n            },\n            {\n              "type": "FIELD",\n              "code": "customer_email",\n              "size": { "width": "50%" }\n            }\n          ]\n        }\n      ]\n    },\n    {\n      "type": "SUBTABLE",\n      "code": "items"\n    }\n  ],\n  "revision": "12"\n}\n```\n\n【プレビュー環境とデプロイの流れ】\n1. create_app: アプリを作成（プレビュー環境に作成される）\n2. add_fields: フィールドを追加（プレビュー環境に追加される）\n3. get_preview_form_layout: プレビュー環境のレイアウト情報を取得\n4. update_form_layout: レイアウトを変更（プレビュー環境に適用される）\n5. deploy_app: アプリをデプロイ（運用環境へ反映）\n6. get_deploy_status: デプロイ状態を確認（完了するまで待機）\n7. get_form_layout: 運用環境のレイアウト情報を取得（デプロイ完了後）',
                             inputSchema: {
                                 type: 'object',
                                 properties: {
@@ -1264,7 +1574,7 @@ class KintoneMCPServer {
                             },
                         },
                         deploy_app: {
-                            description: 'kintoneアプリの設定をデプロイ（本番運用開始・運用環境へ反映）します。デプロイが完了するまでget_deploy_statusで確認する必要があります。',
+                            description: 'kintoneアプリの設定をデプロイ（本番運用開始・運用環境へ反映）します。デプロイが完了するまでget_deploy_statusで確認する必要があります。\n\n【デプロイとは】\nkintoneでは、アプリの設定変更（フィールド追加・レイアウト変更など）は最初にプレビュー環境に適用され、デプロイ後に運用環境に反映されます。デプロイ処理は非同期で実行されるため、完了までに時間がかかる場合があります。\n\n【デプロイの流れ】\n1. deploy_appツールを実行してデプロイを開始\n2. get_deploy_statusツールで定期的にデプロイ状態を確認\n3. すべてのアプリのdeployStatusが「SUCCESS」になったらデプロイ完了\n\n【返却値の例】\n```json\n{\n  "apps": [\n    {\n      "app": "123"\n    }\n  ]\n}\n```\n\n【アプリ開発の一般的な流れ】\n1. create_app: アプリを作成（プレビュー環境に作成される）\n2. add_fields: フィールドを追加（プレビュー環境に追加される）\n3. update_form_layout: フォームレイアウトを設定（プレビュー環境に適用される）\n4. deploy_app: アプリをデプロイ（運用環境へ反映）\n5. get_deploy_status: デプロイ状態を確認（完了するまで待機）\n\n【注意事項】\n- デプロイ中はアプリの設定を変更できません\n- 複数のアプリを同時にデプロイすることも可能です\n- デプロイ完了後は運用環境のAPIを使用できるようになります\n- デプロイ処理は非同期で実行されるため、deploy_appを実行した直後はまだデプロイが完了していません\n- デプロイの完了確認には必ずget_deploy_statusを使用してください',
                             inputSchema: {
                                 type: 'object',
                                 properties: {
@@ -1280,7 +1590,7 @@ class KintoneMCPServer {
                             },
                         },
                         get_deploy_status: {
-                            description: 'kintoneアプリのデプロイ状態（アプリ設定の運用環境への反映状況）を確認します。デプロイが完了するまで定期的に確認する必要があります。',
+                            description: 'kintoneアプリのデプロイ状態（アプリ設定の運用環境への反映状況）を確認します。デプロイが完了するまで定期的に確認する必要があります。\n\n【デプロイ状態の確認方法】\n1. deploy_appツールでデプロイを開始した後、このツールを使用して状態を確認します\n2. 返却値の各アプリの「deployStatus」を確認します\n  - PROCESSING: デプロイ処理中\n  - SUCCESS: デプロイ完了\n  - FAIL: デプロイ失敗\n  - CANCEL: デプロイキャンセル\n3. すべてのアプリのdeployStatusが「SUCCESS」になるまで、定期的に確認を続けます\n\n【返却値の例】\n```json\n{\n  "apps": [\n    {\n      "app": "123",\n      "status": "SUCCESS"\n    }\n  ]\n}\n```\n\n【デプロイ完了の確認方法】\n1. 返却値の各アプリの「status」プロパティを確認します\n2. すべてのアプリの「status」が「SUCCESS」になったらデプロイ完了です\n3. 一部のアプリの「status」が「FAIL」または「CANCEL」の場合、デプロイに失敗しています\n\n【注意事項】\n- デプロイ完了までの時間は、アプリの規模や複雑さによって異なります\n- デプロイ中はアプリの設定を変更できません\n- デプロイが完了したら、運用環境のAPIを使用できるようになります\n- デプロイ状態の確認は、数秒間隔で行うことをお勧めします',
                             inputSchema: {
                                 type: 'object',
                                 properties: {
@@ -1401,7 +1711,7 @@ class KintoneMCPServer {
                             },
                         },
                         get_form_layout: {
-                            description: 'kintoneアプリのフォームレイアウトを取得します。取得したレイアウト情報は、update_form_layoutツールで使用できる形式で返されます。レイアウトはROW（行）、GROUP（グループ）、SUBTABLE（サブテーブル）の階層構造で表現されます。',
+                            description: 'kintoneアプリのフォームレイアウトを取得します。取得したレイアウト情報は、update_form_layoutツールで使用できる形式で返されます。レイアウトはROW（行）、GROUP（グループ）、SUBTABLE（サブテーブル）の階層構造で表現されます。\n\n【フォームレイアウトの階層構造】\n1. 最上位レベル: layout配列には、ROW、GROUP、SUBTABLEの要素を配置できます\n2. GROUP内: GROUPのlayout配列には、ROW要素のみ配置可能です（GROUP内にGROUPやSUBTABLEは配置できません）\n3. ROW内: ROWのfields配列には、LABEL、SPACER、HR、FIELD、REFERENCE_TABLEの要素を配置できます\n\n【各要素の特徴】\n- ROW: 複数のフィールドを横に並べる基本要素。幅の合計が100%になるように設定します\n- GROUP: 複数のROWをまとめる要素。タイトル付きの枠で囲まれます\n- SUBTABLE: 表形式のデータを扱う要素。サブテーブルフィールドのcodeを指定します\n- LABEL: テキスト表示用の要素。valueプロパティにテキストを指定します\n- SPACER: 空白を作る要素。sizeプロパティで幅と高さを指定できます\n- HR: 水平線（区切り線）を表示する要素\n- FIELD: 入力項目を配置する要素。codeプロパティにフィールドコードを指定します\n- REFERENCE_TABLE: 他のアプリのレコードを参照する要素。ROW内に配置します\n\n【取得したレイアウト情報の活用方法】\n- 既存のレイアウトを取得して、必要な部分だけを修正することができます\n- 新しいフィールドを追加した場合は、取得したレイアウト情報に新しいフィールドの配置情報を追加できます\n- レイアウトの変更は、update_form_layoutツールを使用して適用します\n\n【フィールド要素のサイズ設定】\n- width: フィールドの幅を指定します。パーセント（例: "50%"）またはピクセル（例: "200px"）で指定できます\n- height: フィールドの高さを指定します。主にSPACERやLABELで使用します（例: "100px"）\n- innerHeight: 入力エリアの内部高さを指定します。主に複数行テキストフィールドで使用します（例: "200px"）\n\n【返却値の例】\n```json\n{\n  "layout": [\n    {\n      "type": "ROW",\n      "fields": [\n        {\n          "type": "FIELD",\n          "code": "title",\n          "size": { "width": "100%" }\n        }\n      ]\n    },\n    {\n      "type": "GROUP",\n      "code": "customer_info",\n      "layout": [\n        {\n          "type": "ROW",\n          "fields": [\n            {\n              "type": "FIELD",\n              "code": "customer_name",\n              "size": { "width": "50%" }\n            },\n            {\n              "type": "FIELD",\n              "code": "customer_email",\n              "size": { "width": "50%" }\n            }\n          ]\n        }\n      ]\n    },\n    {\n      "type": "SUBTABLE",\n      "code": "items"\n    }\n  ],\n  "revision": "12"\n}\n```\n\n【アプリ開発の一般的な流れ】\n1. create_app: アプリを作成（プレビュー環境に作成される）\n2. add_fields: フィールドを追加（プレビュー環境に追加される）\n3. get_form_layout: 現在のレイアウト情報を取得\n4. update_form_layout: フォームレイアウトを設定（プレビュー環境に適用される）\n5. deploy_app: アプリをデプロイ（運用環境へ反映）\n\n【注意事項】\n- 新規作成したアプリや、変更をデプロイする前のアプリの場合は、プレビュー環境のレイアウト情報が返されます\n- プレビュー環境のレイアウト情報が返された場合、responseに「preview: true」フラグが含まれます\n- 運用環境のレイアウト情報を取得するには、アプリをデプロイする必要があります\n- 新しく追加したフィールドは、必ずレイアウトに追加する必要があります。レイアウトに追加されていないフィールドは画面に表示されません',
                             inputSchema: {
                                 type: 'object',
                                 properties: {
@@ -1414,7 +1724,7 @@ class KintoneMCPServer {
                             },
                         },
                         update_form_layout: {
-                            description: 'kintoneアプリのフォームレイアウトを変更します。レイアウトはROW（行）、GROUP（グループ）、SUBTABLE（サブテーブル）の3種類の要素で構成され、それぞれ特定の構造に従う必要があります。ROWにはLABEL、SPACER、HR、FIELD、REFERENCE_TABLEなどのフィールド要素を配置できます。',
+                            description: 'kintoneアプリのフォームレイアウトを変更します。レイアウトはROW（行）、GROUP（グループ）、SUBTABLE（サブテーブル）の3種類の要素で構成され、それぞれ特定の構造に従う必要があります。ROWにはLABEL、SPACER、HR、FIELD、REFERENCE_TABLEなどのフィールド要素を配置できます。\n\n【フォームレイアウトの階層構造】\n1. 最上位レベル: layout配列には、ROW、GROUP、SUBTABLEの要素を配置できます\n2. GROUP内: GROUPのlayout配列には、ROW要素のみ配置可能です（GROUP内にGROUPやSUBTABLEは配置できません）\n3. ROW内: ROWのfields配列には、LABEL、SPACER、HR、FIELD、REFERENCE_TABLEの要素を配置できます\n\n【各要素の特徴】\n- ROW: 複数のフィールドを横に並べる基本要素。幅の合計が100%になるように設定します\n- GROUP: 複数のROWをまとめる要素。タイトル付きの枠で囲まれます\n- SUBTABLE: 表形式のデータを扱う要素。サブテーブルフィールドのcodeを指定します\n- LABEL: テキスト表示用の要素。valueプロパティにテキストを指定します\n- SPACER: 空白を作る要素。sizeプロパティで幅と高さを指定できます\n- HR: 水平線（区切り線）を表示する要素\n- FIELD: 入力項目を配置する要素。codeプロパティにフィールドコードを指定します\n- REFERENCE_TABLE: 他のアプリのレコードを参照する要素。ROW内に配置します\n\n【レイアウト設定の例】\n```json\n[\n  {\n    "type": "ROW",\n    "fields": [\n      {\n        "type": "FIELD",\n        "code": "title",\n        "size": { "width": "100%" }\n      }\n    ]\n  },\n  {\n    "type": "GROUP",\n    "code": "customer_info",\n    "layout": [\n      {\n        "type": "ROW",\n        "fields": [\n          {\n            "type": "FIELD",\n            "code": "customer_name",\n            "size": { "width": "50%" }\n          },\n          {\n            "type": "FIELD",\n            "code": "customer_email",\n            "size": { "width": "50%" }\n          }\n        ]\n      }\n    ]\n  },\n  {\n    "type": "SUBTABLE",\n    "code": "items"\n  }\n]\n```\n\n【フィールド要素のサイズ設定】\n- width: フィールドの幅を指定します。パーセント（例: "50%"）またはピクセル（例: "200px"）で指定できます\n- height: フィールドの高さを指定します。主にSPACERやLABELで使用します（例: "100px"）\n- innerHeight: 入力エリアの内部高さを指定します。主に複数行テキストフィールドで使用します（例: "200px"）\n\n【返却値の例】\n```json\n{\n  "success": true,\n  "revision": "2"\n}\n```\n\n【アプリ開発の一般的な流れ】\n1. create_app: アプリを作成（プレビュー環境に作成される）\n2. add_fields: フィールドを追加（プレビュー環境に追加される）\n3. get_form_layout: 現在のレイアウト情報を取得\n4. update_form_layout: フォームレイアウトを設定（プレビュー環境に適用される）\n5. deploy_app: アプリをデプロイ（運用環境へ反映）\n\n【注意事項】\n- GROUP内にGROUPやSUBTABLEを配置することはできません\n- ROW内のフィールド要素の幅の合計は100%になるようにしてください\n- REFERENCE_TABLEはROW内に配置する必要があります\n- 変更はプレビュー環境に適用され、deploy_appを実行するまで運用環境には反映されません\n- 新しく追加したフィールドは、必ずレイアウトに追加する必要があります。レイアウトに追加されていないフィールドは画面に表示されません',
                             inputSchema: {
                                 type: 'object',
                                 properties: {
@@ -2591,6 +2901,121 @@ class KintoneMCPServer {
                     return docs.common + docs[fieldType];
                 }
                 
+                // 関連テーブルフィールドのドキュメント
+                if (fieldType === "REFERENCE_TABLE") {
+                    return `
+# 関連テーブル（REFERENCE_TABLE）の仕様
+
+## 概要
+関連テーブルは、他のkintoneアプリのレコードを参照して表示するフィールドです。日本語では「関連テーブル」と呼ばれます。
+
+## 必須パラメータ
+1. \`referenceTable\` オブジェクト:
+   - \`relatedApp\`: 参照先アプリの情報
+     - \`app\`: 参照先アプリのID（数値または文字列）
+     - \`code\`: 参照先アプリのコード（文字列）
+     ※ \`app\`と\`code\`のどちらか一方が必須。両方指定した場合は\`code\`が優先されます。
+   - \`condition\`: 関連付け条件
+     - \`field\`: このアプリのフィールドコード
+     - \`relatedField\`: 参照するアプリのフィールドコード
+
+## オプションパラメータ
+1. \`filterCond\`: 参照するレコードの絞り込み条件（クエリ形式、例: "数値_0 > 10 and 数値_1 > 20"）
+2. \`displayFields\`: 表示するフィールドのコード配列（例: ["表示するフィールド_0", "表示するフィールド_1"]）
+3. \`sort\`: ソート条件（クエリ形式、例: "數值_0 desc, 數值_1 asc"）
+4. \`size\`: 一度に表示する最大レコード数（1, 3, 5, 10, 20, 30, 40, 50のいずれか）
+
+## 使用例
+\`\`\`json
+{
+  "type": "REFERENCE_TABLE",
+  "code": "関連レコード一覧",
+  "label": "関連レコード一覧",
+  "noLabel": true,
+  "referenceTable": {
+    "relatedApp": {
+      "app": "3",
+      "code": "参照先アプリ"
+    },
+    "condition": {
+      "field": "このアプリのフィールド",
+      "relatedField": "参照するアプリのフィールド"
+    },
+    "filterCond": "数値_0 > 10 and 数値_1 > 20",
+    "displayFields": ["表示するフィールド_0", "表示するフィールド_1"],
+    "sort": "數值_0 desc, 數值_1 asc",
+    "size": "5"
+  }
+}
+\`\`\`
+
+## 注意事項
+1. 関連テーブルはフォームレイアウト上では特別な扱いを受けます。
+2. レイアウト要素としては、ROW内のフィールド要素として配置します（type: "REFERENCE_TABLE"）。
+3. フォームレイアウトのGROUP（グループ）内に関連テーブルを配置することはできません。
+`;
+                }
+                
+                // LOOKUPフィールドのドキュメント
+                if (fieldType === "LOOKUP") {
+                    return `
+# LOOKUP（ルックアップ）フィールドの仕様
+
+## 概要
+ルックアップフィールドは、他のkintoneアプリのレコードを参照し、その値を自動的に取得するフィールドです。
+
+## 必須パラメータ
+1. \`lookup\` オブジェクト:
+   - \`relatedApp\`: 参照先アプリの情報
+     - \`app\`: 参照先アプリのID（数値または文字列）
+     - \`code\`: 参照先アプリのコード（文字列）
+     ※ \`app\`と\`code\`のどちらか一方が必須。両方指定した場合は\`code\`が優先されます。
+   - \`relatedKeyField\`: 参照先アプリのキーフィールドコード
+   - \`fieldMappings\`: フィールドマッピングの配列
+     - \`field\`: このアプリ側のフィールドコード
+     - \`relatedField\`: 参照先アプリのフィールドコード
+
+## オプションパラメータ
+1. \`lookup.lookupPickerFields\`: ルックアップピッカーに表示するフィールドコードの配列
+2. \`lookup.filterCond\`: 参照先レコードの絞り込み条件（クエリ形式）
+3. \`lookup.sort\`: 参照先レコードのソート条件（クエリ形式）
+
+## 使用例
+\`\`\`json
+{
+  "type": "LOOKUP",
+  "code": "customer_lookup",
+  "label": "顧客情報",
+  "lookup": {
+    "relatedApp": {
+      "app": "123",
+      "code": "customers"
+    },
+    "relatedKeyField": "customer_id",
+    "fieldMappings": [
+      {
+        "field": "customer_name",
+        "relatedField": "name"
+      },
+      {
+        "field": "customer_email",
+        "relatedField": "email"
+      }
+    ],
+    "lookupPickerFields": ["name", "email", "phone"],
+    "filterCond": "status = \\"active\\"",
+    "sort": "name asc"
+  }
+}
+\`\`\`
+
+## 注意事項
+1. ルックアップフィールドを設定する前に、マッピング先となるフィールドが事前に作成されている必要があります。
+2. 参照先アプリが存在し、指定したフィールドが存在することを確認してください。
+3. ルックアップフィールドの作成は create_lookup_field ツールを使用すると簡単です。
+`;
+                }
+                
                 // その他のフィールドタイプのドキュメント（必要に応じて追加）
                 return `フィールドタイプ ${fieldType} のドキュメントは現在提供されていません。`;
             }
@@ -2629,6 +3054,113 @@ class KintoneMCPServer {
                 } else if (field_type === "DROP_DOWN") {
                     fieldConfig.defaultValue = "";
                 }
+                
+                return fieldConfig;
+            }
+
+            case 'create_reference_table_field': {
+                const { 
+                    code, 
+                    label, 
+                    relatedAppId, 
+                    relatedAppCode, 
+                    conditionField, 
+                    relatedConditionField, 
+                    filterCond, 
+                    displayFields, 
+                    sort, 
+                    size, 
+                    noLabel = true 
+                } = args;
+                
+                // フィールド設定の基本部分
+                const fieldConfig = {
+                    type: "REFERENCE_TABLE",
+                    code: code,
+                    label: label,
+                    noLabel: noLabel,
+                    referenceTable: {
+                        relatedApp: {},
+                        condition: {
+                            field: conditionField,
+                            relatedField: relatedConditionField
+                        }
+                    }
+                };
+                
+                // relatedApp の設定（app と code の優先順位に注意）
+                if (relatedAppCode) {
+                    fieldConfig.referenceTable.relatedApp.code = relatedAppCode;
+                }
+                if (relatedAppId && !relatedAppCode) {
+                    fieldConfig.referenceTable.relatedApp.app = relatedAppId;
+                }
+                
+                // オプション項目の追加
+                if (filterCond) fieldConfig.referenceTable.filterCond = filterCond;
+                if (displayFields && Array.isArray(displayFields)) fieldConfig.referenceTable.displayFields = displayFields;
+                if (sort) fieldConfig.referenceTable.sort = sort;
+                if (size) fieldConfig.referenceTable.size = String(size); // 文字列型に変換
+                
+                return fieldConfig;
+            }
+
+            case 'create_lookup_field': {
+                const { 
+                    code, 
+                    label, 
+                    relatedAppId, 
+                    relatedAppCode, 
+                    relatedKeyField, 
+                    fieldMappings, 
+                    lookupPickerFields, 
+                    filterCond, 
+                    sort, 
+                    required = false 
+                } = args;
+                
+                // バリデーション
+                if (!fieldMappings || !Array.isArray(fieldMappings) || fieldMappings.length === 0) {
+                    throw new Error('fieldMappingsは少なくとも1つのマッピングを含む配列である必要があります');
+                }
+                
+                // フィールドマッピングの各要素をチェック
+                fieldMappings.forEach((mapping, index) => {
+                    if (!mapping.field) {
+                        throw new Error(`fieldMappings[${index}].fieldは必須です`);
+                    }
+                    if (!mapping.relatedField) {
+                        throw new Error(`fieldMappings[${index}].relatedFieldは必須です`);
+                    }
+                });
+                
+                // フィールド設定の基本部分
+                const fieldConfig = {
+                    type: "LOOKUP",
+                    code: code,
+                    label: label,
+                    required: required,
+                    lookup: {
+                        relatedApp: {},
+                        relatedKeyField: relatedKeyField,
+                        fieldMappings: fieldMappings
+                    }
+                };
+                
+                // relatedApp の設定（code が優先）
+                if (relatedAppCode) {
+                    fieldConfig.lookup.relatedApp.code = relatedAppCode;
+                }
+                if (relatedAppId && !relatedAppCode) {
+                    fieldConfig.lookup.relatedApp.app = relatedAppId;
+                }
+                
+                // オプション項目の追加
+                if (lookupPickerFields && Array.isArray(lookupPickerFields)) {
+                    fieldConfig.lookup.lookupPickerFields = lookupPickerFields;
+                }
+                if (filterCond) fieldConfig.lookup.filterCond = filterCond;
+                if (sort) fieldConfig.lookup.sort = sort;
                 
                 return fieldConfig;
             }
