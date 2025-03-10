@@ -40,6 +40,70 @@ class KintoneRepository {
         });
     }
 
+    // プレビュー環境のアプリ設定を取得
+    async getPreviewAppSettings(appId, lang) {
+        try {
+            console.error(`Fetching preview app settings for app: ${appId}`);
+            
+            // プレビュー環境のAPIを呼び出す
+            // KintoneRestAPIClientのバージョンによっては直接requestメソッドが使えない場合があるため、
+            // 代わりにapp.getAppSettingsを使用し、previewパラメータを追加
+            const params = { app: appId, preview: true };
+            if (lang) {
+                params.lang = lang;
+            }
+            
+            const response = await this.client.app.getAppSettings(params);
+            
+            console.error('Preview app settings response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get preview app settings for app ${appId}`);
+        }
+    }
+
+    // プレビュー環境のフォームフィールド情報を取得
+    async getPreviewFormFields(appId, lang) {
+        try {
+            console.error(`Fetching preview form fields for app: ${appId}`);
+            
+            // プレビュー環境のAPIを呼び出す
+            // KintoneRestAPIClientのバージョンによっては直接requestメソッドが使えない場合があるため、
+            // 代わりにapp.getFormFieldsを使用し、previewパラメータを追加
+            const params = { app: appId, preview: true };
+            if (lang) {
+                params.lang = lang;
+            }
+            
+            const response = await this.client.app.getFormFields(params);
+            
+            console.error('Preview form fields response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get preview form fields for app ${appId}`);
+        }
+    }
+
+    // プレビュー環境のフォームレイアウト情報を取得
+    async getPreviewFormLayout(appId) {
+        try {
+            console.error(`Fetching preview form layout for app: ${appId}`);
+            
+            // プレビュー環境のAPIを直接呼び出す
+            // KintoneRestAPIClientのバージョンによっては直接requestメソッドが使えない場合があるため、
+            // 代わりにapp.getFormLayoutを使用し、パスを変更する
+            const response = await this.client.app.getFormLayout({
+                app: appId,
+                preview: true // プレビュー環境を指定
+            });
+            
+            console.error('Preview form layout response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get preview form layout for app ${appId}`);
+        }
+    }
+
     // エラーハンドリングを共通化
     handleKintoneError(error, operation) {
         if (error instanceof KintoneRestAPIError) {
@@ -354,34 +418,83 @@ class KintoneRepository {
 
         // optionsの必須チェック
         if (!options) {
-            throw new Error(`フィールドタイプ "${fieldType}" には options の指定が必須です。`);
+            throw new Error(
+                `フィールドタイプ "${fieldType}" には options の指定が必須です。\n` +
+                `以下の形式で指定してください：\n` +
+                `options: {\n` +
+                `  "選択肢キー1": { "label": "選択肢キー1", "index": "0" },\n` +
+                `  "選択肢キー2": { "label": "選択肢キー2", "index": "1" }\n` +
+                `}`
+            );
         }
 
         // optionsの形式チェック
         if (typeof options !== 'object' || Array.isArray(options)) {
-            throw new Error('options はオブジェクト形式で指定する必要があります。');
+            throw new Error(
+                'options はオブジェクト形式で指定する必要があります。\n' +
+                `以下の形式で指定してください：\n` +
+                `options: {\n` +
+                `  "選択肢キー1": { "label": "選択肢キー1", "index": "0" },\n` +
+                `  "選択肢キー2": { "label": "選択肢キー2", "index": "1" }\n` +
+                `}`
+            );
         }
 
         // 各選択肢のバリデーション
         Object.entries(options).forEach(([key, value]) => {
             // labelの存在チェック
             if (!value.label) {
-                throw new Error(`選択肢 "${key}" の label が指定されていません。label に "${key}" という値を指定する必要があります。`);
+                throw new Error(
+                    `選択肢 "${key}" の label が指定されていません。\n` +
+                    `kintone APIの仕様により、label には "${key}" という値を指定する必要があります。\n` +
+                    `例: "${key}": { "label": "${key}", "index": "0" }`
+                );
             }
 
             // labelと選択肢キーの一致チェック
             if (value.label !== key) {
-                throw new Error(`選択肢 "${key}" の label "${value.label}" が一致しません。label に "${key}" という値を指定する必要があります。`);
+                throw new Error(
+                    `選択肢 "${key}" の label "${value.label}" が一致しません。\n` +
+                    `kintone APIの仕様により、label には "${key}" という値を指定する必要があります。\n` +
+                    `例: "${key}": { "label": "${key}", "index": "0" }\n` +
+                    `注意: 表示名を変更したい場合は、フィールド作成後に別途設定が必要です。`
+                );
             }
 
             // indexの存在チェック
             if (typeof value.index === 'undefined') {
-                throw new Error(`選択肢 "${key}" の index が指定されていません。 0以上の数値を指定してください。`);
+                throw new Error(
+                    `選択肢 "${key}" の index が指定されていません。\n` +
+                    `0以上の数値を文字列型で指定してください。\n` +
+                    `例: "${key}": { "label": "${key}", "index": "0" }`
+                );
+            }
+
+            // indexが文字列型であることのチェック
+            if (typeof value.index !== 'string') {
+                throw new Error(
+                    `選択肢 "${key}" の index は文字列型の数値を指定してください。\n` +
+                    `例: "${key}": { "label": "${key}", "index": "0" }\n` +
+                    `現在の値: ${typeof value.index} 型の ${value.index}`
+                );
+            }
+
+            // indexが数値文字列であることのチェック
+            if (!/^\d+$/.test(value.index)) {
+                throw new Error(
+                    `選択肢 "${key}" の index は 0以上の整数値を文字列型で指定してください。\n` +
+                    `例: "${key}": { "label": "${key}", "index": "0" }\n` +
+                    `現在の値: "${value.index}"`
+                );
             }
 
             // indexが0以上の数値であることのチェック
-            if (typeof value.index !== 'number' || value.index < 0 || !Number.isInteger(value.index)) {
-                throw new Error(`選択肢 "${key}" の index は 0以上の数値を指定してください。`);
+            const indexNum = parseInt(value.index, 10);
+            if (isNaN(indexNum) || indexNum < 0) {
+                throw new Error(
+                    `選択肢 "${key}" の index は 0以上の整数値を文字列型で指定してください。\n` +
+                    `例: "${key}": { "label": "${key}", "index": "0" }`
+                );
             }
         });
 
@@ -429,6 +542,10 @@ class KintoneRepository {
             console.error(`Adding fields to app ${appId}`);
             console.error('Field properties:', properties);
 
+            // 変換済みのプロパティを格納する新しいオブジェクト
+            const convertedProperties = {};
+            const warnings = [];
+
             // フィールドコードの整合性チェックとバリデーション
             for (const [propertyKey, fieldConfig] of Object.entries(properties)) {
                 // フィールドコードのバリデーション
@@ -443,11 +560,22 @@ class KintoneRepository {
 
                 // プロパティキーとcodeの一致チェック
                 if (fieldConfig.code !== propertyKey) {
-                    throw new Error(
-                        `フィールドコードの不一致: プロパティキー "${propertyKey}" と ` +
-                        `フィールド設定内のcode "${fieldConfig.code}" が一致しません。\n` +
-                        `kintone APIの仕様により、これらは完全に一致している必要があります。`
+                    // 不一致の場合は警告を記録し、正しいキーでプロパティを追加
+                    warnings.push(
+                        `フィールドコードの不一致を自動修正しました: プロパティキー "${propertyKey}" → フィールドコード "${fieldConfig.code}"\n` +
+                        `kintone APIの仕様により、プロパティキーとフィールドコードは完全に一致している必要があります。`
                     );
+                    
+                    // 元のプロパティキーをlabelとして保存（もしlabelが未設定の場合）
+                    if (!fieldConfig.label) {
+                        fieldConfig.label = propertyKey;
+                    }
+                    
+                    // 正しいキーでプロパティを追加
+                    convertedProperties[fieldConfig.code] = fieldConfig;
+                } else {
+                    // 一致している場合はそのまま追加
+                    convertedProperties[propertyKey] = fieldConfig;
                 }
 
                 // 選択肢フィールドのoptionsバリデーション
@@ -461,13 +589,24 @@ class KintoneRepository {
                 }
             }
 
+            // 警告メッセージを表示
+            if (warnings.length > 0) {
+                console.error('自動修正の警告:');
+                warnings.forEach(warning => console.error(warning));
+            }
+
             const response = await this.client.app.addFormFields({
                 app: appId,
-                properties: properties,
+                properties: convertedProperties,
                 revision: -1 // 最新のリビジョンを使用
             });
             console.error('Field addition response:', response);
-            return response;
+            
+            // 警告メッセージを含めた拡張レスポンスを返す
+            return {
+                ...response,
+                warnings: warnings.length > 0 ? warnings : undefined
+            };
         } catch (error) {
             this.handleKintoneError(error, `add fields to app ${appId}`);
         }
@@ -523,9 +662,28 @@ class KintoneRepository {
     async getFormLayout(appId) {
         try {
             console.error(`Fetching form layout for app: ${appId}`);
-            const response = await this.client.app.getFormLayout({ app: appId });
-            console.error('Form layout response:', response);
-            return response;
+            try {
+                // まず運用環境のAPIを試す
+                const response = await this.client.app.getFormLayout({ app: appId });
+                console.error('Form layout response:', response);
+                return response;
+            } catch (error) {
+                // 404エラー（アプリが見つからない）の場合、プレビュー環境のAPIを試す
+                if (error instanceof KintoneRestAPIError && 
+                    (error.code === 'GAIA_AP01' || error.status === 404)) {
+                    console.error(`App ${appId} not found in production environment, trying preview environment...`);
+                    const previewResponse = await this.getPreviewFormLayout(appId);
+                    
+                    // プレビュー環境から取得したことを示す情報を追加
+                    return {
+                        ...previewResponse,
+                        preview: true,
+                        message: 'このレイアウト情報はプレビュー環境から取得されました。アプリをデプロイするには deploy_app ツールを使用してください。'
+                    };
+                }
+                // その他のエラーは通常通り処理
+                throw error;
+            }
         } catch (error) {
             this.handleKintoneError(error, `get form layout for app ${appId}`);
         }
@@ -556,7 +714,7 @@ class KintoneMCPServer {
         this.server = new Server(
             {
                 name: 'kintone-mcp-server',
-                version: '3.1.0',
+                version: '3.2.0',
             },
             {
                 capabilities: {
@@ -950,7 +1108,7 @@ class KintoneMCPServer {
                             },
                         },
                         create_app: {
-                            description: '新しいkintoneアプリを作成します',
+                            description: '新しいkintoneアプリを作成します。作成されたアプリはプレビュー環境に存在し、deploy_appを実行するまで運用環境では利用できません。',
                             inputSchema: {
                                 type: 'object',
                                 properties: {
@@ -971,7 +1129,11 @@ class KintoneMCPServer {
                             },
                         },
                         add_fields: {
-                            description: 'kintoneアプリにフィールドを追加します',
+                            description: `kintoneアプリにフィールドを追加します。追加されたフィールドはプレビュー環境に存在し、deploy_appを実行するまで運用環境では反映されません。
+選択肢フィールド（RADIO_BUTTON, CHECK_BOX, MULTI_SELECT, DROP_DOWN）を作成する際の重要な注意点：
+1. options オブジェクトの各キーと label の値は必ず一致させる必要があります
+2. index は文字列型の数値（"0", "1"など）で指定する必要があります
+3. 詳細は get_field_type_documentation ツールで確認できます`,
                             inputSchema: {
                                 type: 'object',
                                 properties: {
@@ -981,14 +1143,128 @@ class KintoneMCPServer {
                                     },
                                     properties: {
                                         type: 'object',
-                                        description: 'フィールドの設定',
+                                        description: `フィールドの設定。
+選択肢フィールドの例:
+{
+  "status": {
+    "type": "RADIO_BUTTON",
+    "code": "status",
+    "label": "ステータス",
+    "options": {
+      "not_started": { "label": "not_started", "index": "0" },
+      "in_progress": { "label": "in_progress", "index": "1" }
+    }
+  }
+}`,
                                     },
                                 },
                                 required: ['app_id', 'properties'],
                             },
                         },
+                        get_field_type_documentation: {
+                            description: "kintoneのフィールドタイプに関する詳細なドキュメントを取得します",
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    field_type: {
+                                        type: 'string',
+                                        description: "ドキュメントを取得するフィールドタイプ（例: RADIO_BUTTON, CHECK_BOX, MULTI_SELECT, DROP_DOWN, TEXT, NUMBER など）",
+                                    },
+                                },
+                                required: ['field_type'],
+                            },
+                        },
+                        create_choice_field: {
+                            description: "選択肢フィールド（RADIO_BUTTON, CHECK_BOX, MULTI_SELECT, DROP_DOWN）の設定を生成します",
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    field_type: {
+                                        type: 'string',
+                                        description: "フィールドタイプ（RADIO_BUTTON, CHECK_BOX, MULTI_SELECT, DROP_DOWN）",
+                                        enum: ["RADIO_BUTTON", "CHECK_BOX", "MULTI_SELECT", "DROP_DOWN"]
+                                    },
+                                    code: {
+                                        type: 'string',
+                                        description: "フィールドコード"
+                                    },
+                                    label: {
+                                        type: 'string',
+                                        description: "フィールドラベル"
+                                    },
+                                    choices: {
+                                        type: 'array',
+                                        items: {
+                                            type: 'string'
+                                        },
+                                        description: "選択肢のキー名の配列"
+                                    },
+                                    required: {
+                                        type: 'boolean',
+                                        description: "必須項目かどうか",
+                                        default: false
+                                    },
+                                    align: {
+                                        type: 'string',
+                                        description: "配置（RADIO_BUTTON と CHECK_BOX のみ）",
+                                        enum: ["HORIZONTAL", "VERTICAL"],
+                                        default: "HORIZONTAL"
+                                    }
+                                },
+                                required: ['field_type', 'code', 'label', 'choices']
+                            },
+                        },
+                        get_preview_app_settings: {
+                            description: 'kintoneアプリのプレビュー環境（動作テスト環境）の一般設定を取得します。新規作成したアプリや、変更をデプロイする前のアプリの設定を取得する場合に使用します。',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    app_id: {
+                                        type: 'number',
+                                        description: 'アプリID',
+                                    },
+                                    lang: {
+                                        type: 'string',
+                                        description: '取得する言語設定（ja, en, zh, user）',
+                                        enum: ['ja', 'en', 'zh', 'user'],
+                                    },
+                                },
+                                required: ['app_id'],
+                            },
+                        },
+                        get_preview_form_fields: {
+                            description: 'kintoneアプリのプレビュー環境（動作テスト環境）のフォームフィールド情報を取得します。新規作成したアプリや、変更をデプロイする前のアプリのフィールド情報を取得する場合に使用します。',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    app_id: {
+                                        type: 'number',
+                                        description: 'アプリID',
+                                    },
+                                    lang: {
+                                        type: 'string',
+                                        description: '取得する言語設定（ja, en, zh, user）',
+                                        enum: ['ja', 'en', 'zh', 'user'],
+                                    },
+                                },
+                                required: ['app_id'],
+                            },
+                        },
+                        get_preview_form_layout: {
+                            description: 'kintoneアプリのプレビュー環境（動作テスト環境）のフォームレイアウト情報を取得します。新規作成したアプリや、変更をデプロイする前のアプリのレイアウト情報を取得する場合に使用します。',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    app_id: {
+                                        type: 'number',
+                                        description: 'アプリID',
+                                    },
+                                },
+                                required: ['app_id'],
+                            },
+                        },
                         deploy_app: {
-                            description: 'kintoneアプリの設定をデプロイ（本番運用開始・運用環境へ反映）します',
+                            description: 'kintoneアプリの設定をデプロイ（本番運用開始・運用環境へ反映）します。デプロイが完了するまでget_deploy_statusで確認する必要があります。',
                             inputSchema: {
                                 type: 'object',
                                 properties: {
@@ -1004,7 +1280,7 @@ class KintoneMCPServer {
                             },
                         },
                         get_deploy_status: {
-                            description: 'kintoneアプリのデプロイ状態（アプリ設定の運用環境への反映状況）を確認します',
+                            description: 'kintoneアプリのデプロイ状態（アプリ設定の運用環境への反映状況）を確認します。デプロイが完了するまで定期的に確認する必要があります。',
                             inputSchema: {
                                 type: 'object',
                                 properties: {
@@ -1125,7 +1401,7 @@ class KintoneMCPServer {
                             },
                         },
                         get_form_layout: {
-                            description: 'kintoneアプリのフォームレイアウトを取得します',
+                            description: 'kintoneアプリのフォームレイアウトを取得します。取得したレイアウト情報は、update_form_layoutツールで使用できる形式で返されます。レイアウトはROW（行）、GROUP（グループ）、SUBTABLE（サブテーブル）の階層構造で表現されます。',
                             inputSchema: {
                                 type: 'object',
                                 properties: {
@@ -1138,7 +1414,7 @@ class KintoneMCPServer {
                             },
                         },
                         update_form_layout: {
-                            description: 'kintoneアプリのフォームレイアウトを変更します',
+                            description: 'kintoneアプリのフォームレイアウトを変更します。レイアウトはROW（行）、GROUP（グループ）、SUBTABLE（サブテーブル）の3種類の要素で構成され、それぞれ特定の構造に従う必要があります。ROWにはLABEL、SPACER、HR、FIELD、REFERENCE_TABLEなどのフィールド要素を配置できます。',
                             inputSchema: {
                                 type: 'object',
                                 properties: {
@@ -1148,73 +1424,73 @@ class KintoneMCPServer {
                                     },
                                     layout: {
                                         type: 'array',
-                                        description: 'フォームのレイアウト情報',
+                                        description: 'フォームのレイアウト情報。レイアウト要素（ROW、GROUP、SUBTABLE）の配列で、フォーム上の表示順に並べます。',
                                         items: {
                                             type: 'object',
                                             properties: {
                                                 type: {
                                                     type: 'string',
                                                     enum: ['ROW', 'SUBTABLE', 'GROUP'],
-                                                    description: 'レイアウト要素のタイプ',
+                                                    description: 'レイアウト要素のタイプ。ROW（行）は複数のフィールドを横に並べる基本要素、GROUP（グループ）は複数のROWをまとめる要素、SUBTABLE（テーブル）は表形式のデータを扱う要素です。サイボウズ社の正式名称は「テーブル」ですが、一般ユーザーからは「サブテーブル」と呼ばれることもあります。',
                                                 },
                                                 fields: {
                                                     type: 'array',
-                                                    description: 'ROWタイプの場合のフィールド配列',
+                                                    description: 'ROWタイプの場合のフィールド配列。ROW内に配置するフィールド要素（LABEL、SPACER、HR、FIELD、REFERENCE_TABLE）を指定します。',
                                                     items: {
                                                         type: 'object',
                                                         properties: {
                                                             type: {
                                                                 type: 'string',
                                                                 enum: ['LABEL', 'SPACER', 'HR', 'REFERENCE_TABLE', 'FIELD'],
-                                                                description: 'フィールド要素のタイプ',
+                                                                description: 'フィールド要素のタイプ。LABEL（ラベル）はテキスト表示、SPACER（スペーサー）は空白、HR（水平線）は区切り線、FIELD（フィールド）は入力項目、REFERENCE_TABLE（参照テーブル）は他のアプリのレコード参照です。',
                                                             },
                                                             code: {
                                                                 type: 'string',
-                                                                description: 'FIELDタイプの場合のフィールドコード',
+                                                                description: 'FIELDタイプの場合のフィールドコード。add_fieldsで追加したフィールドのcodeを指定します。',
                                                             },
                                                             size: {
                                                                 type: 'object',
-                                                                description: 'フィールドのサイズ',
+                                                                description: 'フィールドのサイズ設定。幅や高さを指定できます。',
                                                                 properties: {
                                                                     width: {
                                                                         type: 'string',
-                                                                        description: '幅（"100%"など）',
+                                                                        description: '幅（"100%"、"150px"など）。パーセント指定の場合はROW内での比率、ピクセル指定の場合は固定幅になります。',
                                                                     },
                                                                     height: {
                                                                         type: 'string',
-                                                                        description: '高さ（"200px"など）',
+                                                                        description: '高さ（"200px"など）。主にスペーサーや複数行テキストで使用します。',
                                                                     },
                                                                     innerHeight: {
                                                                         type: 'string',
-                                                                        description: '内部高さ（"200px"など）',
+                                                                        description: '内部高さ（"200px"など）。主に複数行テキストの入力エリアの高さに使用します。',
                                                                     },
                                                                 },
                                                             },
                                                             elementId: {
                                                                 type: 'string',
-                                                                description: '要素のID',
+                                                                description: '要素のID。システムによって自動的に割り当てられるため、通常は指定不要です。',
                                                             },
                                                             value: {
                                                                 type: 'string',
-                                                                description: 'LABELタイプの場合のラベルテキスト',
+                                                                description: 'LABELタイプの場合のラベルテキスト。表示するテキスト内容を指定します。',
                                                             },
                                                         },
                                                     },
                                                 },
                                                 code: {
                                                     type: 'string',
-                                                    description: 'SUBTABLEタイプの場合のサブテーブルコード',
+                                                    description: 'SUBTABLEタイプの場合のサブテーブルコード。add_fieldsで追加したサブテーブルのcodeを指定します。',
                                                 },
                                                 layout: {
                                                     type: 'array',
-                                                    description: 'GROUPタイプの場合の内部レイアウト',
+                                                    description: 'GROUPタイプの場合の内部レイアウト。GROUP内に配置するROW要素の配列を指定します。注意：グループ内にテーブル（SUBTABLE）や別のグループ（GROUP）を配置することはできません。',
                                                 },
                                             },
                                         },
                                     },
                                     revision: {
                                         type: 'number',
-                                        description: 'アプリのリビジョン番号（省略時は-1で最新リビジョンを使用）',
+                                        description: 'アプリのリビジョン番号（省略時は-1で最新リビジョンを使用）。同時更新を防ぐために使用します。',
                                     },
                                 },
                                 required: ['app_id', 'layout'],
@@ -1964,6 +2240,10 @@ class KintoneMCPServer {
     async executeToolRequest(request) {
         const { name, arguments: args } = request.params;
 
+        // ツール実行前のログ出力を強化
+        console.error(`Executing tool: ${name}`);
+        console.error(`Arguments:`, JSON.stringify(args, null, 2));
+
         switch (name) {
             case 'get_record': {
                 const record = await this.repository.getRecord(args.app_id, args.record_id);
@@ -2092,9 +2372,17 @@ class KintoneMCPServer {
                     args.app_id,
                     args.properties
                 );
-                return {
+                
+                // 警告メッセージがある場合は結果に含める
+                const result = {
                     revision: response.revision
                 };
+                
+                if (response.warnings) {
+                    result.warnings = response.warnings;
+                }
+                
+                return result;
             }
 
             case 'deploy_app': {
@@ -2138,6 +2426,213 @@ class KintoneMCPServer {
                 };
             }
 
+            case 'get_preview_app_settings': {
+                const settings = await this.repository.getPreviewAppSettings(
+                    args.app_id,
+                    args.lang
+                );
+                return settings;
+            }
+
+            case 'get_preview_form_fields': {
+                const fields = await this.repository.getPreviewFormFields(
+                    args.app_id,
+                    args.lang
+                );
+                return fields;
+            }
+
+            case 'get_preview_form_layout': {
+                const layout = await this.repository.getPreviewFormLayout(
+                    args.app_id
+                );
+                return layout;
+            }
+
+            case 'get_field_type_documentation': {
+                const fieldType = args.field_type.toUpperCase();
+                
+                // 選択肢フィールドのドキュメント
+                if (["RADIO_BUTTON", "CHECK_BOX", "MULTI_SELECT", "DROP_DOWN"].includes(fieldType)) {
+                    const docs = {
+                        common: `
+# 選択肢フィールド（${fieldType}）の仕様
+
+## 共通の重要ポイント
+1. options オブジェクトの構造:
+   - キー名が選択肢の識別子となります
+   - 各選択肢には必ず label と index を指定する必要があります
+   - label の値は必ずキー名と完全に一致させる必要があります（kintone API の仕様）
+   - index は文字列型の数値（"0", "1" など）で、0以上の連番を指定します
+
+2. 表示名の設定:
+   - label はキー名と一致させる必要があるため、日本語などの表示名は別途設定する必要があります
+   - 表示名はフィールド作成後、管理画面から設定するか、別のAPI呼び出しで設定します`,
+                        
+                        // フィールドタイプ固有の情報
+                        RADIO_BUTTON: `
+## RADIO_BUTTON（ラジオボタン）の特徴
+- 単一選択のみ可能
+- align プロパティで "HORIZONTAL"（横並び）または "VERTICAL"（縦並び）を指定可能
+- defaultValue は選択肢のキー名を文字列で指定（例: "sample1"）
+
+## 使用例
+\`\`\`json
+{
+  "type": "RADIO_BUTTON",
+  "code": "status",
+  "label": "ステータス",
+  "noLabel": false,
+  "required": true,
+  "options": {
+    "not_started": {
+      "label": "not_started",
+      "index": "0"
+    },
+    "in_progress": {
+      "label": "in_progress",
+      "index": "1"
+    }
+  },
+  "defaultValue": "not_started",
+  "align": "HORIZONTAL"
+}
+\`\`\``,
+                        
+                        CHECK_BOX: `
+## CHECK_BOX（チェックボックス）の特徴
+- 複数選択可能
+- align プロパティで "HORIZONTAL"（横並び）または "VERTICAL"（縦並び）を指定可能
+- defaultValue は選択肢のキー名の配列で指定（例: ["sample1", "sample2"]）または空配列 []
+
+## 使用例
+\`\`\`json
+{
+  "type": "CHECK_BOX",
+  "code": "categories",
+  "label": "カテゴリ",
+  "noLabel": false,
+  "required": false,
+  "options": {
+    "web": {
+      "label": "web",
+      "index": "0"
+    },
+    "mobile": {
+      "label": "mobile",
+      "index": "1"
+    }
+  },
+  "defaultValue": ["web"],
+  "align": "HORIZONTAL"
+}
+\`\`\``,
+                        
+                        MULTI_SELECT: `
+## MULTI_SELECT（複数選択）の特徴
+- 複数選択可能なドロップダウン
+- defaultValue は選択肢のキー名の配列で指定（例: ["sample1", "sample2"]）または空配列 []
+
+## 使用例
+\`\`\`json
+{
+  "type": "MULTI_SELECT",
+  "code": "tags",
+  "label": "タグ",
+  "noLabel": false,
+  "required": false,
+  "options": {
+    "important": {
+      "label": "important",
+      "index": "0"
+    },
+    "urgent": {
+      "label": "urgent",
+      "index": "1"
+    }
+  },
+  "defaultValue": []
+}
+\`\`\``,
+                        
+                        DROP_DOWN: `
+## DROP_DOWN（ドロップダウン）の特徴
+- 単一選択のみ可能
+- defaultValue は選択肢のキー名を文字列で指定（例: "sample1"）または空文字列 ""
+
+## 使用例
+\`\`\`json
+{
+  "type": "DROP_DOWN",
+  "code": "priority",
+  "label": "優先度",
+  "noLabel": false,
+  "required": false,
+  "options": {
+    "high": {
+      "label": "high",
+      "index": "0"
+    },
+    "medium": {
+      "label": "medium",
+      "index": "1"
+    },
+    "low": {
+      "label": "low",
+      "index": "2"
+    }
+  },
+  "defaultValue": "medium"
+}
+\`\`\``,
+                    };
+                    
+                    // 共通情報とフィールドタイプ固有の情報を結合
+                    return docs.common + docs[fieldType];
+                }
+                
+                // その他のフィールドタイプのドキュメント（必要に応じて追加）
+                return `フィールドタイプ ${fieldType} のドキュメントは現在提供されていません。`;
+            }
+
+            case 'create_choice_field': {
+                const { field_type, code, label, choices, required = false, align = "HORIZONTAL" } = args;
+                
+                // options オブジェクトの生成
+                const options = {};
+                choices.forEach((choice, index) => {
+                    options[choice] = {
+                        label: choice,
+                        index: String(index)
+                    };
+                });
+                
+                // フィールド設定の基本部分
+                const fieldConfig = {
+                    type: field_type,
+                    code: code,
+                    label: label,
+                    noLabel: false,
+                    required: required,
+                    options: options
+                };
+                
+                // フィールドタイプ固有の設定を追加
+                if (field_type === "RADIO_BUTTON") {
+                    fieldConfig.defaultValue = choices.length > 0 ? choices[0] : "";
+                    fieldConfig.align = align;
+                } else if (field_type === "CHECK_BOX") {
+                    fieldConfig.defaultValue = [];
+                    fieldConfig.align = align;
+                } else if (field_type === "MULTI_SELECT") {
+                    fieldConfig.defaultValue = [];
+                } else if (field_type === "DROP_DOWN") {
+                    fieldConfig.defaultValue = "";
+                }
+                
+                return fieldConfig;
+            }
+
             default:
                 throw new McpError(
                     ErrorCode.MethodNotFound,
@@ -2175,6 +2670,40 @@ class KintoneMCPServer {
     handleToolError(error) {
         let errorCode = ErrorCode.InternalError;
         let errorMessage = error.message;
+        let helpText = "";
+
+        // 選択肢フィールドに関連するエラーの特定と対応
+        if (error.message.includes("選択肢") && error.message.includes("label")) {
+            helpText = `
+選択肢フィールドのエラーが発生しました。以下の点を確認してください：
+
+1. options オブジェクトの各キーと label の値が完全に一致しているか
+   正しい例: "status": { "label": "status", "index": "0" }
+   誤った例: "status": { "label": "ステータス", "index": "0" }
+
+2. get_field_type_documentation ツールを使用して、正しい形式を確認してください：
+   例: get_field_type_documentation({ field_type: "RADIO_BUTTON" })
+
+3. create_choice_field ツールを使用して、正しい形式のフィールド設定を生成することもできます：
+   例: create_choice_field({
+     field_type: "RADIO_BUTTON",
+     code: "status",
+     label: "ステータス",
+     choices: ["not_started", "in_progress", "completed"]
+   })`;
+        } else if (error.message.includes("選択肢") && error.message.includes("index")) {
+            helpText = `
+選択肢フィールドの index に関するエラーが発生しました。以下の点を確認してください：
+
+1. index は文字列型の数値（"0", "1"など）で指定されているか
+   正しい例: "status": { "label": "status", "index": "0" }
+   誤った例: "status": { "label": "status", "index": 0 }
+
+2. index は 0 以上の整数値か
+   
+3. get_field_type_documentation ツールを使用して、正しい形式を確認してください：
+   例: get_field_type_documentation({ field_type: "RADIO_BUTTON" })`;
+        }
 
         if (error instanceof McpError) {
             throw error;
@@ -2183,6 +2712,33 @@ class KintoneMCPServer {
             errorCode = error.status >= 500 ? 
                 ErrorCode.InternalError : 
                 ErrorCode.InvalidRequest;
+            
+            // アプリが見つからないエラーの場合、プレビュー環境と運用環境の区別に関する情報を追加
+            if (error.code === "GAIA_AP01" || error.message.includes("存在しません")) {
+                helpText = `
+アプリが見つかりません。以下の可能性があります：
+
+1. アプリがまだプレビュー環境にのみ存在し、運用環境にデプロイされていない
+2. デプロイ処理が完了していない
+
+解決策：
+1. 新規作成したアプリの場合は、get_preview_app_settings ツールを使用してプレビュー環境の情報を取得してください
+2. アプリをデプロイするには、deploy_app ツールを使用してください
+3. デプロイ状態を確認するには、get_deploy_status ツールを使用してください
+4. デプロイが完了したら、運用環境のAPIを使用できます
+
+kintoneアプリのライフサイクル：
+1. create_app: アプリを作成（プレビュー環境に作成される）
+2. add_fields: フィールドを追加（プレビュー環境に追加される）
+3. deploy_app: アプリをデプロイ（運用環境へ反映）
+4. get_deploy_status: デプロイ状態を確認（完了するまで待機）
+5. get_app_settings: 運用環境の設定を取得（デプロイ完了後）`;
+            }
+        }
+
+        // ヘルプテキストがある場合は追加
+        if (helpText) {
+            errorMessage += "\n\n" + helpText;
         }
 
         throw new McpError(errorCode, errorMessage);
