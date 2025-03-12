@@ -66,7 +66,7 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 #### ファイル操作
 
 - `upload_file`: kintoneにファイルをアップロード
-- `download_file`: kintoneからファイルをダウンロード
+- `download_file`: kintoneからファイルをダウンロード（注意: 現在の実装では1MB以上のファイルは正常にダウンロードできない場合があります）
 
 #### アプリ情報
 
@@ -77,6 +77,7 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 
 - `create_app`: kintoneアプリの新規作成
 - `add_fields`: kintoneアプリへのフィールド追加
+- `update_field`: 既存のkintoneフィールドの設定を更新
 - `deploy_app`: kintoneアプリの本番運用開始（運用環境へ反映）
 - `get_deploy_status`: アプリ設定の運用環境への反映状況を確認する
 - `update_form_layout`: kintoneアプリのフォームレイアウトを変更
@@ -94,6 +95,12 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 - `add_thread_comment`: スレッドにコメントを追加
 - `add_guests`: ゲストユーザーを追加
 - `update_space_guests`: スペースのゲストメンバーを更新
+
+#### ユーザー・グループ情報
+
+- `get_users`: kintoneのユーザー情報を取得
+- `get_groups`: kintoneのグループ情報を取得
+- `get_group_users`: 指定したグループに所属するユーザーの一覧を取得
 
 ### 8. その他
 

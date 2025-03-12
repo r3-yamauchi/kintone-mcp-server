@@ -7,6 +7,8 @@ import { handleAppTools } from '../tools/AppTools.js';
 import { handleSpaceTools } from '../tools/SpaceTools.js';
 import { handleFieldTools } from '../tools/FieldTools.js';
 import { handleDocumentationTools } from '../tools/DocumentationTools.js';
+import { handleLayoutTools } from '../tools/LayoutTools.js';
+import { handleUserTools } from '../tools/UserTools.js';
 
 // ファイル関連のツールを処理する関数
 async function handleFileTools(name, args, repository) {
@@ -23,7 +25,13 @@ async function handleFileTools(name, args, repository) {
             const fileData = await repository.downloadFile(
                 args.file_key
             );
-            return fileData;
+            
+            // MCPプロトコルに準拠したレスポンス形式
+            return {
+                uri: `file://${args.file_key}`,
+                mimeType: fileData.contentType || 'application/octet-stream',
+                blob: Buffer.from(fileData.data || fileData).toString('base64')
+            };
         }
         
         default:
@@ -80,16 +88,30 @@ export async function executeToolRequest(request, repository) {
             result = await handleSpaceTools(name, args, repository);
         }
         
-        else if (['add_fields', 'create_choice_field', 'create_reference_table_field', 'create_lookup_field'].includes(name)) {
+        else if (['add_fields', 'create_choice_field', 'create_reference_table_field', 'create_lookup_field',
+                 'create_text_field', 'create_number_field', 'create_date_field', 'create_time_field',
+                 'create_datetime_field', 'create_rich_text_field', 'create_attachment_field',
+                 'create_user_select_field', 'create_subtable_field', 'create_calc_field',
+                 'create_status_field', 'create_related_records_field', 'create_link_field'].includes(name)) {
             result = await handleFieldTools(name, args, repository);
         }
         
-        else if (['get_field_type_documentation'].includes(name)) {
+        else if (['get_field_type_documentation', 'get_available_field_types', 
+                 'get_documentation_tool_description', 'get_field_creation_tool_description'].includes(name)) {
             result = await handleDocumentationTools(name, args);
         }
         
         else if (['upload_file', 'download_file'].includes(name)) {
             result = await handleFileTools(name, args, repository);
+        }
+        
+        else if (['create_form_layout', 'update_form_layout', 'add_layout_element', 
+                 'create_group_layout', 'create_table_layout'].includes(name)) {
+            result = await handleLayoutTools(name, args, repository);
+        }
+        
+        else if (['get_users', 'get_groups', 'get_group_users'].includes(name)) {
+            result = await handleUserTools(name, args, repository);
         }
         
         // 未知のツール
@@ -115,6 +137,20 @@ export async function executeToolRequest(request, repository) {
     }
 }
 
+// エラーメッセージを構造化するヘルパー関数
+function formatErrorMessage(errorType, errorDetail, suggestions) {
+    return `
+【エラーの種類】
+${errorType}
+
+【エラーの詳細】
+${errorDetail}
+
+【対応方法】
+${suggestions.map((s, i) => `${i+1}. ${s}`).join('\n')}
+`;
+}
+
 // エラーハンドリング
 export function handleToolError(error) {
     let errorCode = ErrorCode.InternalError;
@@ -123,35 +159,90 @@ export function handleToolError(error) {
 
     // 選択肢フィールドに関連するエラーの特定と対応
     if (error.message.includes("選択肢") && error.message.includes("label")) {
-        helpText = `
-選択肢フィールドのエラーが発生しました。以下の点を確認してください：
-
-1. options オブジェクトの各キーと label の値が完全に一致しているか
-   正しい例: "status": { "label": "status", "index": "0" }
-   誤った例: "status": { "label": "ステータス", "index": "0" }
-
-2. get_field_type_documentation ツールを使用して、正しい形式を確認してください：
-   例: get_field_type_documentation({ field_type: "RADIO_BUTTON" })
-
-3. create_choice_field ツールを使用して、正しい形式のフィールド設定を生成することもできます：
-   例: create_choice_field({
-     field_type: "RADIO_BUTTON",
-     code: "status",
-     label: "ステータス",
-     choices: ["not_started", "in_progress", "completed"]
-   })`;
+        helpText = formatErrorMessage(
+            "選択肢フィールドの設定エラー",
+            "options オブジェクトの label 設定に問題があります。",
+            [
+                "options オブジェクトの各キーと label の値が完全に一致しているか確認してください。\n   正しい例: \"status\": { \"label\": \"status\", \"index\": \"0\" }\n   誤った例: \"status\": { \"label\": \"ステータス\", \"index\": \"0\" }",
+                "get_field_type_documentation ツールを使用して、正しい形式を確認してください：\n   例: get_field_type_documentation({ field_type: \"RADIO_BUTTON\" })",
+                "create_choice_field ツールを使用して、正しい形式のフィールド設定を生成することもできます：\n   例: create_choice_field({\n     field_type: \"RADIO_BUTTON\",\n     code: \"status\",\n     label: \"ステータス\",\n     choices: [\"not_started\", \"in_progress\", \"completed\"]\n   })"
+            ]
+        );
     } else if (error.message.includes("選択肢") && error.message.includes("index")) {
-        helpText = `
-選択肢フィールドの index に関するエラーが発生しました。以下の点を確認してください：
-
-1. index は文字列型の数値（"0", "1"など）で指定されているか
-   正しい例: "status": { "label": "status", "index": "0" }
-   誤った例: "status": { "label": "status", "index": 0 }
-
-2. index は 0 以上の整数値か
-   
-3. get_field_type_documentation ツールを使用して、正しい形式を確認してください：
-   例: get_field_type_documentation({ field_type: "RADIO_BUTTON" })`;
+        helpText = formatErrorMessage(
+            "選択肢フィールドの index 設定エラー",
+            "options オブジェクトの index 設定に問題があります。",
+            [
+                "index は文字列型の数値（\"0\", \"1\"など）で指定されているか確認してください。\n   正しい例: \"status\": { \"label\": \"status\", \"index\": \"0\" }\n   誤った例: \"status\": { \"label\": \"status\", \"index\": 0 }",
+                "index は 0 以上の整数値である必要があります。",
+                "get_field_type_documentation ツールを使用して、正しい形式を確認してください：\n   例: get_field_type_documentation({ field_type: \"RADIO_BUTTON\" })"
+            ]
+        );
+    } 
+    // 計算フィールドのエラー
+    else if (error.message.includes("計算") || error.message.includes("expression") || error.message.includes("CALC")) {
+        // 未サポート関数に関するエラーかどうかを確認
+        if (error.message.includes("関数はkintoneではサポートされていません")) {
+            // エラーメッセージをそのまま使用（validateExpressionFormatで生成された詳細なメッセージ）
+            helpText = error.message;
+        }
+        // サブテーブル内のフィールド参照に関するエラーかどうかを確認
+        else if (error.message.includes("サブテーブル内のフィールド") || error.message.includes("テーブル名を指定せず")) {
+            helpText = formatErrorMessage(
+                "計算フィールドのフィールド参照エラー",
+                "サブテーブル内のフィールド参照方法が正しくありません。",
+                [
+                    "サブテーブル内のフィールドを参照する場合は、テーブル名を指定せず、フィールドコードのみを使用してください。\n   正しい例: SUM(金額)\n   誤った例: SUM(経費明細.金額)",
+                    "kintoneでは、フィールドコードはアプリ内で一意であるため、サブテーブル名を指定する必要はありません。",
+                    "get_field_type_documentation ツールで計算フィールドの仕様を確認してください：\n   例: get_field_type_documentation({ field_type: \"CALC\" })"
+                ]
+            );
+        } else {
+            helpText = formatErrorMessage(
+                "計算フィールドの設定エラー",
+                "計算式または計算フィールドの設定に問題があります。",
+                [
+                    "kintoneの計算フィールドでサポートされている主な関数:\n   - SUM: 合計を計算\n   - ROUND, ROUNDUP, ROUNDDOWN: 数値の丸め処理\n   - IF, AND, OR, NOT: 条件分岐\n   - DATE_FORMAT: 日付の書式設定と計算",
+                    "計算式の構文が正しいか確認してください。\n   - 括弧の対応が取れているか\n   - 演算子の使用方法が正しいか",
+                    "参照しているフィールドが存在するか確認してください。\n   - フィールドコードのスペルミスがないか\n   - 参照先のフィールドが既に作成されているか",
+                    "サブテーブル内のフィールドを参照する場合は、テーブル名を指定せず、フィールドコードのみを使用してください。\n   正しい例: SUM(金額)\n   誤った例: SUM(経費明細.金額)",
+                    "日付の計算例:\n   - 日付の差分: DATE_FORMAT(日付1, \"YYYY/MM/DD\") - DATE_FORMAT(日付2, \"YYYY/MM/DD\")",
+                    "循環参照がないか確認してください。\n   - フィールドA→フィールドB→フィールドAのような参照関係がないか",
+                    "get_field_type_documentation ツールで計算フィールドの仕様を確認してください：\n   例: get_field_type_documentation({ field_type: \"CALC\" })"
+                ]
+            );
+            
+            // kintone計算フィールドの詳細仕様の確認方法を追加
+            helpText += "\n\n【kintone計算フィールドの詳細仕様の確認方法】\n" +
+                       "1. get_field_type_documentation ツールを使用: get_field_type_documentation({ field_type: \"CALC\" })\n" +
+                       "2. 計算フィールドの作成例: create_calc_field({ code: \"total\", label: \"合計\", expression: \"price * quantity\" })\n" +
+                       "3. kintone公式ドキュメント: https://jp.cybozu.help/k/ja/user/app_settings/form/form_parts/field_calculation.html";
+        }
+    }
+    // ルックアップフィールドのエラー
+    else if (error.message.includes("lookup") || error.message.includes("LOOKUP")) {
+        helpText = formatErrorMessage(
+            "ルックアップフィールドの設定エラー",
+            "ルックアップフィールドの設定に問題があります。",
+            [
+                "参照先アプリが存在するか確認してください。\n   - アプリIDまたはコードが正しいか\n   - アプリが運用環境にデプロイされているか",
+                "フィールドマッピングが正しいか確認してください。\n   - 参照先のフィールドが存在するか\n   - マッピング先のフィールドが既に作成されているか\n   - フィールドの型が互換性を持つか",
+                "get_field_type_documentation ツールでルックアップフィールドの仕様を確認してください：\n   例: get_field_type_documentation({ field_type: \"LOOKUP\" })"
+            ]
+        );
+    }
+    // レイアウト関連のエラー
+    else if (error.message.includes("layout") || error.message.includes("レイアウト")) {
+        helpText = formatErrorMessage(
+            "レイアウト設定エラー",
+            "フォームレイアウトの設定に問題があります。",
+            [
+                "レイアウト要素の型が正しいか確認してください。\n   - ROW, GROUP, SUBTABLE, FIELD, LABEL, SPACER, HR, REFERENCE_TABLE のいずれか",
+                "参照しているフィールドが存在するか確認してください。\n   - フィールドコードのスペルミスがないか\n   - 参照先のフィールドが既に作成されているか",
+                "レイアウト構造が正しいか確認してください。\n   - ROW内にはフィールド要素のみ配置可能\n   - GROUP内にはROW, GROUP, SUBTABLEのみ配置可能\n   - トップレベルにはROW, GROUP, SUBTABLEのみ配置可能",
+                "get_field_type_documentation ツールでレイアウトの仕様を確認してください：\n   例: get_field_type_documentation({ field_type: \"LAYOUT\" })"
+            ]
+        );
     }
 
     if (error instanceof McpError) {
@@ -181,24 +272,21 @@ export function handleToolError(error) {
         
         // アプリが見つからないエラーの場合、プレビュー環境と運用環境の区別に関する情報を追加
         if (error.code === "GAIA_AP01" || error.message.includes("存在しません")) {
-            helpText = `
-アプリが見つかりません。以下の可能性があります：
-
-1. アプリがまだプレビュー環境にのみ存在し、運用環境にデプロイされていない
-2. デプロイ処理が完了していない
-
-解決策：
-1. 新規作成したアプリの場合は、get_preview_app_settings ツールを使用してプレビュー環境の情報を取得してください
-2. アプリをデプロイするには、deploy_app ツールを使用してください
-3. デプロイ状態を確認するには、get_deploy_status ツールを使用してください
-4. デプロイが完了したら、運用環境のAPIを使用できます
-
-kintoneアプリのライフサイクル：
-1. create_app: アプリを作成（プレビュー環境に作成される）
-2. add_fields: フィールドを追加（プレビュー環境に追加される）
-3. deploy_app: アプリをデプロイ（運用環境へ反映）
-4. get_deploy_status: デプロイ状態を確認（完了するまで待機）
-5. get_app_settings: 運用環境の設定を取得（デプロイ完了後）`;
+            helpText = formatErrorMessage(
+                "アプリが見つからないエラー",
+                "指定されたアプリが見つかりません。",
+                [
+                    "アプリがまだプレビュー環境にのみ存在し、運用環境にデプロイされていない可能性があります。",
+                    "デプロイ処理が完了していない可能性があります。",
+                    "新規作成したアプリの場合は、get_preview_app_settings ツールを使用してプレビュー環境の情報を取得してください。",
+                    "アプリをデプロイするには、deploy_app ツールを使用してください。",
+                    "デプロイ状態を確認するには、get_deploy_status ツールを使用してください。",
+                    "デプロイが完了したら、運用環境のAPIを使用できます。"
+                ]
+            );
+            
+            // kintoneアプリのライフサイクル情報を追加
+            helpText += "\n\n【kintoneアプリのライフサイクル】\n1. create_app: アプリを作成（プレビュー環境に作成される）\n2. add_fields: フィールドを追加（プレビュー環境に追加される）\n3. deploy_app: アプリをデプロイ（運用環境へ反映）\n4. get_deploy_status: デプロイ状態を確認（完了するまで待機）\n5. get_app_settings: 運用環境の設定を取得（デプロイ完了後）";
         }
         
         // 必須フィールドが不足しているエラーの場合
@@ -214,22 +302,18 @@ kintoneアプリのライフサイクル：
             }
             
             if (missingFields.length > 0) {
-                helpText = `
-必須フィールドが不足しています：${missingFields.join(', ')}
-
-以下の点を確認してください：
-1. 必須フィールドの値が指定されているか
-2. フィールドの形式が正しいか
-3. フィールドの型が正しいか
-
-例：
-{
-  "app_id": 123,
-  "fields": {
-    "project_name": { "value": "プロジェクト名" },
-    "project_manager": { "value": "山田太郎" }
-  }
-}`;
+                helpText = formatErrorMessage(
+                    "必須フィールド不足エラー",
+                    `必須フィールドが不足しています：${missingFields.join(', ')}`,
+                    [
+                        "必須フィールドの値が指定されているか確認してください。",
+                        "フィールドの形式が正しいか確認してください。",
+                        "フィールドの型が正しいか確認してください。"
+                    ]
+                );
+                
+                // 使用例を追加
+                helpText += "\n\n【使用例】\n```json\n{\n  \"app_id\": 123,\n  \"fields\": {\n    \"project_name\": { \"value\": \"プロジェクト名\" },\n    \"project_manager\": { \"value\": \"山田太郎\" }\n  }\n}\n```";
             }
         }
     }

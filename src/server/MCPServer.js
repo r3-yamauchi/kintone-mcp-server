@@ -19,7 +19,7 @@ export class MCPServer {
         this.server = new Server(
             {
                 name: 'kintonemcp',
-                version: '3.4.0',
+                version: '3.5.0',
             },
             {
                 capabilities: {
@@ -146,7 +146,7 @@ export class MCPServer {
                 // ファイル関連のツール
                 {
                     name: 'download_file',
-                    description: 'kintoneアプリからファイルをダウンロードします',
+                    description: 'kintoneアプリからファイルをダウンロードします。注意: 現在の実装では1MB以上のファイルは正常にダウンロードできない場合があります。',
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -499,7 +499,31 @@ export class MCPServer {
                 },
                 {
                     name: 'add_fields',
-                    description: 'kintoneアプリにフィールドを追加します',
+                    description: 'kintoneアプリにフィールドを追加します。各フィールドには code（フィールドコード）、type（フィールドタイプ）、label（表示名）の指定が必須です。\n' +
+                        'フィールドコードに使用できる文字: ひらがな、カタカナ、漢字、英数字、記号(_＿･・＄￥)\n' +
+                        '注意: システムフィールドタイプ（CREATOR, MODIFIER, RECORD_NUMBER, CREATED_TIME, UPDATED_TIME）は追加できません。これらはkintoneによって自動的に作成されるフィールドです。\n' +
+                        '`type`: `CREATOR` のようなシステムフィールドタイプを指定すると、エラーが発生します。\n' +
+                        '代替方法として、以下のようなフィールドを追加できます：\n' +
+                        '- CREATOR（作成者）の代わりに「申請者」などの名前でUSER_SELECTフィールド\n' +
+                        '- MODIFIER（更新者）の代わりに「承認者」などの名前でUSER_SELECTフィールド\n' +
+                        '- CREATED_TIME（作成日時）の代わりに「申請日時」などの名前でDATETIMEフィールド\n' +
+                        '- UPDATED_TIME（更新日時）の代わりに「承認日時」などの名前でDATETIMEフィールド\n' +
+                        '- RECORD_NUMBER（レコード番号）の代わりに「管理番号」などの名前でSINGLE_LINE_TEXTフィールド\n' +
+                        '例: {\n' +
+                        '  "app_id": 123,\n' +
+                        '  "properties": {\n' +
+                        '    "number_field": {\n' +
+                        '      "type": "NUMBER",\n' +
+                        '      "code": "number_field",\n' +
+                        '      "label": "数値フィールド"\n' +
+                        '    },\n' +
+                        '    "text_field": {\n' +
+                        '      "type": "SINGLE_LINE_TEXT",\n' +
+                        '      "code": "text_field",\n' +
+                        '      "label": "テキストフィールド"\n' +
+                        '    }\n' +
+                        '  }\n' +
+                        '}',
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -509,10 +533,47 @@ export class MCPServer {
                             },
                             properties: {
                                 type: 'object',
-                                description: 'フィールドの設定'
+                                description: 'フィールドの設定（各フィールドには code, type, label の指定が必須）'
                             }
                         },
                         required: ['app_id', 'properties']
+                    }
+                },
+                {
+                    name: 'update_field',
+                    description: '既存のkintoneフィールドの設定を更新します。\n' +
+                        '注意: システムフィールドタイプ（CREATOR, MODIFIER, RECORD_NUMBER, CREATED_TIME, UPDATED_TIME）は更新できません。\n' +
+                        '例: {\n' +
+                        '  "app_id": 123,\n' +
+                        '  "field_code": "text_field",\n' +
+                        '  "field": {\n' +
+                        '    "type": "SINGLE_LINE_TEXT",\n' +
+                        '    "code": "text_field",\n' +
+                        '    "label": "更新後のラベル",\n' +
+                        '    "required": true\n' +
+                        '  }\n' +
+                        '}',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            app_id: {
+                                type: 'number',
+                                description: 'アプリID'
+                            },
+                            field_code: {
+                                type: 'string',
+                                description: '更新対象のフィールドコード'
+                            },
+                            field: {
+                                type: 'object',
+                                description: '更新後のフィールド設定'
+                            },
+                            revision: {
+                                type: 'number',
+                                description: 'アプリのリビジョン番号（省略時は-1で最新リビジョンを使用）'
+                            }
+                        },
+                        required: ['app_id', 'field_code', 'field']
                     }
                 },
                 {
@@ -698,12 +759,11 @@ export class MCPServer {
                                                 properties: {
                                                     type: {
                                                         type: 'string',
-                                                        enum: ['LABEL', 'SPACER', 'HR', 'REFERENCE_TABLE', 'FIELD'],
-                                                        description: 'フィールド要素のタイプ'
+                                                        description: 'フィールド要素のタイプ（"LABEL", "SPACER", "HR", "REFERENCE_TABLE"または実際のフィールドタイプ）'
                                                     },
                                                     code: {
                                                         type: 'string',
-                                                        description: 'FIELDタイプの場合のフィールドコード'
+                                                        description: 'フィールド要素の場合のフィールドコード'
                                                     },
                                                     size: {
                                                         type: 'object',
@@ -711,15 +771,15 @@ export class MCPServer {
                                                         properties: {
                                                             width: {
                                                                 type: 'string',
-                                                                description: '幅（"100%"など）'
+                                                                description: '幅（数値のみ指定可能、例：100）'
                                                             },
                                                             height: {
                                                                 type: 'string',
-                                                                description: '高さ（"200px"など）'
+                                                                description: '高さ（数値のみ指定可能、例：200）'
                                                             },
                                                             innerHeight: {
                                                                 type: 'string',
-                                                                description: '内部高さ（"200px"など）'
+                                                                description: '内部高さ（数値のみ指定可能、例：200）'
                                                             }
                                                         }
                                                     },
@@ -736,7 +796,7 @@ export class MCPServer {
                                         },
                                         code: {
                                             type: 'string',
-                                            description: 'SUBTABLEタイプの場合のサブテーブルコード'
+                                            description: 'フィールドコード'
                                         },
                                         layout: {
                                             type: 'array',
@@ -811,7 +871,15 @@ export class MCPServer {
                 // フィールド作成支援ツール
                 {
                     name: 'create_choice_field',
-                    description: '選択肢フィールド（ラジオボタン、チェックボックス、ドロップダウン、複数選択）の設定を生成します',
+                    description: '選択肢フィールド（ラジオボタン、チェックボックス、ドロップダウン、複数選択）の設定を生成します。\n' +
+                        'フィールドコードに使用できる文字: ひらがな、カタカナ、漢字、英数字、記号(_＿･・＄￥)\n' +
+                        '例: {\n' +
+                        '  "field_type": "RADIO_BUTTON",\n' +
+                        '  "code": "radio_field",\n' +
+                        '  "label": "ラジオボタン",\n' +
+                        '  "choices": ["選択肢1", "選択肢2", "選択肢3"],\n' +
+                        '  "align": "HORIZONTAL"\n' +
+                        '}',
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -822,7 +890,7 @@ export class MCPServer {
                             },
                             code: {
                                 type: 'string',
-                                description: 'フィールドコード'
+                                description: 'フィールドコード（指定しない場合はlabelから自動生成）'
                             },
                             label: {
                                 type: 'string',
@@ -845,18 +913,26 @@ export class MCPServer {
                                 description: 'ラジオボタン・チェックボックスの配置方向'
                             }
                         },
-                        required: ['field_type', 'code', 'label', 'choices']
+                        required: ['field_type', 'label', 'choices']
                     }
                 },
                 {
                     name: 'create_reference_table_field',
-                    description: '関連テーブルフィールドの設定を生成します',
+                    description: '関連テーブルフィールドの設定を生成します。\n' +
+                        'フィールドコードに使用できる文字: ひらがな、カタカナ、漢字、英数字、記号(_＿･・＄￥)\n' +
+                        '例: {\n' +
+                        '  "code": "related_table",\n' +
+                        '  "label": "関連テーブル",\n' +
+                        '  "relatedAppId": 123,\n' +
+                        '  "conditionField": "customer_id",\n' +
+                        '  "relatedConditionField": "customer_id"\n' +
+                        '}',
                     inputSchema: {
                         type: 'object',
                         properties: {
                             code: {
                                 type: 'string',
-                                description: 'フィールドコード'
+                                description: 'フィールドコード（指定しない場合はlabelから自動生成）'
                             },
                             label: {
                                 type: 'string',
@@ -903,18 +979,29 @@ export class MCPServer {
                                 description: 'ラベルを非表示にするかどうか'
                             }
                         },
-                        required: ['code', 'label', 'conditionField', 'relatedConditionField']
+                        required: ['label', 'conditionField', 'relatedConditionField']
                     }
                 },
                 {
                     name: 'create_lookup_field',
-                    description: 'ルックアップフィールドの設定を生成します',
+                    description: 'ルックアップフィールドの設定を生成します。\n' +
+                        'フィールドコードに使用できる文字: ひらがな、カタカナ、漢字、英数字、記号(_＿･・＄￥)\n' +
+                        '例: {\n' +
+                        '  "code": "lookup_field",\n' +
+                        '  "label": "ルックアップ",\n' +
+                        '  "relatedAppId": 123,\n' +
+                        '  "relatedKeyField": "customer_id",\n' +
+                        '  "fieldMappings": [\n' +
+                        '    { "field": "name", "relatedField": "customer_name" },\n' +
+                        '    { "field": "email", "relatedField": "customer_email" }\n' +
+                        '  ]\n' +
+                        '}',
                     inputSchema: {
                         type: 'object',
                         properties: {
                             code: {
                                 type: 'string',
-                                description: 'フィールドコード'
+                                description: 'フィールドコード（指定しない場合はlabelから自動生成）'
                             },
                             label: {
                                 type: 'string',
@@ -970,7 +1057,7 @@ export class MCPServer {
                                 description: '必須フィールドかどうか'
                             }
                         },
-                        required: ['code', 'label', 'relatedKeyField', 'fieldMappings']
+                        required: ['label', 'relatedKeyField', 'fieldMappings']
                     }
                 },
                 
@@ -987,6 +1074,223 @@ export class MCPServer {
                             }
                         },
                         required: ['field_type']
+                    }
+                },
+                {
+                    name: 'get_available_field_types',
+                    description: '利用可能なフィールドタイプの一覧を取得します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {}
+                    }
+                },
+                {
+                    name: 'get_documentation_tool_description',
+                    description: 'ドキュメントツールの説明を取得します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {}
+                    }
+                },
+                {
+                    name: 'get_field_creation_tool_description',
+                    description: 'フィールド作成ツールの説明を取得します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {}
+                    }
+                },
+                
+                // レイアウト関連のツール
+                {
+                    name: 'create_form_layout',
+                    description: 'フィールド情報からフォームレイアウトを自動生成します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            app_id: {
+                                type: 'number',
+                                description: 'kintoneアプリのID'
+                            },
+                            fields: {
+                                type: 'array',
+                                items: {
+                                    type: 'object'
+                                },
+                                description: 'レイアウトに配置するフィールド情報の配列'
+                            },
+                            options: {
+                                type: 'object',
+                                properties: {
+                                    groupBySection: {
+                                        type: 'boolean',
+                                        description: 'セクションごとにグループ化するかどうか'
+                                    },
+                                    fieldsPerRow: {
+                                        type: 'number',
+                                        description: '1行あたりのフィールド数'
+                                    }
+                                },
+                                description: 'レイアウト生成オプション'
+                            }
+                        },
+                        required: ['app_id', 'fields']
+                    }
+                },
+                {
+                    name: 'add_layout_element',
+                    description: '既存のフォームレイアウトに要素を追加します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            app_id: {
+                                type: 'number',
+                                description: 'kintoneアプリのID'
+                            },
+                            element: {
+                                type: 'object',
+                                description: '追加する要素'
+                            },
+                            position: {
+                                type: 'object',
+                                properties: {
+                                    index: {
+                                        type: 'number',
+                                        description: '挿入位置のインデックス'
+                                    },
+                                    type: {
+                                        type: 'string',
+                                        enum: ['GROUP'],
+                                        description: '挿入先の要素タイプ'
+                                    },
+                                    groupCode: {
+                                        type: 'string',
+                                        description: '挿入先のグループコード'
+                                    },
+                                    after: {
+                                        type: 'string',
+                                        description: 'この要素の後に挿入するフィールドコード'
+                                    },
+                                    before: {
+                                        type: 'string',
+                                        description: 'この要素の前に挿入するフィールドコード'
+                                    }
+                                },
+                                description: '要素の挿入位置'
+                            }
+                        },
+                        required: ['app_id', 'element']
+                    }
+                },
+                {
+                    name: 'create_group_layout',
+                    description: 'グループ要素を作成します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            code: {
+                                type: 'string',
+                                description: 'グループコード'
+                            },
+                            label: {
+                                type: 'string',
+                                description: 'グループラベル'
+                            },
+                            fields: {
+                                type: 'array',
+                                items: {
+                                    type: 'object'
+                                },
+                                description: 'グループ内に配置するフィールド情報の配列'
+                            },
+                            openGroup: {
+                                type: 'boolean',
+                                description: 'グループを開いた状態で表示するかどうか'
+                            },
+                            options: {
+                                type: 'object',
+                                properties: {
+                                    fieldsPerRow: {
+                                        type: 'number',
+                                        description: '1行あたりのフィールド数'
+                                    }
+                                },
+                                description: 'グループレイアウト生成オプション'
+                            }
+                        },
+                        required: ['code', 'label', 'fields']
+                    }
+                },
+                {
+                    name: 'create_table_layout',
+                    description: 'テーブルレイアウトを作成します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            rows: {
+                                type: 'array',
+                                items: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'object'
+                                    }
+                                },
+                                description: 'テーブルの各行に配置するフィールド情報の二次元配列'
+                            },
+                            options: {
+                                type: 'object',
+                                description: 'テーブルレイアウト生成オプション'
+                            }
+                        },
+                        required: ['rows']
+                    }
+                },
+                
+                // ユーザー関連のツール
+                {
+                    name: 'get_users',
+                    description: 'kintoneのユーザー情報を取得します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            codes: {
+                                type: 'array',
+                                items: {
+                                    type: 'string'
+                                },
+                                description: '取得するユーザーコードの配列（指定しない場合はすべてのユーザーを取得）'
+                            }
+                        }
+                    }
+                },
+                {
+                    name: 'get_groups',
+                    description: 'kintoneのグループ情報を取得します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            codes: {
+                                type: 'array',
+                                items: {
+                                    type: 'string'
+                                },
+                                description: '取得するグループコードの配列（指定しない場合はすべてのグループを取得）'
+                            }
+                        }
+                    }
+                },
+                {
+                    name: 'get_group_users',
+                    description: '指定したグループに所属するユーザーの一覧を取得します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            group_code: {
+                                type: 'string',
+                                description: 'グループコード'
+                            }
+                        },
+                        required: ['group_code']
                     }
                 }
             ]
