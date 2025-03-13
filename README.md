@@ -5,6 +5,10 @@
 クライアントとして Claudeデスクトップアプリを使用する場合は Claude Pro プランのサブスクリプションが必要です。
 Windsurf や CLINE で使用することもできます。
 
+<a href="https://glama.ai/mcp/servers/dki958qnks">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/dki958qnks/badge" alt="Kintone Server MCP server" />
+</a>
+
 ## 使い方
 
 ### 1. ソースコードをダウンロードする
