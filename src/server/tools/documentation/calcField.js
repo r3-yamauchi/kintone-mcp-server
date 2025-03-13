@@ -15,17 +15,24 @@ export function getCalcFieldDocumentation() {
 1. \`expression\`: 計算式（文字列、必須）
    - 他のフィールドを参照して計算を行う式を指定します
    - フィールドコード、演算子、関数を組み合わせて記述します
-2. \`format\`: 表示形式（"NUMBER", "DATE", "TIME", "DATETIME"のいずれか、省略可）
+2. \`format\`: 表示形式（省略可）
    - 計算結果の表示形式を指定します
-   - 省略時は "NUMBER" になります
-3. \`digit\`: 桁区切りの有無（true/false、省略可、format="NUMBER"の場合のみ有効）
-   - trueの場合、3桁ごとにカンマ区切りで表示されます（例：1,234,567）
-4. \`displayScale\`: 小数点以下の桁数（"0"～"10"、省略可、format="NUMBER"の場合のみ有効）
+   - 以下の値が指定可能です：
+     - "NUMBER"：数値（例：1000）
+     - "NUMBER_DIGIT"：数値（桁区切りあり）（例：1,000）
+     - "DATE"：日付（例：2012-08-06）
+     - "TIME"：時刻（例：2:03）
+     - "DATETIME"：日時（例：2012-08-06 2:03）
+     - "HOUR_MINUTE"：時間（例：26時間3分）
+     - "DAY_HOUR_MINUTE"：時間（例：1日2時間3分）
+   - 省略時は "NUMBER_DIGIT"（桁区切りあり）になります
+   - **重要**: 計算フィールドで桁区切り表示を有効にするには、\`format\`に"NUMBER_DIGIT"を指定する必要があります
+3. \`displayScale\`: 小数点以下の桁数（"0"～"10"、省略可、format="NUMBER"または"NUMBER_DIGIT"の場合のみ有効）
    - 小数点以下の表示桁数を指定します（例："2"で小数点以下2桁まで表示）
    - 文字列型の数値で指定します
-5. \`unit\`: 単位（省略可、format="NUMBER"の場合のみ有効）
+4. \`unit\`: 単位（省略可、format="NUMBER"または"NUMBER_DIGIT"の場合のみ有効）
    - 数値の単位を指定します（例："円"、"%"、"kg"など）
-6. \`unitPosition\`: 単位の位置（"BEFORE"/"AFTER"、省略時は"BEFORE"、format="NUMBER"の場合のみ有効）
+5. \`unitPosition\`: 単位の位置（"BEFORE"/"AFTER"、省略時は"AFTER"、format="NUMBER"または"NUMBER_DIGIT"の場合のみ有効）
    - "BEFORE"：単位を数値の前に表示（例：$100）
    - "AFTER"：単位を数値の後に表示（例：100円）
 

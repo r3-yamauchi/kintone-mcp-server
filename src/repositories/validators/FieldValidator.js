@@ -1,26 +1,192 @@
 // src/repositories/validators/FieldValidator.js
 import { FIELD_TYPES_REQUIRING_OPTIONS, CALC_FIELD_TYPE, LINK_FIELD_TYPE, VALID_LINK_PROTOCOLS, LOOKUP_FIELD_TYPE, REFERENCE_TABLE_FIELD_TYPE, SINGLE_LINE_TEXT_FIELD_TYPE, MULTI_LINE_TEXT_FIELD_TYPE, NUMBER_FIELD_TYPE, VALID_UNIT_POSITIONS, DATE_FIELD_TYPE, TIME_FIELD_TYPE, DATETIME_FIELD_TYPE, RICH_TEXT_FIELD_TYPE, ATTACHMENT_FIELD_TYPE, USER_SELECT_FIELD_TYPE, GROUP_SELECT_FIELD_TYPE, ORGANIZATION_SELECT_FIELD_TYPE, SUBTABLE_FIELD_TYPE, STATUS_FIELD_TYPE, RELATED_RECORDS_FIELD_TYPE, RECORD_NUMBER_FIELD_TYPE, CREATOR_FIELD_TYPE, MODIFIER_FIELD_TYPE, CREATED_TIME_FIELD_TYPE, UPDATED_TIME_FIELD_TYPE, UNIT_POSITION_PATTERNS } from '../../constants.js';
 
+import { autoCorrectUnitPosition } from '../../server/tools/FieldTools.js';
+
+/**
+ * フィールドを検証し、必要に応じて自動修正を適用する関数
+ * @param {Object} field フィールドオブジェクト
+ * @returns {Object} 検証・修正済みのフィールドオブジェクト
+ */
+export function validateField(field) {
+    // 単位位置の自動修正を適用
+    const correctedField = autoCorrectUnitPosition(field);
+    
+    // フィールドコードの検証
+    if (correctedField.code) {
+        validateFieldCode(correctedField.code);
+    }
+    
+    // フィールドタイプ固有の検証
+    if (correctedField.type) {
+        // 選択肢フィールドの検証
+        if (FIELD_TYPES_REQUIRING_OPTIONS.includes(correctedField.type)) {
+            validateOptions(correctedField.type, correctedField.options);
+        }
+        
+        // 計算フィールドの検証
+        if (correctedField.type === CALC_FIELD_TYPE) {
+            validateCalcField(correctedField.type, correctedField.expression, correctedField);
+        }
+        
+        // リンクフィールドの検証
+        if (correctedField.type === LINK_FIELD_TYPE) {
+            validateLinkField(correctedField.type, correctedField.protocol);
+        }
+        
+        // 関連テーブルフィールドの検証
+        if (correctedField.type === REFERENCE_TABLE_FIELD_TYPE) {
+            validateReferenceTableField(correctedField.type, correctedField.referenceTable);
+        }
+        
+        // 数値フィールドの検証
+        if (correctedField.type === NUMBER_FIELD_TYPE) {
+            validateNumberField(correctedField.type, correctedField);
+        }
+        
+        // 文字列フィールドの検証
+        if ([SINGLE_LINE_TEXT_FIELD_TYPE, MULTI_LINE_TEXT_FIELD_TYPE].includes(correctedField.type)) {
+            validateTextField(correctedField.type, correctedField);
+        }
+        
+        // 日時フィールドの検証
+        if ([DATE_FIELD_TYPE, TIME_FIELD_TYPE, DATETIME_FIELD_TYPE].includes(correctedField.type)) {
+            validateDateTimeField(correctedField.type, correctedField);
+        }
+        
+        // リッチエディタフィールドの検証
+        if (correctedField.type === RICH_TEXT_FIELD_TYPE) {
+            validateRichTextField(correctedField.type, correctedField);
+        }
+        
+        // 添付ファイルフィールドの検証
+        if (correctedField.type === ATTACHMENT_FIELD_TYPE) {
+            validateAttachmentField(correctedField.type, correctedField);
+        }
+        
+        // ユーザー選択フィールドの検証
+        if ([USER_SELECT_FIELD_TYPE, GROUP_SELECT_FIELD_TYPE, ORGANIZATION_SELECT_FIELD_TYPE].includes(correctedField.type)) {
+            validateUserSelectField(correctedField.type, correctedField);
+        }
+        
+        // テーブルフィールドの検証
+        if (correctedField.type === SUBTABLE_FIELD_TYPE) {
+            validateSubtableField(correctedField.type, correctedField);
+        }
+        
+        // ステータスフィールドの検証
+        if (correctedField.type === STATUS_FIELD_TYPE) {
+            validateStatusField(correctedField.type, correctedField);
+        }
+        
+        // 関連レコードリストフィールドの検証
+        if (correctedField.type === RELATED_RECORDS_FIELD_TYPE) {
+            validateRelatedRecordsField(correctedField.type, correctedField);
+        }
+        
+        // レコード番号フィールドの検証
+        if (correctedField.type === RECORD_NUMBER_FIELD_TYPE) {
+            validateRecordNumberField(correctedField.type, correctedField);
+        }
+        
+        // システムフィールドの検証
+        if ([CREATOR_FIELD_TYPE, MODIFIER_FIELD_TYPE, CREATED_TIME_FIELD_TYPE, UPDATED_TIME_FIELD_TYPE].includes(correctedField.type)) {
+            validateSystemField(correctedField.type, correctedField);
+        }
+        
+        // LOOKUPフィールドの検証
+        if (correctedField.type === LOOKUP_FIELD_TYPE) {
+            validateLookupField(correctedField.type, correctedField.lookup);
+        }
+    }
+    
+    return correctedField;
+}
+
 /**
  * 単位記号に基づいて適切な unitPosition を判定する関数
  * @param {string} unit 単位記号
  * @returns {string} 適切な unitPosition ("BEFORE" または "AFTER")
  */
 function determineUnitPosition(unit) {
-    if (!unit) return "BEFORE"; // 単位が指定されていない場合はデフォルト値
+    // 判定理由を記録する変数
+    let reason = "";
     
-    // BEFORE パターンに一致するか確認
-    if (UNIT_POSITION_PATTERNS.BEFORE.some(pattern => unit.includes(pattern))) {
-        return "BEFORE";
-    }
-    
-    // AFTER パターンに一致するか確認
-    if (UNIT_POSITION_PATTERNS.AFTER.some(pattern => unit.includes(pattern))) {
+    // 単位が指定されていない場合
+    if (!unit) {
+        reason = "単位が指定されていないため";
+        console.error(`単位位置判定: ${reason}、デフォルト値 "AFTER" を設定`);
         return "AFTER";
     }
     
-    // どちらのパターンにも一致しない場合はデフォルト値
-    return "BEFORE";
+    // 単位の長さが4文字以上の場合
+    if (unit.length >= 4) {
+        reason = `単位の長さが4文字以上 (${unit.length}文字) のため`;
+        console.error(`単位位置判定: ${reason}、"AFTER" を設定`);
+        return "AFTER";
+    }
+    
+    // 複合単位の判定（スペースや特殊記号を含む）
+    if (/[\s\/\-\+]/.test(unit) || (unit.length > 1 && /[^\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(unit))) {
+        reason = `複合単位 "${unit}" と判断されるため`;
+        console.error(`単位位置判定: ${reason}、"AFTER" を設定`);
+        return "AFTER";
+    }
+    
+    // 完全一致による判定
+    const isBeforeExact = UNIT_POSITION_PATTERNS.BEFORE.includes(unit);
+    const isAfterExact = UNIT_POSITION_PATTERNS.AFTER.includes(unit);
+    
+    // 両方のパターンに一致する場合
+    if (isBeforeExact && isAfterExact) {
+        reason = `単位 "${unit}" が BEFORE と AFTER の両方のパターンに一致するため`;
+        console.error(`単位位置判定: ${reason}、"AFTER" を優先設定`);
+        return "AFTER";
+    }
+    
+    // BEFOREパターンに完全一致
+    if (isBeforeExact) {
+        reason = `単位 "${unit}" が BEFORE パターンに完全一致するため`;
+        console.error(`単位位置判定: ${reason}、"BEFORE" を設定`);
+        return "BEFORE";
+    }
+    
+    // AFTERパターンに完全一致
+    if (isAfterExact) {
+        reason = `単位 "${unit}" が AFTER パターンに完全一致するため`;
+        console.error(`単位位置判定: ${reason}、"AFTER" を設定`);
+        return "AFTER";
+    }
+    
+    // 部分一致による判定（完全一致しない場合のフォールバック）
+    const beforeMatches = UNIT_POSITION_PATTERNS.BEFORE.filter(pattern => unit.includes(pattern));
+    const afterMatches = UNIT_POSITION_PATTERNS.AFTER.filter(pattern => unit.includes(pattern));
+    
+    // 両方のパターンに部分一致する場合
+    if (beforeMatches.length > 0 && afterMatches.length > 0) {
+        reason = `単位 "${unit}" が BEFORE パターン [${beforeMatches.join(', ')}] と AFTER パターン [${afterMatches.join(', ')}] の両方に部分一致するため`;
+        console.error(`単位位置判定: ${reason}、"AFTER" を優先設定`);
+        return "AFTER";
+    }
+    
+    // BEFOREパターンに部分一致
+    if (beforeMatches.length > 0) {
+        reason = `単位 "${unit}" が BEFORE パターン [${beforeMatches.join(', ')}] に部分一致するため`;
+        console.error(`単位位置判定: ${reason}、"BEFORE" を設定`);
+        return "BEFORE";
+    }
+    
+    // AFTERパターンに部分一致
+    if (afterMatches.length > 0) {
+        reason = `単位 "${unit}" が AFTER パターン [${afterMatches.join(', ')}] に部分一致するため`;
+        console.error(`単位位置判定: ${reason}、"AFTER" を設定`);
+        return "AFTER";
+    }
+    
+    // どのパターンにも一致しない場合
+    reason = `単位 "${unit}" がどのパターンにも一致しないため`;
+    console.error(`単位位置判定: ${reason}、デフォルト値 "AFTER" を設定`);
+    return "AFTER";
 }
 
 /**
@@ -231,21 +397,44 @@ function validateExpressionFormat(expression) {
             };
         }
     }
-    
+
+    // テーブル名.フィールド名パターンを検出
+    // 修正: 数値リテラルの小数点を除外するために正規表現を改良
+    // 1. 数値リテラルの前後に識別子が来ない場合は除外
+    // 2. 識別子の後に続くドットのみを検出
+
+    // 数値リテラルを検出する正規表現
+    const numberPattern = /\b\d+\.\d+\b/g;
+
+    // 数値リテラルを一時的に置換して保護
+    const numberPlaceholders = {};
+    let placeholderCount = 0;
+    let protectedExpression = expression.replace(numberPattern, (match) => {
+        const placeholder = `__NUMBER_PLACEHOLDER_${placeholderCount}__`;
+        numberPlaceholders[placeholder] = match;
+        placeholderCount++;
+        return placeholder;
+    });
+
     // テーブル名.フィールド名パターンを検出
     const tableFieldPattern = /([a-zA-Z0-9ぁ-んァ-ヶー一-龠々＿_･・＄￥]+)\.([a-zA-Z0-9ぁ-んァ-ヶー一-龠々＿_･・＄￥]+)/g;
-    
-    if (tableFieldPattern.test(expression)) {
+
+    if (tableFieldPattern.test(protectedExpression)) {
         // 修正案を作成
-        const suggestion = expression.replace(tableFieldPattern, "$2");
-        
+        const suggestion = protectedExpression.replace(tableFieldPattern, "$2");
+
+        // プレースホルダーを元の数値に戻す
+        const finalSuggestion = suggestion.replace(/__NUMBER_PLACEHOLDER_\d+__/g, (placeholder) => {
+            return numberPlaceholders[placeholder] || placeholder;
+        });
+
         return {
             isValid: false,
-            message: `計算式内でサブテーブル内のフィールドを参照する際は、テーブル名を指定せず、フィールドコードのみを使用してください。\n\n【誤った参照方法】\n${expression}\n\n【正しい参照方法】\n${suggestion}\n\nkintoneでは、フィールドコードはアプリ内で一意であるため、サブテーブル名を指定する必要はありません。`,
-            suggestion: suggestion
+            message: `計算式内でサブテーブル内のフィールドを参照する際は、テーブル名を指定せず、フィールドコードのみを使用してください。\n\n【誤った参照方法】\n${expression}\n\n【正しい参照方法】\n${finalSuggestion}\n\nkintoneでは、フィールドコードはアプリ内で一意であるため、サブテーブル名を指定する必要はありません。`,
+            suggestion: finalSuggestion
         };
     }
-    
+
     // 空の計算式チェック
     if (!expression || expression.trim() === '') {
         return {
@@ -261,29 +450,43 @@ function validateExpressionFormat(expression) {
 // 計算フィールドのバリデーション
 export function validateCalcField(fieldType, expression, config) {
     if (fieldType === CALC_FIELD_TYPE) {
+        // formulaからexpressionへの自動変換
+        if (config && config.formula !== undefined && config.expression === undefined) {
+            config.expression = config.formula;
+            delete config.formula;
+            console.error(`警告: 計算フィールドの計算式は formula ではなく expression に指定してください。今回は自動的に変換しました。`);
+            expression = config.expression;
+        }
+        
+        // digit=trueの場合はformatをNUMBER_DIGITに自動設定
+        if (config && config.digit === true && (!config.format || config.format === 'NUMBER')) {
+            config.format = 'NUMBER_DIGIT';
+            console.error(`桁区切り表示が有効なため、format を "NUMBER_DIGIT" に自動設定しました。`);
+        }
+        
         // 計算式のチェック
         if (expression === undefined) {
-            throw new Error('計算フィールドには expression の指定が必須です。空でない文字列で kintoneで使用できる計算式を指定する必要があります。');
+            throw new Error('計算フィールドには expression の指定が必須です。formula ではなく expression を使用してください。');
         }
         if (typeof expression !== 'string' || expression.trim() === '') {
             throw new Error('expression は空でない文字列で kintoneで使用できる計算式を指定する必要があります。');
         }
         
-        // 計算式の形式チェック
-        const validationResult = validateExpressionFormat(expression);
-        if (!validationResult.isValid) {
-            throw new Error(validationResult.message);
+        // digit=trueの場合はformatをNUMBER_DIGITに自動設定
+        if (config && config.digit === true && (!config.format || config.format === 'NUMBER')) {
+            config.format = 'NUMBER_DIGIT';
+            console.error(`桁区切り表示が有効なため、format を "NUMBER_DIGIT" に自動設定しました。`);
         }
         
         // 表示形式のチェック
         if (config && config.format !== undefined) {
-            const validFormats = ['NUMBER', 'DATE', 'TIME', 'DATETIME'];
+            const validFormats = ['NUMBER', 'NUMBER_DIGIT', 'DATE', 'TIME', 'DATETIME', 'HOUR_MINUTE', 'DAY_HOUR_MINUTE'];
             if (!validFormats.includes(config.format)) {
                 throw new Error(`format の値が不正です: "${config.format}"\n指定可能な値: ${validFormats.join(', ')}`);
             }
             
             // 数値形式の場合の追加チェック
-            if (config.format === 'NUMBER') {
+            if (config.format === 'NUMBER' || config.format === 'NUMBER_DIGIT') {
                 // 桁区切りのチェック
                 if (config.digit !== undefined && 
                     typeof config.digit !== 'boolean' && 
@@ -320,6 +523,10 @@ export function validateCalcField(fieldType, expression, config) {
                     }
                 }
             }
+        } else if (config) {
+            // formatが指定されていない場合はデフォルトでNUMBER_DIGITを設定
+            config.format = 'NUMBER_DIGIT';
+            console.error(`formatが指定されていないため、デフォルト値 "NUMBER_DIGIT" を設定しました。`);
         }
     }
     return true;
@@ -426,7 +633,11 @@ export function validateNumberField(fieldType, config) {
         }
         
         // displayScaleのチェック（小数点以下の表示桁数）
-        if (config.displayScale !== undefined) {
+        if (config.displayScale === "") {
+            // 空文字列の場合は削除
+            delete config.displayScale;
+            console.error(`数値フィールドの displayScale に空文字列が指定されたため、指定を削除しました。`);
+        } else if (config.displayScale !== undefined) {
             const scale = parseInt(config.displayScale, 10);
             if (isNaN(scale) || scale < 0 || scale > 10) {
                 throw new Error('displayScaleは0から10までの整数で指定してください。');

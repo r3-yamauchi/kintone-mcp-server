@@ -88,11 +88,12 @@ export async function executeToolRequest(request, repository) {
             result = await handleSpaceTools(name, args, repository);
         }
         
-        else if (['add_fields', 'create_choice_field', 'create_reference_table_field', 'create_lookup_field',
-                 'create_text_field', 'create_number_field', 'create_date_field', 'create_time_field',
-                 'create_datetime_field', 'create_rich_text_field', 'create_attachment_field',
-                 'create_user_select_field', 'create_subtable_field', 'create_calc_field',
-                 'create_status_field', 'create_related_records_field', 'create_link_field'].includes(name)) {
+else if (['add_fields', 'create_choice_field', 'create_reference_table_field', 'create_lookup_field',
+         'create_text_field', 'create_number_field', 'create_date_field', 'create_time_field',
+         'create_datetime_field', 'create_rich_text_field', 'create_attachment_field',
+         'create_user_select_field', 'create_subtable_field', 'create_calc_field',
+         'create_status_field', 'create_related_records_field', 'create_link_field',
+         'update_field'].includes(name)) {
             result = await handleFieldTools(name, args, repository);
         }
         

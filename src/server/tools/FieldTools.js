@@ -7,25 +7,119 @@ import { UNIT_POSITION_PATTERNS } from '../../constants.js';
  * @returns {string} 適切な unitPosition ("BEFORE" または "AFTER")
  */
 function determineUnitPosition(unit) {
-    if (!unit) return "BEFORE"; // 単位が指定されていない場合はデフォルト値
+    // 判定理由を記録する変数
+    let reason = "";
     
-    // パーセント記号の特別処理
-    if (unit === '%' || unit === '％') {
+    // 単位が指定されていない場合
+    if (!unit) {
+        reason = "単位が指定されていないため";
+        console.error(`単位位置判定: ${reason}、デフォルト値 "AFTER" を設定`);
         return "AFTER";
     }
     
-    // BEFORE パターンに一致するか確認
-    if (UNIT_POSITION_PATTERNS.BEFORE.some(pattern => unit.includes(pattern))) {
+    // 単位の長さが4文字以上の場合
+    if (unit.length >= 4) {
+        reason = `単位の長さが4文字以上 (${unit.length}文字) のため`;
+        console.error(`単位位置判定: ${reason}、"AFTER" を設定`);
+        return "AFTER";
+    }
+    
+    // 複合単位の判定（スペースや特殊記号を含む）
+    if (/[\s\/\-\+]/.test(unit) || (unit.length > 1 && /[^\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(unit))) {
+        reason = `複合単位 "${unit}" と判断されるため`;
+        console.error(`単位位置判定: ${reason}、"AFTER" を設定`);
+        return "AFTER";
+    }
+    
+    // 完全一致による判定
+    const isBeforeExact = UNIT_POSITION_PATTERNS.BEFORE.includes(unit);
+    const isAfterExact = UNIT_POSITION_PATTERNS.AFTER.includes(unit);
+    
+    // 両方のパターンに一致する場合
+    if (isBeforeExact && isAfterExact) {
+        reason = `単位 "${unit}" が BEFORE と AFTER の両方のパターンに一致するため`;
+        console.error(`単位位置判定: ${reason}、"AFTER" を優先設定`);
+        return "AFTER";
+    }
+    
+    // BEFOREパターンに完全一致
+    if (isBeforeExact) {
+        reason = `単位 "${unit}" が BEFORE パターンに完全一致するため`;
+        console.error(`単位位置判定: ${reason}、"BEFORE" を設定`);
         return "BEFORE";
     }
     
-    // AFTER パターンに一致するか確認
-    if (UNIT_POSITION_PATTERNS.AFTER.some(pattern => unit.includes(pattern))) {
+    // AFTERパターンに完全一致
+    if (isAfterExact) {
+        reason = `単位 "${unit}" が AFTER パターンに完全一致するため`;
+        console.error(`単位位置判定: ${reason}、"AFTER" を設定`);
         return "AFTER";
     }
     
-    // どちらのパターンにも一致しない場合はデフォルト値
-    return "BEFORE";
+    // 部分一致による判定（完全一致しない場合のフォールバック）
+    const beforeMatches = UNIT_POSITION_PATTERNS.BEFORE.filter(pattern => unit.includes(pattern));
+    const afterMatches = UNIT_POSITION_PATTERNS.AFTER.filter(pattern => unit.includes(pattern));
+    
+    // 両方のパターンに部分一致する場合
+    if (beforeMatches.length > 0 && afterMatches.length > 0) {
+        reason = `単位 "${unit}" が BEFORE パターン [${beforeMatches.join(', ')}] と AFTER パターン [${afterMatches.join(', ')}] の両方に部分一致するため`;
+        console.error(`単位位置判定: ${reason}、"AFTER" を優先設定`);
+        return "AFTER";
+    }
+    
+    // BEFOREパターンに部分一致
+    if (beforeMatches.length > 0) {
+        reason = `単位 "${unit}" が BEFORE パターン [${beforeMatches.join(', ')}] に部分一致するため`;
+        console.error(`単位位置判定: ${reason}、"BEFORE" を設定`);
+        return "BEFORE";
+    }
+    
+    // AFTERパターンに部分一致
+    if (afterMatches.length > 0) {
+        reason = `単位 "${unit}" が AFTER パターン [${afterMatches.join(', ')}] に部分一致するため`;
+        console.error(`単位位置判定: ${reason}、"AFTER" を設定`);
+        return "AFTER";
+    }
+    
+    // どのパターンにも一致しない場合
+    reason = `単位 "${unit}" がどのパターンにも一致しないため`;
+    console.error(`単位位置判定: ${reason}、デフォルト値 "AFTER" を設定`);
+    return "AFTER";
+}
+
+/**
+ * フィールドの単位位置を自動修正する関数
+ * @param {Object} field フィールドオブジェクト
+ * @returns {Object} 修正されたフィールドオブジェクト
+ */
+export function autoCorrectUnitPosition(field) {
+    // フィールドオブジェクトのディープコピーを作成
+    const correctedField = JSON.parse(JSON.stringify(field));
+    
+    // NUMBER フィールドの場合
+    if (field.type === "NUMBER" && field.unit && !field.unitPosition) {
+        // 単位記号に基づいて適切な unitPosition を判定
+        correctedField.unitPosition = determineUnitPosition(field.unit);
+        console.error(`NUMBER フィールド "${field.code || ''}" の unitPosition を "${correctedField.unitPosition}" に自動設定しました。`);
+    }
+    
+    // CALC フィールドの場合
+    if (field.type === "CALC" && field.format === "NUMBER" && field.unit && !field.unitPosition) {
+        // 単位記号に基づいて適切な unitPosition を判定
+        correctedField.unitPosition = determineUnitPosition(field.unit);
+        console.error(`CALC フィールド "${field.code || ''}" の unitPosition を "${correctedField.unitPosition}" に自動設定しました。`);
+    }
+    
+    // サブテーブルフィールドの場合、内部のフィールドも再帰的に処理
+    if (field.type === "SUBTABLE" && field.fields) {
+        // 各サブフィールドに対して自動修正を適用
+        for (const [fieldKey, fieldDef] of Object.entries(field.fields)) {
+            correctedField.fields[fieldKey] = autoCorrectUnitPosition(fieldDef);
+        }
+        console.error(`SUBTABLE フィールド "${field.code || ''}" 内のフィールドの単位位置を自動修正しました。`);
+    }
+    
+    return correctedField;
 }
 
 /**
@@ -93,6 +187,19 @@ export async function handleFieldTools(name, args, repository) {
                 // フィールドタイプが指定されていない場合はエラー
                 if (!field.type) {
                     throw new Error(`フィールド "${field.code}" にはタイプ(type)の指定が必須です。`);
+                }
+                
+                // 計算フィールドの場合、formulaからexpressionへの自動変換
+                if (field.type === "CALC" && field.formula !== undefined && field.expression === undefined) {
+                    field.expression = field.formula;
+                    delete field.formula;
+                    console.error(`警告: 計算フィールド "${field.code}" の計算式は formula ではなく expression に指定してください。今回は自動的に変換しました。`);
+                }
+                
+                // 数値フィールドの場合、displayScaleが空文字列なら削除
+                if (field.type === "NUMBER" && field.displayScale === "") {
+                    delete field.displayScale;
+                    console.error(`数値フィールド "${field.code}" の displayScale に空文字列が指定されたため、指定を削除しました。`);
                 }
                 
                 processedProperties[field.code] = field;
@@ -466,8 +573,8 @@ export async function handleFieldTools(name, args, repository) {
                 effectiveUnitPosition = determineUnitPosition(unit);
                 console.error(`単位記号「${unit}」に基づいて unitPosition を "${effectiveUnitPosition}" に自動設定しました。`);
             } else {
-                // どちらも指定されていない場合は kintone API の仕様に合わせてデフォルト値を使用
-                effectiveUnitPosition = "BEFORE";
+                // どちらも指定されていない場合はデフォルト値を AFTER に変更
+                effectiveUnitPosition = "AFTER";
             }
             
             // フィールド設定の基本部分
@@ -487,7 +594,19 @@ export async function handleFieldTools(name, args, repository) {
             if (minValue !== undefined) fieldConfig.minValue = String(minValue);
             if (unit !== undefined) fieldConfig.unit = unit;
             fieldConfig.unitPosition = effectiveUnitPosition;
-            if (displayScale !== undefined) fieldConfig.displayScale = String(displayScale);
+            
+            // displayScaleが空文字列なら削除、それ以外は設定
+            if (displayScale === "") {
+                console.error(`数値フィールド "${code}" の displayScale に空文字列が指定されたため、指定を削除しました。`);
+                // displayScaleを設定しない
+            } else if (displayScale !== undefined) {
+                // displayScaleの値の範囲チェック
+                const scale = parseInt(displayScale, 10);
+                if (isNaN(scale) || scale < 0 || scale > 10) {
+                    throw new Error('displayScaleは0から10までの整数で指定してください。');
+                }
+                fieldConfig.displayScale = String(displayScale);
+            }
             
             return fieldConfig;
         }
@@ -818,7 +937,7 @@ export async function handleFieldTools(name, args, repository) {
                 expression,
                 noLabel = false,
                 // 表示形式関連パラメータ
-                format = "NUMBER",
+                format,
                 digit = false,
                 displayScale = "0",
                 unit = "",
@@ -829,7 +948,6 @@ export async function handleFieldTools(name, args, repository) {
             console.error(`Creating calculation field: ${code}`);
             console.error(`Label: ${label}`);
             console.error(`Expression: ${expression}`);
-            console.error(`Format: ${format}`);
             
             // フィールド設定の基本部分
             const fieldConfig = {
@@ -840,12 +958,24 @@ export async function handleFieldTools(name, args, repository) {
                 expression: expression
             };
             
-            // 表示形式設定の追加
-            if (format) fieldConfig.format = format;
+            // 表示形式の設定
+            // digit=trueの場合はNUMBER_DIGITを使用、それ以外はformatパラメータまたはデフォルト値を使用
+            if (digit === true) {
+                fieldConfig.format = "NUMBER_DIGIT";
+                console.error(`桁区切り表示が有効なため、format を "NUMBER_DIGIT" に設定しました。`);
+            } else if (format) {
+                fieldConfig.format = format;
+                console.error(`Format: ${format}`);
+            } else {
+                // デフォルトでNUMBER_DIGITを使用（桁区切り表示をデフォルトにする）
+                fieldConfig.format = "NUMBER_DIGIT";
+                console.error(`formatが指定されていないため、デフォルト値 "NUMBER_DIGIT" を設定しました。`);
+            }
             
-            // 数値形式の場合
-            if (format === "NUMBER") {
-                if (digit !== undefined) fieldConfig.digit = digit;
+            // 数値形式の場合の追加設定
+            if (fieldConfig.format === "NUMBER" || fieldConfig.format === "NUMBER_DIGIT") {
+                // digitはformatで表現するため、fieldConfigには含めない
+                
                 if (displayScale !== undefined) fieldConfig.displayScale = String(displayScale);
                 if (unit !== undefined) fieldConfig.unit = unit;
                 
@@ -868,8 +998,8 @@ export async function handleFieldTools(name, args, repository) {
                     effectiveUnitPosition = determineUnitPosition(unit);
                     console.error(`単位記号「${unit}」に基づいて unitPosition を "${effectiveUnitPosition}" に自動設定しました。`);
                 } else {
-                    // どちらも指定されていない場合は kintone API の仕様に合わせてデフォルト値を使用
-                    effectiveUnitPosition = "BEFORE";
+                    // どちらも指定されていない場合はデフォルト値を AFTER に変更
+                    effectiveUnitPosition = "AFTER";
                 }
                 
                 fieldConfig.unitPosition = effectiveUnitPosition;

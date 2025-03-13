@@ -1,7 +1,7 @@
 // src/repositories/KintoneAppRepository.js
 import { BaseKintoneRepository } from './base/BaseKintoneRepository.js';
 import { KintoneRestAPIError } from '@kintone/rest-api-client';
-import { validateFieldCode, validateOptions, validateCalcField, validateLinkField, validateReferenceTableField, validateLookupField, validateTextField, validateNumberField, validateDateTimeField, validateRichTextField, validateAttachmentField, validateUserSelectField, validateSubtableField, validateStatusField, validateRelatedRecordsField, validateRecordNumberField, validateSystemField } from './validators/FieldValidator.js';
+import { validateFieldCode, validateOptions, validateCalcField, validateLinkField, validateReferenceTableField, validateLookupField, validateTextField, validateNumberField, validateDateTimeField, validateRichTextField, validateAttachmentField, validateUserSelectField, validateSubtableField, validateStatusField, validateRelatedRecordsField, validateRecordNumberField, validateSystemField, validateField } from './validators/FieldValidator.js';
 import { validateFormLayout, validateFieldSize, validateElementPosition } from './validators/LayoutValidator.js';
 import { autoCorrectOptions } from './validators/OptionValidator.js';
 import { FIELD_TYPES_REQUIRING_OPTIONS, CALC_FIELD_TYPE, LINK_FIELD_TYPE, VALID_LINK_PROTOCOLS, LOOKUP_FIELD_TYPE, REFERENCE_TABLE_FIELD_TYPE, SUBTABLE_FIELD_TYPE } from '../constants.js';
@@ -238,22 +238,27 @@ export class KintoneAppRepository extends BaseKintoneRepository {
                     validateOptions(fieldConfig.type, fieldConfig.options);
                 }
 
+                // 単位位置の自動修正を適用
                 if (fieldConfig.type) {
-                    validateCalcField(fieldConfig.type, fieldConfig.expression);
-                    validateLinkField(fieldConfig.type, fieldConfig.protocol);
-                    validateReferenceTableField(fieldConfig.type, fieldConfig.referenceTable);
-                    validateLookupField(fieldConfig.type, fieldConfig.lookup);
-                    validateTextField(fieldConfig.type, fieldConfig);
-                    validateNumberField(fieldConfig.type, fieldConfig);
-                    validateDateTimeField(fieldConfig.type, fieldConfig);
-                    validateRichTextField(fieldConfig.type, fieldConfig);
-                    validateAttachmentField(fieldConfig.type, fieldConfig);
-                    validateUserSelectField(fieldConfig.type, fieldConfig);
-                    validateSubtableField(fieldConfig.type, fieldConfig);
-                    validateStatusField(fieldConfig.type, fieldConfig);
-                    validateRelatedRecordsField(fieldConfig.type, fieldConfig);
-                    validateRecordNumberField(fieldConfig.type, fieldConfig);
-                    validateSystemField(fieldConfig.type, fieldConfig);
+                    // validateField関数を使用して自動修正を適用
+                    const correctedField = validateField(fieldConfig);
+                    
+                    // 修正されたフィールドで置き換え
+                    if (fieldConfig.code === propertyKey) {
+                        convertedProperties[propertyKey] = correctedField;
+                    } else {
+                        convertedProperties[fieldConfig.code] = correctedField;
+                    }
+                    
+                    // 自動修正の結果をログに出力
+                    if (fieldConfig.type === "NUMBER" || 
+                        (fieldConfig.type === "CALC" && fieldConfig.format === "NUMBER")) {
+                        if (fieldConfig.unit && !fieldConfig.unitPosition && correctedField.unitPosition) {
+                            warnings.push(
+                                `フィールド "${fieldConfig.code}" の unitPosition を "${correctedField.unitPosition}" に自動設定しました。`
+                            );
+                        }
+                    }
                     
                     // SUBTABLEフィールドの特別な処理
                     if (fieldConfig.type === SUBTABLE_FIELD_TYPE) {
@@ -589,23 +594,21 @@ export class KintoneAppRepository extends BaseKintoneRepository {
                     throw new Error(`フィールド "${fieldCode}" にはタイプ(type)の指定が必須です。`);
                 }
 
-                // 各フィールドタイプ固有のバリデーション
+                // 単位位置の自動修正を適用
                 if (fieldConfig.type) {
-                    validateCalcField(fieldConfig.type, fieldConfig.expression);
-                    validateLinkField(fieldConfig.type, fieldConfig.protocol);
-                    validateReferenceTableField(fieldConfig.type, fieldConfig.referenceTable);
-                    validateLookupField(fieldConfig.type, fieldConfig.lookup);
-                    validateTextField(fieldConfig.type, fieldConfig);
-                    validateNumberField(fieldConfig.type, fieldConfig);
-                    validateDateTimeField(fieldConfig.type, fieldConfig);
-                    validateRichTextField(fieldConfig.type, fieldConfig);
-                    validateAttachmentField(fieldConfig.type, fieldConfig);
-                    validateUserSelectField(fieldConfig.type, fieldConfig);
-                    validateSubtableField(fieldConfig.type, fieldConfig);
-                    validateStatusField(fieldConfig.type, fieldConfig);
-                    validateRelatedRecordsField(fieldConfig.type, fieldConfig);
-                    validateRecordNumberField(fieldConfig.type, fieldConfig);
-                    validateSystemField(fieldConfig.type, fieldConfig);
+                    // validateField関数を使用して自動修正を適用
+                    const correctedField = validateField(fieldConfig);
+                    
+                    // 修正されたフィールドで置き換え
+                    properties[fieldCode] = correctedField;
+                    
+                    // 自動修正の結果をログに出力
+                    if (fieldConfig.type === "NUMBER" || 
+                        (fieldConfig.type === "CALC" && fieldConfig.format === "NUMBER")) {
+                        if (fieldConfig.unit && !fieldConfig.unitPosition && correctedField.unitPosition) {
+                            console.error(`フィールド "${fieldCode}" の unitPosition を "${correctedField.unitPosition}" に自動設定しました。`);
+                        }
+                    }
                 }
             }
 

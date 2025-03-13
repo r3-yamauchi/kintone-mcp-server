@@ -59,6 +59,15 @@ export const FIELD_TYPES_REQUIRING_OPTIONS = [
 
 // 計算フィールドの定数
 export const CALC_FIELD_TYPE = 'CALC';
+export const CALC_FIELD_FORMATS = [
+    'NUMBER',
+    'NUMBER_DIGIT',
+    'DATETIME',
+    'DATE',
+    'TIME',
+    'HOUR_MINUTE',
+    'DAY_HOUR_MINUTE'
+];
 
 // リンクフィールドの定数
 export const LINK_FIELD_TYPE = 'LINK';
