@@ -44,7 +44,13 @@ export function validateRowElement(row) {
     // GROUP要素が含まれる場合は、それが唯一の要素であることを確認
     const groupFields = row.fields.filter(field => field.type === "GROUP");
     if (groupFields.length > 0 && row.fields.length > groupFields.length) {
-        throw new Error('GROUP要素を含む行には他のフィールドを配置できません。kintoneの仕様により、グループフィールドの左右にはフィールドを配置できません。');
+        throw new Error('GROUP要素を含む行には他のフィールドを配置できません。kintoneの仕様により、グループフィールドはトップレベルに配置する必要があります。');
+    }
+    
+    // ROW要素内にSUBTABLE要素が含まれていないことを確認
+    const subtableFields = row.fields.filter(field => field.type === "SUBTABLE");
+    if (subtableFields.length > 0) {
+        throw new Error('ROW要素内にはSUBTABLE要素を配置できません。kintoneの仕様により、テーブルはトップレベルに配置する必要があります。');
     }
     
     // 各フィールド要素を検証
@@ -78,9 +84,23 @@ export function validateGroupElement(group) {
         throw new Error('GROUP要素には code プロパティが必須です。');
     }
     
-    if (!group.label) {
-        throw new Error('GROUP要素には label プロパティが必須です。');
+    // fieldsプロパティが指定されている場合は明確なエラーメッセージを表示
+    if (group.fields !== undefined) {
+        throw new Error(
+            `GROUP要素 "${group.code}" には fields プロパティではなく layout プロパティを使用してください。\n` +
+            `GROUP要素の正しい構造:\n` +
+            `{\n` +
+            `  "type": "GROUP",\n` +
+            `  "code": "グループコード",\n` +
+            `  "label": "グループ名",\n` +
+            `  "layout": [] // ここに行要素を配置\n` +
+            `}`
+        );
     }
+    
+    // フィールド追加時には label プロパティが必須だが、
+    // レイアウト更新時には label プロパティを省略する必要があるため、
+    // ここではチェックを行わない
     
     // openGroup プロパティが指定されていない場合は true を設定
     // kintoneの仕様では省略すると false になるが、このMCP Serverでは明示的に true を設定
@@ -90,9 +110,9 @@ export function validateGroupElement(group) {
     }
     
     // layout プロパティが存在しない場合は空の配列を設定
-    if (!group.layout) {
+    if (group.layout === undefined) {
         group.layout = [];
-        console.error(`Warning: GROUP要素 "${group.code}" の layout プロパティが指定されていません。空の配列を設定します。`);
+        console.error(`Warning: GROUP要素 "${group.code}" に layout プロパティが指定されていません。空の配列を設定します。`);
     }
     
     // layout プロパティが配列でない場合は配列に変換
@@ -178,8 +198,27 @@ export function validateFieldSize(size) {
     
     // 幅の検証
     if (size.width !== undefined) {
-        if (typeof size.width !== 'number') {
-            throw new Error('size.width は数値形式で指定する必要があります。kintoneの仕様では、サイズは数値として指定する必要があります。');
+        // 文字列形式の場合は数値に変換
+        if (typeof size.width === 'string') {
+            // 数値以外の文字（単位など）を除去して数値のみを抽出
+            const numericPart = size.width.replace(/[^0-9.]/g, '');
+            const numWidth = Number(numericPart);
+            
+            if (isNaN(numWidth)) {
+                throw new Error('size.width は数値または数値形式の文字列で指定する必要があります。');
+            }
+            
+            // 元の文字列に数値以外の文字が含まれていた場合は警告
+            if (size.width !== numericPart) {
+                console.error(`Warning: size.width に単位または数値以外の文字が含まれています。kintoneでは単位の指定はできません。数値部分のみを使用します: "${size.width}" → ${numWidth}`);
+            } else {
+                console.error(`Warning: size.width が文字列形式で指定されています。自動的に数値に変換しました: "${size.width}" → ${numWidth}`);
+            }
+            
+            // 数値に変換して置き換え
+            size.width = numWidth;
+        } else if (typeof size.width !== 'number') {
+            throw new Error('size.width は数値または数値形式の文字列で指定する必要があります。');
         }
         
         // 有効な範囲かチェック
@@ -190,8 +229,27 @@ export function validateFieldSize(size) {
     
     // 高さの検証
     if (size.height !== undefined) {
-        if (typeof size.height !== 'number') {
-            throw new Error('size.height は数値形式で指定する必要があります。kintoneの仕様では、サイズは数値として指定する必要があります。');
+        // 文字列形式の場合は数値に変換
+        if (typeof size.height === 'string') {
+            // 数値以外の文字（単位など）を除去して数値のみを抽出
+            const numericPart = size.height.replace(/[^0-9.]/g, '');
+            const numHeight = Number(numericPart);
+            
+            if (isNaN(numHeight)) {
+                throw new Error('size.height は数値または数値形式の文字列で指定する必要があります。');
+            }
+            
+            // 元の文字列に数値以外の文字が含まれていた場合は警告
+            if (size.height !== numericPart) {
+                console.error(`Warning: size.height に単位または数値以外の文字が含まれています。kintoneでは単位の指定はできません。数値部分のみを使用します: "${size.height}" → ${numHeight}`);
+            } else {
+                console.error(`Warning: size.height が文字列形式で指定されています。自動的に数値に変換しました: "${size.height}" → ${numHeight}`);
+            }
+            
+            // 数値に変換して置き換え
+            size.height = numHeight;
+        } else if (typeof size.height !== 'number') {
+            throw new Error('size.height は数値または数値形式の文字列で指定する必要があります。');
         }
         
         // 有効な範囲かチェック
@@ -202,8 +260,27 @@ export function validateFieldSize(size) {
     
     // 内部高さの検証
     if (size.innerHeight !== undefined) {
-        if (typeof size.innerHeight !== 'number') {
-            throw new Error('size.innerHeight は数値形式で指定する必要があります。kintoneの仕様では、サイズは数値として指定する必要があります。');
+        // 文字列形式の場合は数値に変換
+        if (typeof size.innerHeight === 'string') {
+            // 数値以外の文字（単位など）を除去して数値のみを抽出
+            const numericPart = size.innerHeight.replace(/[^0-9.]/g, '');
+            const numInnerHeight = Number(numericPart);
+            
+            if (isNaN(numInnerHeight)) {
+                throw new Error('size.innerHeight は数値または数値形式の文字列で指定する必要があります。');
+            }
+            
+            // 元の文字列に数値以外の文字が含まれていた場合は警告
+            if (size.innerHeight !== numericPart) {
+                console.error(`Warning: size.innerHeight に単位または数値以外の文字が含まれています。kintoneでは単位の指定はできません。数値部分のみを使用します: "${size.innerHeight}" → ${numInnerHeight}`);
+            } else {
+                console.error(`Warning: size.innerHeight が文字列形式で指定されています。自動的に数値に変換しました: "${size.innerHeight}" → ${numInnerHeight}`);
+            }
+            
+            // 数値に変換して置き換え
+            size.innerHeight = numInnerHeight;
+        } else if (typeof size.innerHeight !== 'number') {
+            throw new Error('size.innerHeight は数値または数値形式の文字列で指定する必要があります。');
         }
         
         // 有効な範囲かチェック

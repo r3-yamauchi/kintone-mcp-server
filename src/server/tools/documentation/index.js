@@ -16,6 +16,7 @@ export { getLinkFieldDocumentation } from './linkField.js';
 export { getLookupDocumentation } from './lookup.js';
 export { getReferenceTableDocumentation } from './referenceTable.js';
 export { getSystemFieldDocumentation } from './systemFields.js';
+export { getLayoutFieldDocumentation, groupElementStructure } from './layoutFields.js';
 
 /**
  * フィールドタイプに基づいてドキュメントを取得する
@@ -64,6 +65,10 @@ export function getFieldTypeDocumentation(fieldType) {
         case 'CREATED_TIME':
         case 'UPDATED_TIME':
             return getSystemFieldDocumentation();
+        case 'LAYOUT':
+        case 'FORM_LAYOUT':
+        case 'GROUP':
+            return getLayoutFieldDocumentation(fieldType);
         default:
             return `# ${fieldType}フィールドのドキュメント\n\n申し訳ありませんが、このフィールドタイプのドキュメントはまだ準備されていません。`;
     }

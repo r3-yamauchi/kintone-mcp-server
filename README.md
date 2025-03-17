@@ -85,10 +85,12 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 - `create_app`: kintoneアプリの新規作成
 - `add_fields`: kintoneアプリへのフィールド追加
 - `update_field`: 既存のkintoneフィールドの設定を更新
-- `deploy_app`: kintoneアプリの本番運用開始（運用環境へ反映）
-- `get_deploy_status`: アプリ設定の運用環境への反映状況を確認する
 - `update_form_layout`: kintoneアプリのフォームレイアウトを変更
 - `update_app_settings`: アプリの一般設定を変更
+- `deploy_app`: kintoneアプリの本番運用開始（運用環境へ反映）
+- `get_deploy_status`: アプリ設定の運用環境への反映状況を確認する
+- `move_app_to_space`: kintoneアプリを指定したスペースに移動
+- `move_app_from_space`: kintoneアプリをスペースに所属させないようにする
 
 #### スペース操作
 
@@ -108,6 +110,11 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 - `get_users`: kintoneのユーザー情報を取得
 - `get_groups`: kintoneのグループ情報を取得
 - `get_group_users`: 指定したグループに所属するユーザーの一覧を取得
+
+#### kintone接続情報
+
+- `get_kintone_domain`: kintoneの接続先ドメインを取得
+- `get_kintone_username`: kintoneへの接続に使用されるユーザー名を取得
 
 ### 8. その他
 

@@ -3,7 +3,8 @@ import {
     getFieldTypeDocumentation, 
     getAvailableFieldTypes,
     getDocumentationToolDescription,
-    getFieldCreationToolDescription
+    getFieldCreationToolDescription,
+    groupElementStructure
 } from './documentation/index.js';
 
 /**
@@ -42,6 +43,11 @@ export async function handleDocumentationTools(name, args) {
         case 'get_field_creation_tool_description': {
             // フィールド作成ツールの説明を取得
             return getFieldCreationToolDescription();
+        }
+        
+        case 'get_group_element_structure': {
+            // GROUP要素の構造に関するドキュメントを取得
+            return groupElementStructure;
         }
         
         default:

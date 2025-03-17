@@ -543,11 +543,98 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             
             validateLayoutElementSizes(layout);
             
+            // GROUPフィールドの label プロパティを除去する関数
+            const removeGroupLabels = (items) => {
+                // 入力チェック
+                if (!items) {
+                    console.error('Warning: removeGroupLabels called with null or undefined items');
+                    return [];
+                }
+                
+                // Promiseオブジェクトの場合はエラーログを出力
+                if (items instanceof Promise) {
+                    console.error('Warning: removeGroupLabels received a Promise object. This should not happen in synchronous mode.');
+                    console.error('Promise content:', JSON.stringify(items));
+                    return [];
+                }
+                
+                // 配列でない場合は配列に変換
+                if (!Array.isArray(items)) {
+                    console.error(`Warning: removeGroupLabels received non-array items: ${typeof items}`);
+                    console.error('Items content:', JSON.stringify(items));
+                    return [];
+                }
+                
+                return items.map(item => {
+                    if (!item) {
+                        console.error('Warning: null or undefined item in layout');
+                        return null;
+                    }
+                    
+                    if (item.type === "GROUP") {
+                        // label プロパティを削除した新しいオブジェクトを作成
+                        const newItem = { ...item };
+                        delete newItem.label;
+                        
+                        // layout プロパティが存在する場合は再帰的に処理
+                        if (newItem.layout) {
+                            // Promiseオブジェクトの場合はエラーログを出力
+                            if (newItem.layout instanceof Promise) {
+                                console.error(`Warning: GROUP要素 "${newItem.code}" の layout プロパティがPromiseオブジェクトです。同期処理に変更してください。`);
+                                newItem.layout = [];
+                            } else if (!Array.isArray(newItem.layout)) {
+                                // 配列でない場合は配列に変換
+                                console.error(`Warning: GROUP要素 "${newItem.code}" の layout プロパティが配列ではありません。自動的に配列に変換します。`);
+                                // 空でない値の場合のみ配列に変換
+                                newItem.layout = newItem.layout ? [newItem.layout] : [];
+                            }
+                            
+                            newItem.layout = removeGroupLabels(newItem.layout);
+                        }
+                        
+                        return newItem;
+                    } else if (item.type === "ROW" && item.fields) {
+                        // fieldsが配列でない場合は配列に変換
+                        if (!Array.isArray(item.fields)) {
+                            console.error(`Warning: ROW要素の fields プロパティが配列ではありません。自動的に配列に変換します。`);
+                            item.fields = item.fields ? [item.fields] : [];
+                        }
+                        
+                        // ROW内のフィールドも処理（念のため）
+                        return {
+                            ...item,
+                            fields: item.fields.map(field => {
+                                if (!field) {
+                                    console.error('Warning: null or undefined field in ROW');
+                                    return null;
+                                }
+                                
+                                if (field.type === "GROUP") {
+                                    const newField = { ...field };
+                                    delete newField.label;
+                                    return newField;
+                                }
+                                return field;
+                            }).filter(Boolean) // nullやundefinedを除外
+                        };
+                    }
+                    return item;
+                }).filter(Boolean); // nullやundefinedを除外
+            };
+            
+            // レイアウト情報から GROUPフィールドの label プロパティを除去
+            const layoutWithoutGroupLabels = removeGroupLabels(layout);
+            
             const params = {
                 app: appId,
-                layout: layout,
+                layout: layoutWithoutGroupLabels,
                 revision: revision
             };
+            
+            // リクエストパラメータの詳細をデバッグログに出力
+            console.error('REST API request parameters:');
+            console.error(`app: ${params.app}, revision: ${params.revision}`);
+            console.error('updateFormLayout (JSON):', JSON.stringify(params.layout, null, 2));
             
             const response = await this.client.app.updateFormLayout(params);
             console.error('Update form layout response:', response);
@@ -642,6 +729,46 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             return response;
         } catch (error) {
             this.handleKintoneError(error, `delete form fields for app ${appId}`);
+        }
+    }
+
+    // アプリを指定したスペースに移動させるメソッド
+    async moveAppToSpace(appId, spaceId) {
+        try {
+            console.error(`Moving app ${appId} to space ${spaceId}`);
+            await this.client.app.move({
+                app: appId,
+                space: spaceId
+            });
+            return { success: true };
+        } catch (error) {
+            this.handleKintoneError(error, `move app ${appId} to space ${spaceId}`);
+        }
+    }
+
+    // アプリをスペースに所属させないようにするメソッド
+    async moveAppFromSpace(appId) {
+        try {
+            console.error(`Moving app ${appId} from space`);
+            await this.client.app.move({
+                app: appId,
+                space: null
+            });
+            return { success: true };
+        } catch (error) {
+            // kintoneシステム設定による制限の場合の特別なエラーハンドリング
+            if (error.code === 'CB_NO01' || 
+                (error.message && error.message.includes('スペースに所属しないアプリの作成を許可'))) {
+                throw new Error(
+                    `アプリ ${appId} をスペースに所属させないようにすることができませんでした。\n\n` +
+                    `【考えられる原因】\n` +
+                    `kintoneシステム管理の「利用する機能の選択」で「スペースに所属しないアプリの作成を許可する」が無効になっている可能性があります。\n\n` +
+                    `【対応方法】\n` +
+                    `1. kintone管理者に「スペースに所属しないアプリの作成を許可する」設定を有効にするよう依頼してください。\n` +
+                    `2. または、アプリを別のスペースに移動する方法を検討してください。`
+                );
+            }
+            this.handleKintoneError(error, `move app ${appId} from space`);
         }
     }
 }

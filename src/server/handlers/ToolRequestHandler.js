@@ -1,7 +1,6 @@
 // src/server/handlers/ToolRequestHandler.js
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import { KintoneRestAPIError } from '@kintone/rest-api-client';
-import { KintoneRecord } from '../../models/KintoneRecord.js';
 import { handleRecordTools } from '../tools/RecordTools.js';
 import { handleAppTools } from '../tools/AppTools.js';
 import { handleSpaceTools } from '../tools/SpaceTools.js';
@@ -9,6 +8,7 @@ import { handleFieldTools } from '../tools/FieldTools.js';
 import { handleDocumentationTools } from '../tools/DocumentationTools.js';
 import { handleLayoutTools } from '../tools/LayoutTools.js';
 import { handleUserTools } from '../tools/UserTools.js';
+import { handleSystemTools } from '../tools/SystemTools.js';
 
 // ファイル関連のツールを処理する関数
 async function handleFileTools(name, args, repository) {
@@ -78,7 +78,8 @@ export async function executeToolRequest(request, repository) {
         
         else if (['create_app', 'deploy_app', 'get_deploy_status', 'update_app_settings', 'get_apps_info', 
              'get_form_layout', 'update_form_layout', 'get_preview_app_settings', 
-             'get_preview_form_fields', 'get_preview_form_layout'].includes(name)) {
+             'get_preview_form_fields', 'get_preview_form_layout', 
+             'move_app_to_space', 'move_app_from_space'].includes(name)) {
             result = await handleAppTools(name, args, repository);
         }
         
@@ -98,7 +99,8 @@ else if (['add_fields', 'create_choice_field', 'create_reference_table_field', '
         }
         
         else if (['get_field_type_documentation', 'get_available_field_types', 
-                 'get_documentation_tool_description', 'get_field_creation_tool_description'].includes(name)) {
+                 'get_documentation_tool_description', 'get_field_creation_tool_description',
+                 'get_group_element_structure'].includes(name)) {
             result = await handleDocumentationTools(name, args);
         }
         
@@ -113,6 +115,10 @@ else if (['add_fields', 'create_choice_field', 'create_reference_table_field', '
         
         else if (['get_users', 'get_groups', 'get_group_users'].includes(name)) {
             result = await handleUserTools(name, args, repository);
+        }
+        
+        else if (['get_kintone_domain', 'get_kintone_username'].includes(name)) {
+            result = await handleSystemTools(name, args, repository);
         }
         
         // 未知のツール

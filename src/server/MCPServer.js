@@ -19,7 +19,7 @@ export class MCPServer {
         this.server = new Server(
             {
                 name: 'kintonemcp',
-                version: '3.5.0',
+                version: '3.6.0',
             },
             {
                 capabilities: {
@@ -732,7 +732,7 @@ export class MCPServer {
                 },
                 {
                     name: 'update_form_layout',
-                    description: 'kintoneアプリのフォームレイアウトを変更します',
+                    description: 'kintoneアプリのフォームレイアウトを変更します。トップレベルには ROW と SUBTABLE と GROUP を配置できます。SUBTABLEやGROUPはトップレベルに配置する必要があります。ROW内に配置することはできません。',
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -811,6 +811,38 @@ export class MCPServer {
                             }
                         },
                         required: ['app_id', 'layout']
+                    }
+                },
+                {
+                    name: 'move_app_to_space',
+                    description: 'kintoneアプリを指定したスペースに移動します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            app_id: {
+                                type: 'number',
+                                description: 'kintoneアプリのID'
+                            },
+                            space_id: {
+                                type: ['string', 'number'],
+                                description: '移動先のスペースID'
+                            }
+                        },
+                        required: ['app_id', 'space_id']
+                    }
+                },
+                {
+                    name: 'move_app_from_space',
+                    description: 'kintoneアプリをスペースに所属させないようにします。注意: kintoneシステム管理の「利用する機能の選択」で「スペースに所属しないアプリの作成を許可する」が有効になっている必要があります。',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            app_id: {
+                                type: 'number',
+                                description: 'kintoneアプリのID'
+                            }
+                        },
+                        required: ['app_id']
                     }
                 },
                 
@@ -1291,6 +1323,24 @@ export class MCPServer {
                             }
                         },
                         required: ['group_code']
+                    }
+                },
+                
+                // システム関連のツール
+                {
+                    name: 'get_kintone_domain',
+                    description: 'kintoneの接続先ドメインを取得します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {}
+                    }
+                },
+                {
+                    name: 'get_kintone_username',
+                    description: 'kintoneへの接続に使用されるユーザー名を取得します',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {}
                     }
                 }
             ]

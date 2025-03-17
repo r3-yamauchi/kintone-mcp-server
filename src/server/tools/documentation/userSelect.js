@@ -183,7 +183,7 @@ ${typeSpecificDesc[fieldType] || `kintoneの${typeName}を選択するフィー�
 ${typeSpecificExample[fieldType] || ''}
 
 ## 注意事項
-1. defaultValueに指定する${typeName}は、kintoneに存在する必要があります
+1. defaultValueに指定する${typeName}は、kintone環境に現に存在している必要があります。存在しない、あるいは無効化されている${typeName}を設定するとエラーが発生するため、初期値（既定値）を設定する場合は十分に注意してください。
 2. entitiesを指定すると、選択可能な${typeName}を制限できます
 3. ${typeName}選択フィールドは、kintoneの画面上でドロップダウンリストとして表示されます
 4. ユーザーの権限によって、選択できる${typeName}が制限される場合があります

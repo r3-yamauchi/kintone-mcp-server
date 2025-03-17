@@ -144,6 +144,16 @@ export class KintoneRepository {
         return this.spaceRepo.updateSpaceGuests(spaceId, guests);
     }
 
+    // アプリをスペースに移動させる
+    async moveAppToSpace(appId, spaceId) {
+        return this.appRepo.moveAppToSpace(appId, spaceId);
+    }
+
+    // アプリをスペースに所属させないようにする
+    async moveAppFromSpace(appId) {
+        return this.appRepo.moveAppFromSpace(appId);
+    }
+
     // ユーザー関連
     async addGuests(guests) {
         return this.userRepo.addGuests(guests);

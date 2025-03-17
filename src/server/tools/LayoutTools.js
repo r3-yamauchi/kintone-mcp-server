@@ -1,14 +1,37 @@
 // src/server/tools/LayoutTools.js
 
-// レイアウトデータを再帰的に検証・修正する関数
-function validateAndFixLayout(layout) {
+// フィールドコードの自動生成関数
+function generateFieldCode(label) {
+    if (!label) return '';
+    
+    // ラベルから使用可能な文字のみを抽出
+    let code = label;
+    
+    // 英数字、ひらがな、カタカナ、漢字、許可された記号以外を削除
+    code = code.replace(/[^a-zA-Z0-9ぁ-んァ-ヶー一-龠々＿_･・＄￥]/g, '_');
+    
+    // 先頭が数字の場合、先頭に 'f_' を追加
+    if (/^[0-9０-９]/.test(code)) {
+        code = 'f_' + code;
+    }
+    
+    return code;
+}
+
+// レイアウトデータを再帰的に検証・修正する関数（同期版）
+function validateAndFixLayout(layout, existingFieldCodes = []) {
+    // 使用済みフィールドコードのリスト（既存 + 新規追加済み）
+    const usedFieldCodes = [...existingFieldCodes];
     if (!Array.isArray(layout)) {
         console.error(`Warning: レイアウトが配列ではありません。自動的に配列に変換します。`);
         layout = [layout];
     }
     
+    // ROW内やGROUP内から抽出したSUBTABLEやGROUPを保存するための配列
+    const extractedElements = [];
+    
     // 各レイアウト要素を検証・修正
-    return layout.map(item => {
+    const processedLayout = layout.map(item => {
         // typeプロパティが指定されていない場合は自動的に補完
         if (!item.type) {
             // トップレベルの要素は ROW, GROUP, SUBTABLE のいずれかである必要がある
@@ -30,12 +53,24 @@ function validateAndFixLayout(layout) {
                 item.fields = [item.fields];
             }
             
-            // GROUP要素が含まれる場合は、それが唯一の要素であることを確認
+            // ROW要素内からGROUP要素を抽出してトップレベルに移動
             const groupFields = item.fields.filter(field => field.type === "GROUP");
-            if (groupFields.length > 0 && item.fields.length > groupFields.length) {
-                console.error(`Warning: GROUP要素を含む行に他のフィールドが配置されています。kintoneの仕様により、グループフィールドの左右にはフィールドを配置できません。GROUP要素のみを残します。`);
-                // GROUP要素のみを残す
-                item.fields = groupFields;
+            if (groupFields.length > 0) {
+                console.error(`Warning: ROW要素内のGROUP要素を自動的にトップレベルに移動しました。kintoneの仕様により、グループフィールドはトップレベルに配置する必要があります。`);
+                // GROUP要素をトップレベルに移動するために保存
+                extractedElements.push(...groupFields);
+                // ROW内からは除外
+                item.fields = item.fields.filter(field => field.type !== "GROUP");
+            }
+            
+            // ROW要素内からSUBTABLE要素を抽出してトップレベルに移動
+            const subtableFields = item.fields.filter(field => field.type === "SUBTABLE");
+            if (subtableFields.length > 0) {
+                console.error(`Warning: ROW要素内のSUBTABLE要素を自動的にトップレベルに移動しました。kintoneの仕様により、テーブルはトップレベルに配置する必要があります。`);
+                // SUBTABLE要素をトップレベルに移動するために保存
+                extractedElements.push(...subtableFields);
+                // ROW内からは除外
+                item.fields = item.fields.filter(field => field.type !== "SUBTABLE");
             }
             
             // 各フィールド要素を検証・修正
@@ -50,17 +85,62 @@ function validateAndFixLayout(layout) {
                 return field;
             });
         } else if (item.type === "GROUP") {
-            // codeプロパティが指定されていない場合は自動的に補完
-            if (!item.code) {
-                item.code = `group_${Date.now()}`;
-                console.error(`Warning: GROUP要素に code プロパティが指定されていません。自動的に "${item.code}" を設定します。`);
-            }
-            
             // labelプロパティが指定されていない場合は自動的に補完
             if (!item.label) {
-                item.label = `Group ${item.code}`;
+                item.label = `グループ${Date.now()}`;
                 console.error(`Warning: GROUP要素に label プロパティが指定されていません。自動的に "${item.label}" を設定します。`);
             }
+            
+            // codeプロパティが指定されていない場合は自動的に補完
+            if (!item.code) {
+                // labelから自動生成
+                item.code = generateFieldCode(item.label);
+                console.error(`Warning: GROUP要素に code プロパティが指定されていません。label から自動生成しました: "${item.code}"`);
+            }
+            
+            // fieldsプロパティが指定されている場合はlayoutプロパティに変換
+            if (item.fields !== undefined) {
+                console.error(`Warning: GROUP要素 "${item.code}" に fields プロパティが指定されています。layout プロパティに変換します。GROUP要素には fields ではなく layout プロパティを使用してください。`);
+                
+                // fieldsプロパティが配列でない場合は配列に変換
+                if (!Array.isArray(item.fields)) {
+                    item.fields = [item.fields];
+                }
+                
+                // fieldsの内容をROW要素に変換してlayoutに設定
+                if (item.fields.length > 0) {
+                    item.layout = [{
+                        type: "ROW",
+                        fields: item.fields
+                    }];
+                } else {
+                    item.layout = [];
+                }
+                
+                // fieldsプロパティを削除
+                delete item.fields;
+            }
+            
+            // 既存のフィールドコードとの重複チェック
+            if (usedFieldCodes.includes(item.code)) {
+                // 重複する場合、新しいフィールドコードを生成
+                const originalCode = item.code;
+                let newCode = originalCode;
+                let suffix = 1;
+                
+                // 一意のフィールドコードになるまで接尾辞を追加
+                while (usedFieldCodes.includes(newCode)) {
+                    newCode = `${originalCode}_${suffix}`;
+                    suffix++;
+                }
+                
+                // フィールドコードを更新
+                item.code = newCode;
+                console.error(`Warning: GROUP要素のフィールドコードが重複しているため、自動的に "${item.code}" に変更しました。`);
+            }
+            
+            // 使用済みリストに追加
+            usedFieldCodes.push(item.code);
             
             // openGroup プロパティが指定されていない場合は true を設定
             // kintoneの仕様では省略すると false になるが、このMCP Serverでは明示的に true を設定
@@ -69,8 +149,8 @@ function validateAndFixLayout(layout) {
                 console.error(`Warning: GROUP要素 "${item.code}" の openGroup プロパティが指定されていません。自動的に true を設定します。`);
             }
             
-            // layoutプロパティが指定されていない場合は自動的に補完
-            if (!item.layout) {
+            // layoutプロパティが指定されていない場合は空の配列を設定
+            if (item.layout === undefined) {
                 item.layout = [];
                 console.error(`Warning: GROUP要素 "${item.code}" に layout プロパティが指定されていません。空の配列を設定します。`);
             }
@@ -81,27 +161,60 @@ function validateAndFixLayout(layout) {
                 item.layout = [item.layout];
             }
             
-            // グループ内からSUBTABLEとGROUP要素を除外
-            const filteredLayout = item.layout.filter(subItem => {
+            // グループ内からSUBTABLEとGROUP要素を抽出してトップレベルに移動
+            const filteredLayout = [];
+            for (const subItem of item.layout) {
                 if (subItem.type === "SUBTABLE") {
-                    console.error(`Warning: GROUP要素 "${item.code}" 内のSUBTABLE要素を自動的に除外しました。kintoneの仕様により、グループフィールド内にテーブルを入れることはできません。`);
-                    return false;
+                    console.error(`Warning: GROUP要素 "${item.code}" 内のSUBTABLE要素を自動的にトップレベルに移動しました。kintoneの仕様により、グループフィールド内にテーブルを入れることはできません。`);
+                    extractedElements.push(subItem);
+                } else if (subItem.type === "GROUP") {
+                    console.error(`Warning: GROUP要素 "${item.code}" 内のGROUP要素を自動的にトップレベルに移動しました。kintoneの仕様により、グループフィールド内にグループフィールドを入れることはできません。`);
+                    extractedElements.push(subItem);
+                } else {
+                    filteredLayout.push(subItem);
                 }
-                if (subItem.type === "GROUP") {
-                    console.error(`Warning: GROUP要素 "${item.code}" 内のGROUP要素を自動的に除外しました。kintoneの仕様により、グループフィールド内にグループフィールドを入れることはできません。`);
-                    return false;
-                }
-                return true;
-            });
+            }
             
-            // グループ内の各レイアウト要素を再帰的に検証・修正
-            item.layout = validateAndFixLayout(filteredLayout);
+            // グループ内の各レイアウト要素を再帰的に検証・修正（同期的に呼び出し）
+            if (filteredLayout.length > 0) {
+                item.layout = validateAndFixLayout(filteredLayout);
+            } else {
+                item.layout = [];
+            }
         } else if (item.type === "SUBTABLE") {
+            // labelプロパティが指定されていない場合は自動的に補完
+            if (!item.label) {
+                item.label = `テーブル${Date.now()}`;
+                console.error(`Warning: SUBTABLE要素に label プロパティが指定されていません。自動的に "${item.label}" を設定します。`);
+            }
+            
             // codeプロパティが指定されていない場合は自動的に補完
             if (!item.code) {
-                item.code = `subtable_${Date.now()}`;
-                console.error(`Warning: SUBTABLE要素に code プロパティが指定されていません。自動的に "${item.code}" を設定します。`);
+                // labelから自動生成
+                item.code = generateFieldCode(item.label);
+                console.error(`Warning: SUBTABLE要素に code プロパティが指定されていません。label から自動生成しました: "${item.code}"`);
             }
+            
+            // 既存のフィールドコードとの重複チェック
+            if (usedFieldCodes.includes(item.code)) {
+                // 重複する場合、新しいフィールドコードを生成
+                const originalCode = item.code;
+                let newCode = originalCode;
+                let suffix = 1;
+                
+                // 一意のフィールドコードになるまで接尾辞を追加
+                while (usedFieldCodes.includes(newCode)) {
+                    newCode = `${originalCode}_${suffix}`;
+                    suffix++;
+                }
+                
+                // フィールドコードを更新
+                item.code = newCode;
+                console.error(`Warning: SUBTABLE要素のフィールドコードが重複しているため、自動的に "${item.code}" に変更しました。`);
+            }
+            
+            // 使用済みリストに追加
+            usedFieldCodes.push(item.code);
             
             // テーブル内のフィールドを検証（テーブルのフィールド定義を取得できる場合）
             if (item.fields) {
@@ -116,6 +229,85 @@ function validateAndFixLayout(layout) {
                     });
                 }
             }
+        }
+        
+        return item;
+    });
+    
+    // 抽出した要素をトップレベルに追加
+    return [...processedLayout, ...extractedElements];
+}
+
+// スペース要素を作成する関数
+function createSpacerElement(elementId = null, size = null) {
+  const element = {
+    type: "SPACER",
+    elementId: elementId || `spacer_${Date.now()}`
+  };
+  
+  if (size) {
+    element.size = size;
+  }
+  
+  return element;
+}
+
+// 罫線要素を作成する関数
+function createHrElement(elementId = null) {
+  return {
+    type: "HR",
+    elementId: elementId || `hr_${Date.now()}`
+  };
+}
+
+// ラベル要素を作成する関数
+function createLabelElement(value, elementId = null) {
+  return {
+    type: "LABEL",
+    value: value,
+    elementId: elementId || `label_${Date.now()}`
+  };
+}
+
+// GROUPフィールドのlabelプロパティを削除し、layoutが空配列の場合はlayoutプロパティ自体を削除する関数
+function cleanupGroupElements(layout) {
+    if (!Array.isArray(layout)) {
+        return layout;
+    }
+    
+    return layout.map(item => {
+        if (item.type === "GROUP") {
+            // labelプロパティを削除
+            if (item.label !== undefined) {
+                delete item.label;
+            }
+            
+            // layoutプロパティが空配列の場合は削除
+            if (Array.isArray(item.layout) && item.layout.length === 0) {
+                delete item.layout;
+            } else if (Array.isArray(item.layout)) {
+                // layoutプロパティが配列の場合は再帰的に処理
+                item.layout = cleanupGroupElements(item.layout);
+            }
+        } else if (item.type === "ROW" && Array.isArray(item.fields)) {
+            // ROW要素内のGROUP要素も処理
+            item.fields = item.fields.map(field => {
+                if (field.type === "GROUP") {
+                    // labelプロパティを削除
+                    if (field.label !== undefined) {
+                        delete field.label;
+                    }
+                    
+                    // layoutプロパティが空配列の場合は削除
+                    if (Array.isArray(field.layout) && field.layout.length === 0) {
+                        delete field.layout;
+                    } else if (Array.isArray(field.layout)) {
+                        // layoutプロパティが配列の場合は再帰的に処理
+                        field.layout = cleanupGroupElements(field.layout);
+                    }
+                }
+                return field;
+            });
         }
         
         return item;
@@ -150,21 +342,52 @@ export async function handleLayoutTools(name, args, repository) {
             
             // デバッグ用のログ出力
             console.error(`Updating form layout for app: ${args.app_id}`);
+            console.error('Input layout:', JSON.stringify(args.layout, null, 2));
             
-            // レイアウトデータを検証・修正
-            const validatedLayout = validateAndFixLayout(args.layout);
+            // 既存のフィールド情報を取得
+            let existingFieldCodes = [];
+            try {
+                const existingFields = await repository.getFormFields(args.app_id);
+                existingFieldCodes = Object.keys(existingFields.properties || {});
+                console.error(`Existing field codes: ${existingFieldCodes.join(', ')}`);
+            } catch (error) {
+                console.error(`Failed to get existing fields: ${error.message}`);
+                console.error('Continuing without duplicate check');
+            }
             
-            console.error(`Layout:`, JSON.stringify(validatedLayout, null, 2));
+            // レイアウトデータを検証・修正（同期的に呼び出し）
+            const validatedLayout = validateAndFixLayout(args.layout, existingFieldCodes);
+            
+            // 変換後のレイアウトをログに出力
+            console.error(`Converted layout:`, JSON.stringify(validatedLayout, null, 2));
+            
+            // GROUPフィールドのlabelプロパティを削除し、layoutが空配列の場合はlayoutプロパティ自体を削除
+            const cleanedLayout = cleanupGroupElements(validatedLayout);
+            
+            // 深いコピーを作成して参照の問題を解決
+            const finalLayout = JSON.parse(JSON.stringify(cleanedLayout));
+            
+            // 最終的なレイアウトをログに出力
+            console.error(`Final layout (before API call):`, JSON.stringify(finalLayout, null, 2));
             
             const revision = args.revision || -1; // リビジョン番号（省略時は最新）
             
-            const response = await repository.updateFormLayout(
-                args.app_id,
-                validatedLayout,
-                revision
-            );
-            
-            return response;
+            try {
+                const response = await repository.updateFormLayout(
+                    args.app_id,
+                    finalLayout,
+                    revision
+                );
+                
+                return response;
+            } catch (error) {
+                // エラーの詳細情報を出力
+                console.error('Error updating form layout:', error);
+                if (error.errors) {
+                    console.error('Detailed errors:', JSON.stringify(error.errors, null, 2));
+                }
+                throw error;
+            }
         }
         
         case 'create_form_layout': {
@@ -180,20 +403,49 @@ export async function handleLayoutTools(name, args, repository) {
             console.error(`Creating form layout for app: ${args.app_id}`);
             console.error(`Fields:`, JSON.stringify(args.fields, null, 2));
             
+            // 既存のフィールド情報を取得
+            let existingFieldCodes = [];
+            try {
+                const existingFields = await repository.getFormFields(args.app_id);
+                existingFieldCodes = Object.keys(existingFields.properties || {});
+                console.error(`Existing field codes: ${existingFieldCodes.join(', ')}`);
+            } catch (error) {
+                console.error(`Failed to get existing fields: ${error.message}`);
+                console.error('Continuing without duplicate check');
+            }
+            
             // レイアウト構造を構築
             const layout = buildFormLayout(args.fields, args.options || {});
             
-            // レイアウトを更新
-            const response = await repository.updateFormLayout(
-                args.app_id,
-                layout,
-                -1 // 最新リビジョン
-            );
+            // レイアウトを検証・修正（同期的に呼び出し）
+            const validatedLayout = validateAndFixLayout(layout, existingFieldCodes);
             
-            return {
-                revision: response.revision,
-                layout: layout
-            };
+            // 深いコピーを作成して参照の問題を解決
+            const finalLayout = JSON.parse(JSON.stringify(validatedLayout));
+            
+            // 最終的なレイアウトをログに出力
+            console.error(`Final layout (before API call):`, JSON.stringify(finalLayout, null, 2));
+            
+            try {
+                // レイアウトを更新
+                const response = await repository.updateFormLayout(
+                    args.app_id,
+                    finalLayout,
+                    -1 // 最新リビジョン
+                );
+                
+                return {
+                    revision: response.revision,
+                    layout: layout
+                };
+            } catch (error) {
+                // エラーの詳細情報を出力
+                console.error('Error creating form layout:', error);
+                if (error.errors) {
+                    console.error('Detailed errors:', JSON.stringify(error.errors, null, 2));
+                }
+                throw error;
+            }
         }
         
         case 'add_layout_element': {
@@ -215,24 +467,58 @@ export async function handleLayoutTools(name, args, repository) {
             // 現在のレイアウトを取得
             const currentLayout = await repository.getFormLayout(args.app_id);
             
+            // 既存のフィールド情報を取得
+            let existingFieldCodes = [];
+            try {
+                const existingFields = await repository.getFormFields(args.app_id);
+                existingFieldCodes = Object.keys(existingFields.properties || {});
+                console.error(`Existing field codes: ${existingFieldCodes.join(', ')}`);
+            } catch (error) {
+                console.error(`Failed to get existing fields: ${error.message}`);
+                console.error('Continuing without duplicate check');
+            }
+            
+            // 要素を検証・修正
+            let validatedElement = args.element;
+            if (args.element.type === "GROUP" || args.element.type === "SUBTABLE") {
+                // GROUP要素とSUBTABLE要素は検証・修正（同期的に呼び出し）
+                const validatedElements = validateAndFixLayout([args.element], existingFieldCodes);
+                validatedElement = validatedElements[0];
+            }
+            
             // 新しいレイアウトを構築
             const newLayout = addElementToLayout(
                 currentLayout.layout,
-                args.element,
+                validatedElement,
                 args.position || {}
             );
             
-            // レイアウトを更新
-            const response = await repository.updateFormLayout(
-                args.app_id,
-                newLayout,
-                currentLayout.revision
-            );
+            // 深いコピーを作成して参照の問題を解決
+            const finalLayout = JSON.parse(JSON.stringify(newLayout));
             
-            return {
-                revision: response.revision,
-                layout: newLayout
-            };
+            // 最終的なレイアウトをログに出力
+            console.error(`Final layout (before API call):`, JSON.stringify(finalLayout, null, 2));
+            
+            try {
+                // レイアウトを更新
+                const response = await repository.updateFormLayout(
+                    args.app_id,
+                    finalLayout,
+                    currentLayout.revision
+                );
+                
+                return {
+                    revision: response.revision,
+                    layout: newLayout
+                };
+            } catch (error) {
+                // エラーの詳細情報を出力
+                console.error('Error adding layout element:', error);
+                if (error.errors) {
+                    console.error('Detailed errors:', JSON.stringify(error.errors, null, 2));
+                }
+                throw error;
+            }
         }
         
         case 'create_group_layout': {
@@ -280,6 +566,65 @@ export async function handleLayoutTools(name, args, repository) {
             const tableLayout = buildTableLayout(args.rows, args.options || {});
             
             return tableLayout;
+        }
+        
+        case 'create_spacer_element': {
+            // 引数のチェック
+            const elementId = args.elementId;
+            const size = {};
+            
+            if (args.width !== undefined) {
+                size.width = args.width;
+            }
+            
+            if (args.height !== undefined) {
+                size.height = args.height;
+            }
+            
+            // デバッグ用のログ出力
+            console.error(`Creating spacer element${elementId ? ` with ID: ${elementId}` : ''}`);
+            if (Object.keys(size).length > 0) {
+                console.error(`Size:`, JSON.stringify(size, null, 2));
+            }
+            
+            // スペース要素を作成
+            const spacerElement = createSpacerElement(
+                elementId,
+                Object.keys(size).length > 0 ? size : null
+            );
+            
+            return spacerElement;
+        }
+        
+        case 'create_hr_element': {
+            // 引数のチェック
+            const elementId = args.elementId;
+            
+            // デバッグ用のログ出力
+            console.error(`Creating hr element${elementId ? ` with ID: ${elementId}` : ''}`);
+            
+            // 罫線要素を作成
+            const hrElement = createHrElement(elementId);
+            
+            return hrElement;
+        }
+        
+        case 'create_label_element': {
+            // 引数のチェック
+            if (!args.value) {
+                throw new Error('value は必須パラメータです。');
+            }
+            
+            const value = args.value;
+            const elementId = args.elementId;
+            
+            // デバッグ用のログ出力
+            console.error(`Creating label element with value: "${value}"`);
+            
+            // ラベル要素を作成
+            const labelElement = createLabelElement(value, elementId);
+            
+            return labelElement;
         }
         
         default:

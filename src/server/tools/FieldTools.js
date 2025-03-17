@@ -169,6 +169,34 @@ export async function handleFieldTools(name, args, repository) {
             console.error(`Adding fields to app: ${args.app_id}`);
             console.error(`Properties:`, JSON.stringify(args.properties, null, 2));
             
+            // レイアウト要素（SPACER, HR, LABEL）のチェック
+            const layoutElementTypes = ['SPACER', 'HR', 'LABEL'];
+            for (const [key, field] of Object.entries(args.properties)) {
+                if (field.type && layoutElementTypes.includes(field.type)) {
+                    throw new Error(
+                        `レイアウト要素 "${field.type}" は add_fields ツールではサポートされていません。\n\n` +
+                        `スペース、罫線、ラベルなどのレイアウト要素は、フォームのレイアウト設定で追加する必要があります。\n\n` +
+                        `【代替方法】\n` +
+                        `1. update_form_layout ツールを使用してフォームレイアウトを更新する\n` +
+                        `2. add_layout_element ツールを使用して特定の位置にレイアウト要素を追加する\n\n` +
+                        `【使用例】\n` +
+                        `// スペース要素を作成\n` +
+                        `const spacerElement = {\n` +
+                        `  type: "SPACER",\n` +
+                        `  elementId: "spacer1",\n` +
+                        `  size: { width: 100, height: 30 }\n` +
+                        `};\n\n` +
+                        `// レイアウトに要素を追加\n` +
+                        `add_layout_element({\n` +
+                        `  app_id: ${args.app_id},\n` +
+                        `  element: spacerElement\n` +
+                        `});\n\n` +
+                        `または、create_spacer_element、create_hr_element、create_label_element ツールを使用して\n` +
+                        `簡単にレイアウト要素を作成することもできます。`
+                    );
+                }
+            }
+            
             // フィールドのコード設定を確認・修正
             const processedProperties = {};
             for (const [key, field] of Object.entries(args.properties)) {
