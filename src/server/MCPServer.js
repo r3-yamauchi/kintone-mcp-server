@@ -19,7 +19,7 @@ export class MCPServer {
         this.server = new Server(
             {
                 name: 'kintonemcp',
-                version: '3.6.0',
+                version: '3.7.0',
             },
             {
                 capabilities: {
@@ -523,7 +523,8 @@ export class MCPServer {
                         '      "label": "テキストフィールド"\n' +
                         '    }\n' +
                         '  }\n' +
-                        '}',
+                        '}\n' +
+                        'また、ルックアップフィールドをフォームに配置する際は 250 以上の幅を明示的に指定してください。',
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -732,7 +733,7 @@ export class MCPServer {
                 },
                 {
                     name: 'update_form_layout',
-                    description: 'kintoneアプリのフォームレイアウトを変更します。トップレベルには ROW と SUBTABLE と GROUP を配置できます。SUBTABLEやGROUPはトップレベルに配置する必要があります。ROW内に配置することはできません。',
+                    description: 'kintoneアプリのフォームレイアウトを変更します。トップレベルには ROW と SUBTABLE と GROUP を配置できます。SUBTABLEやGROUPはトップレベルに配置する必要があります。ROW内に配置することはできません。また、ルックアップフィールドをフォームに配置する際は 250 以上の幅を明示的に指定してください。',
                     inputSchema: {
                         type: 'object',
                         properties: {

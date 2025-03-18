@@ -1,4 +1,5 @@
 // src/server/tools/LayoutTools.js
+import { autoCorrectFieldWidth, autoCorrectLayoutWidths } from '../../utils/LayoutUtils.js';
 
 // フィールドコードの自動生成関数
 function generateFieldCode(label) {
@@ -269,6 +270,7 @@ function createLabelElement(value, elementId = null) {
   };
 }
 
+
 // GROUPフィールドのlabelプロパティを削除し、layoutが空配列の場合はlayoutプロパティ自体を削除する関数
 function cleanupGroupElements(layout) {
     if (!Array.isArray(layout)) {
@@ -361,8 +363,114 @@ export async function handleLayoutTools(name, args, repository) {
             // 変換後のレイアウトをログに出力
             console.error(`Converted layout:`, JSON.stringify(validatedLayout, null, 2));
             
+            // フォームフィールド情報を取得
+            let formFields = null;
+            try {
+                console.error(`フォームフィールド情報を取得中: アプリID ${args.app_id}`);
+                const fieldsResponse = await repository.getFormFields(args.app_id);
+                formFields = fieldsResponse.properties || {};
+                console.error(`フォームフィールド情報の取得に成功: ${Object.keys(formFields).length} フィールド`);
+                
+                // ルックアップフィールドの情報をログに出力（デバッグ用）
+                const lookupFields = Object.entries(formFields).filter(([_, field]) => field.lookup !== undefined);
+                if (lookupFields.length > 0) {
+                    console.error(`ルックアップフィールドを検出: ${lookupFields.length}件`);
+                    lookupFields.forEach(([code, field]) => {
+                        console.error(`ルックアップフィールド "${code}": ${JSON.stringify({
+                            type: field.type,
+                            relatedApp: field.lookup.relatedApp?.app,
+                            relatedKeyField: field.lookup.relatedKeyField
+                        })}`);
+                    });
+                } else {
+                    console.error('ルックアップフィールドは見つかりませんでした');
+                }
+            } catch (error) {
+                console.error(`フォームフィールド情報の取得に失敗: ${error.message}`);
+                console.error('幅の自動補正をスキップします');
+                formFields = null;
+            }
+            
+            // レイアウトの幅を自動補正
+            let correctedLayout = validatedLayout;
+            let layoutGuidances = [];
+            
+            if (formFields) {
+                console.error(`レイアウトの幅を自動補正します`);
+                
+                // 補正前のレイアウト情報をログに出力
+                const fieldsBeforeCorrection = [];
+                const extractFieldInfo = (items) => {
+                    items.forEach(item => {
+                        if (item.type === "ROW" && item.fields) {
+                            item.fields.forEach(field => {
+                                if (field.code) {
+                                    fieldsBeforeCorrection.push({
+                                        code: field.code,
+                                        type: field.type,
+                                        width: field.size?.width || "未指定",
+                                        isLookup: formFields[field.code]?.lookup !== undefined
+                                    });
+                                }
+                            });
+                        } else if (item.type === "GROUP" && item.layout) {
+                            extractFieldInfo(item.layout);
+                        }
+                    });
+                };
+                extractFieldInfo(validatedLayout);
+                console.error(`補正前のフィールド情報: ${JSON.stringify(fieldsBeforeCorrection)}`);
+                
+                // 幅の自動補正を実行
+                const correctionResult = autoCorrectLayoutWidths(validatedLayout, formFields);
+                correctedLayout = correctionResult.layout;
+                layoutGuidances = correctionResult.guidances;
+                console.error(`レイアウトの幅の自動補正が完了しました`);
+                
+                // ガイダンスメッセージがあれば出力
+                if (layoutGuidances.length > 0) {
+                    console.error(`ガイダンスメッセージ: ${layoutGuidances.join('\n')}`);
+                }
+                
+                // 補正後のレイアウト情報をログに出力
+                const fieldsAfterCorrection = [];
+                const extractCorrectedFieldInfo = (items) => {
+                    items.forEach(item => {
+                        if (item.type === "ROW" && item.fields) {
+                            item.fields.forEach(field => {
+                                if (field.code) {
+                                    fieldsAfterCorrection.push({
+                                        code: field.code,
+                                        type: field.type,
+                                        width: field.size?.width || "未指定",
+                                        isLookup: formFields[field.code]?.lookup !== undefined
+                                    });
+                                }
+                            });
+                        } else if (item.type === "GROUP" && item.layout) {
+                            extractCorrectedFieldInfo(item.layout);
+                        }
+                    });
+                };
+                extractCorrectedFieldInfo(correctedLayout);
+                console.error(`補正後のフィールド情報: ${JSON.stringify(fieldsAfterCorrection)}`);
+                
+                // 変更があったフィールドを特定
+                const changedFields = fieldsAfterCorrection.filter((field, index) => {
+                    const beforeField = fieldsBeforeCorrection[index];
+                    return beforeField && field.width !== beforeField.width;
+                });
+                if (changedFields.length > 0) {
+                    console.error(`幅が変更されたフィールド: ${JSON.stringify(changedFields)}`);
+                } else {
+                    console.error(`幅が変更されたフィールドはありません`);
+                }
+            } else {
+                console.error(`フォームフィールド情報が取得できなかったため、幅の自動補正をスキップします`);
+            }
+            
             // GROUPフィールドのlabelプロパティを削除し、layoutが空配列の場合はlayoutプロパティ自体を削除
-            const cleanedLayout = cleanupGroupElements(validatedLayout);
+            const cleanedLayout = cleanupGroupElements(correctedLayout);
             
             // 深いコピーを作成して参照の問題を解決
             const finalLayout = JSON.parse(JSON.stringify(cleanedLayout));
@@ -378,6 +486,14 @@ export async function handleLayoutTools(name, args, repository) {
                     finalLayout,
                     revision
                 );
+                
+                // ガイダンスメッセージがあればレスポンスに含める
+                if (layoutGuidances.length > 0) {
+                    return {
+                        ...response,
+                        guidances: layoutGuidances
+                    };
+                }
                 
                 return response;
             } catch (error) {
@@ -420,8 +536,43 @@ export async function handleLayoutTools(name, args, repository) {
             // レイアウトを検証・修正（同期的に呼び出し）
             const validatedLayout = validateAndFixLayout(layout, existingFieldCodes);
             
+            // フォームフィールド情報を取得
+            let formFields = null;
+            try {
+                const fieldsResponse = await repository.getFormFields(args.app_id);
+                formFields = fieldsResponse.properties || {};
+                console.error(`Retrieved form fields for width correction: ${Object.keys(formFields).length} fields`);
+                
+                // ルックアップフィールドの情報をログに出力（デバッグ用）
+                const lookupFields = Object.entries(formFields).filter(([_, field]) => field.lookup !== undefined);
+                if (lookupFields.length > 0) {
+                    console.error(`Found ${lookupFields.length} lookup fields: ${lookupFields.map(([code]) => code).join(', ')}`);
+                } else {
+                    console.error('No lookup fields found in form fields');
+                }
+            } catch (error) {
+                console.error(`Failed to get form fields for width correction: ${error.message}`);
+                console.error('Continuing without width correction');
+            }
+            
+            // レイアウトの幅を自動補正
+            let correctedLayout = validatedLayout;
+            let layoutGuidances = [];
+            
+            if (formFields) {
+                const correctionResult = autoCorrectLayoutWidths(validatedLayout, formFields);
+                correctedLayout = correctionResult.layout;
+                layoutGuidances = correctionResult.guidances;
+                console.error(`Applied width correction to layout`);
+                
+                // ガイダンスメッセージがあれば出力
+                if (layoutGuidances.length > 0) {
+                    console.error(`ガイダンスメッセージ: ${layoutGuidances.join('\n')}`);
+                }
+            }
+            
             // 深いコピーを作成して参照の問題を解決
-            const finalLayout = JSON.parse(JSON.stringify(validatedLayout));
+            const finalLayout = JSON.parse(JSON.stringify(correctedLayout));
             
             // 最終的なレイアウトをログに出力
             console.error(`Final layout (before API call):`, JSON.stringify(finalLayout, null, 2));
@@ -434,10 +585,19 @@ export async function handleLayoutTools(name, args, repository) {
                     -1 // 最新リビジョン
                 );
                 
-                return {
-                    revision: response.revision,
-                    layout: layout
-                };
+                // ガイダンスメッセージがあればレスポンスに含める
+                if (layoutGuidances.length > 0) {
+                    return {
+                        revision: response.revision,
+                        layout: layout,
+                        guidances: layoutGuidances
+                    };
+                } else {
+                    return {
+                        revision: response.revision,
+                        layout: layout
+                    };
+                }
             } catch (error) {
                 // エラーの詳細情報を出力
                 console.error('Error creating form layout:', error);
@@ -493,8 +653,35 @@ export async function handleLayoutTools(name, args, repository) {
                 args.position || {}
             );
             
+            // フォームフィールド情報を取得
+            let formFields = null;
+            try {
+                const fieldsResponse = await repository.getFormFields(args.app_id);
+                formFields = fieldsResponse.properties || {};
+                console.error(`Retrieved form fields for width correction`);
+            } catch (error) {
+                console.error(`Failed to get form fields for width correction: ${error.message}`);
+                console.error('Continuing without width correction');
+            }
+            
+            // レイアウトの幅を自動補正
+            let correctedLayout = newLayout;
+            let layoutGuidances = [];
+            
+            if (formFields) {
+                const correctionResult = autoCorrectLayoutWidths(newLayout, formFields);
+                correctedLayout = correctionResult.layout;
+                layoutGuidances = correctionResult.guidances;
+                console.error(`Applied width correction to layout`);
+                
+                // ガイダンスメッセージがあれば出力
+                if (layoutGuidances.length > 0) {
+                    console.error(`ガイダンスメッセージ: ${layoutGuidances.join('\n')}`);
+                }
+            }
+            
             // 深いコピーを作成して参照の問題を解決
-            const finalLayout = JSON.parse(JSON.stringify(newLayout));
+            const finalLayout = JSON.parse(JSON.stringify(correctedLayout));
             
             // 最終的なレイアウトをログに出力
             console.error(`Final layout (before API call):`, JSON.stringify(finalLayout, null, 2));
@@ -507,10 +694,19 @@ export async function handleLayoutTools(name, args, repository) {
                     currentLayout.revision
                 );
                 
-                return {
-                    revision: response.revision,
-                    layout: newLayout
-                };
+                // ガイダンスメッセージがあればレスポンスに含める
+                if (layoutGuidances.length > 0) {
+                    return {
+                        revision: response.revision,
+                        layout: newLayout,
+                        guidances: layoutGuidances
+                    };
+                } else {
+                    return {
+                        revision: response.revision,
+                        layout: newLayout
+                    };
+                }
             } catch (error) {
                 // エラーの詳細情報を出力
                 console.error('Error adding layout element:', error);

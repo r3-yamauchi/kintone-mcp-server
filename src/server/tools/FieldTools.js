@@ -1,5 +1,5 @@
 // src/server/tools/FieldTools.js
-import { UNIT_POSITION_PATTERNS } from '../../constants.js';
+import { UNIT_POSITION_PATTERNS, LOOKUP_FIELD_MIN_WIDTH } from '../../constants.js';
 
 /**
  * 単位記号に基づいて適切な unitPosition を判定する関数
@@ -449,12 +449,14 @@ export async function handleFieldTools(name, args, repository) {
                 lookupPickerFields, 
                 filterCond, 
                 sort, 
-                required = false 
+                required = false,
+                fieldType = "SINGLE_LINE_TEXT" // デフォルトのフィールドタイプ
             } = args;
             
             // デバッグ用のログ出力
             console.error(`Creating lookup field: ${code}`);
             console.error(`Label: ${label}`);
+            console.error(`Field type: ${fieldType}`);
             console.error(`Related app: ${relatedAppCode || relatedAppId}`);
             console.error(`Related key field: ${relatedKeyField}`);
             
@@ -471,14 +473,29 @@ export async function handleFieldTools(name, args, repository) {
                 if (!mapping.relatedField) {
                     throw new Error(`fieldMappings[${index}].relatedFieldは必須です`);
                 }
+                
+                // ルックアップのキー自体がマッピングに含まれていないかチェック
+                if (mapping.relatedField === relatedKeyField) {
+                    throw new Error(`ルックアップのキーフィールド "${relatedKeyField}" はフィールドマッピングに含めないでください`);
+                }
             });
+            
+            // lookupPickerFieldsのチェック
+            if (!lookupPickerFields || !Array.isArray(lookupPickerFields) || lookupPickerFields.length === 0) {
+                console.error(`警告: lookupPickerFieldsが指定されていません。ルックアップピッカーに表示するフィールドを指定することを推奨します。`);
+            }
+            
+            // sortのチェック
+            if (!sort) {
+                console.error(`警告: sortが指定されていません。ルックアップの検索結果のソート順を指定することを推奨します。`);
+            }
             
             // デバッグ用のログ出力（フィールドマッピング）
             console.error(`Field mappings:`, JSON.stringify(fieldMappings, null, 2));
             
             // フィールド設定の基本部分
             const fieldConfig = {
-                type: "LOOKUP",
+                type: fieldType || "SINGLE_LINE_TEXT", // fieldTypeが指定されていない場合はデフォルト値を使用
                 code: code,
                 label: label,
                 required: required,
@@ -488,6 +505,19 @@ export async function handleFieldTools(name, args, repository) {
                     fieldMappings: fieldMappings
                 }
             };
+            
+            // 幅の設定と補正
+            // 幅が指定されていない場合、または指定された幅が最小幅より小さい場合は最小幅を設定
+            if (!args.size) {
+                fieldConfig.size = { width: LOOKUP_FIELD_MIN_WIDTH };
+                console.error(`ルックアップフィールド "${code}" の幅が指定されていないため、最小幅 ${LOOKUP_FIELD_MIN_WIDTH} を設定しました。`);
+            } else if (args.size) {
+                fieldConfig.size = { ...args.size };
+                if (!fieldConfig.size.width || parseInt(fieldConfig.size.width, 10) < parseInt(LOOKUP_FIELD_MIN_WIDTH, 10)) {
+                    fieldConfig.size.width = LOOKUP_FIELD_MIN_WIDTH;
+                    console.error(`ルックアップフィールド "${code}" の幅が最小幅 ${LOOKUP_FIELD_MIN_WIDTH} より小さいため、最小幅を設定しました。`);
+                }
+            }
             
             // relatedApp の設定（code が優先）
             if (relatedAppCode) {
@@ -500,9 +530,32 @@ export async function handleFieldTools(name, args, repository) {
             // オプション項目の追加
             if (lookupPickerFields && Array.isArray(lookupPickerFields)) {
                 fieldConfig.lookup.lookupPickerFields = lookupPickerFields;
+            } else {
+                // デフォルトのlookupPickerFieldsを設定
+                // 少なくともキーフィールドは含める
+                fieldConfig.lookup.lookupPickerFields = [relatedKeyField];
+                console.error(`lookupPickerFieldsが指定されていないため、デフォルト値 [${relatedKeyField}] を設定しました。`);
             }
+            
             if (filterCond) fieldConfig.lookup.filterCond = filterCond;
-            if (sort) fieldConfig.lookup.sort = sort;
+            
+            if (sort) {
+                fieldConfig.lookup.sort = sort;
+            } else {
+                // デフォルトのsortを設定
+                fieldConfig.lookup.sort = `${relatedKeyField} asc`;
+                console.error(`sortが指定されていないため、デフォルト値 "${relatedKeyField} asc" を設定しました。`);
+            }
+            
+            // 注意書きを追加
+            console.error(`
+【注意】ルックアップフィールドについて
+- ルックアップフィールドは基本的なフィールドタイプ（SINGLE_LINE_TEXT、NUMBERなど）に、lookup属性を追加したものです
+- フィールドタイプとして "LOOKUP" を指定するのではなく、適切な基本タイプを指定し、その中にlookupプロパティを設定します
+- 参照先アプリは運用環境にデプロイされている必要があります
+- ルックアップのキーフィールド自体はフィールドマッピングに含めないでください
+- lookupPickerFieldsとsortは省略可能ですが、指定することを強く推奨します
+`);
             
             return fieldConfig;
         }

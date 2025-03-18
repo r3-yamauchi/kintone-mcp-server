@@ -131,6 +131,7 @@ dist
 
 # Project specific files
 .clinerules
+.clinerules/
 
 # Editor directories and files
 .idea/

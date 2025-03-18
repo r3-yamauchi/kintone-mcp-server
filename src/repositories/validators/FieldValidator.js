@@ -1,5 +1,5 @@
 // src/repositories/validators/FieldValidator.js
-import { FIELD_TYPES_REQUIRING_OPTIONS, CALC_FIELD_TYPE, LINK_FIELD_TYPE, VALID_LINK_PROTOCOLS, LOOKUP_FIELD_TYPE, REFERENCE_TABLE_FIELD_TYPE, SINGLE_LINE_TEXT_FIELD_TYPE, MULTI_LINE_TEXT_FIELD_TYPE, NUMBER_FIELD_TYPE, VALID_UNIT_POSITIONS, DATE_FIELD_TYPE, TIME_FIELD_TYPE, DATETIME_FIELD_TYPE, RICH_TEXT_FIELD_TYPE, ATTACHMENT_FIELD_TYPE, USER_SELECT_FIELD_TYPE, GROUP_SELECT_FIELD_TYPE, ORGANIZATION_SELECT_FIELD_TYPE, SUBTABLE_FIELD_TYPE, STATUS_FIELD_TYPE, RELATED_RECORDS_FIELD_TYPE, RECORD_NUMBER_FIELD_TYPE, CREATOR_FIELD_TYPE, MODIFIER_FIELD_TYPE, CREATED_TIME_FIELD_TYPE, UPDATED_TIME_FIELD_TYPE, UNIT_POSITION_PATTERNS } from '../../constants.js';
+import { FIELD_TYPES_REQUIRING_OPTIONS, CALC_FIELD_TYPE, LINK_FIELD_TYPE, VALID_LINK_PROTOCOLS, REFERENCE_TABLE_FIELD_TYPE, SINGLE_LINE_TEXT_FIELD_TYPE, MULTI_LINE_TEXT_FIELD_TYPE, NUMBER_FIELD_TYPE, VALID_UNIT_POSITIONS, DATE_FIELD_TYPE, TIME_FIELD_TYPE, DATETIME_FIELD_TYPE, RICH_TEXT_FIELD_TYPE, ATTACHMENT_FIELD_TYPE, USER_SELECT_FIELD_TYPE, GROUP_SELECT_FIELD_TYPE, ORGANIZATION_SELECT_FIELD_TYPE, SUBTABLE_FIELD_TYPE, STATUS_FIELD_TYPE, RELATED_RECORDS_FIELD_TYPE, RECORD_NUMBER_FIELD_TYPE, CREATOR_FIELD_TYPE, MODIFIER_FIELD_TYPE, CREATED_TIME_FIELD_TYPE, UPDATED_TIME_FIELD_TYPE, UNIT_POSITION_PATTERNS } from '../../constants.js';
 
 import { autoCorrectUnitPosition } from '../../server/tools/FieldTools.js';
 
@@ -94,9 +94,13 @@ export function validateField(field) {
             validateSystemField(correctedField.type, correctedField);
         }
         
-        // LOOKUPフィールドの検証
-        if (correctedField.type === LOOKUP_FIELD_TYPE) {
-            validateLookupField(correctedField.type, correctedField.lookup);
+        // LOOKUPフィールドの検証（lookupプロパティの有無で判断）
+        if (correctedField.lookup) {
+            const result = validateLookupField(correctedField.type, correctedField.lookup);
+            if (result && result._recommendedMinWidth) {
+                // 推奨最小幅の情報を追加
+                correctedField._recommendedMinWidth = result._recommendedMinWidth;
+            }
         }
     }
     
@@ -1028,41 +1032,60 @@ export function validateSystemField(fieldType, config) {
 
 // LOOKUPフィールドのバリデーション
 export function validateLookupField(fieldType, lookup) {
-    if (fieldType === LOOKUP_FIELD_TYPE) {
-        // 必須項目のチェック
-        if (!lookup) {
-            throw new Error('LOOKUPフィールドには lookup の指定が必須です。');
-        }
-        
-        // relatedApp のチェック
-        if (!lookup.relatedApp) {
-            throw new Error('LOOKUPフィールドには relatedApp の指定が必須です。');
-        }
-        
-        // app または code のいずれかが必要
-        if (!lookup.relatedApp.app && !lookup.relatedApp.code) {
-            throw new Error('LOOKUPフィールドには参照先アプリのIDまたはコード（relatedApp.app または relatedApp.code）の指定が必須です。');
-        }
-        
-        // relatedKeyField のチェック
-        if (!lookup.relatedKeyField) {
-            throw new Error('LOOKUPフィールドには relatedKeyField の指定が必須です。');
-        }
-        
-        // fieldMappings のチェック
-        if (!lookup.fieldMappings || !Array.isArray(lookup.fieldMappings) || lookup.fieldMappings.length === 0) {
-            throw new Error('LOOKUPフィールドには fieldMappings の指定が必須です。少なくとも1つのマッピングを含む配列である必要があります。');
-        }
-        
-        // 各フィールドマッピングのチェック
-        lookup.fieldMappings.forEach((mapping, index) => {
-            if (!mapping.field) {
-                throw new Error(`LOOKUPフィールドの fieldMappings[${index}].field の指定が必須です。`);
-            }
-            if (!mapping.relatedField) {
-                throw new Error(`LOOKUPフィールドの fieldMappings[${index}].relatedField の指定が必須です。`);
-            }
-        });
+    // 必須項目のチェック
+    if (!lookup) {
+        throw new Error('ルックアップフィールドには lookup の指定が必須です。');
     }
-    return true;
+    
+    // relatedApp のチェック
+    if (!lookup.relatedApp) {
+        throw new Error('ルックアップフィールドには relatedApp の指定が必須です。');
+    }
+    
+    // app または code のいずれかが必要
+    if (!lookup.relatedApp.app && !lookup.relatedApp.code) {
+        throw new Error('ルックアップフィールドには参照先アプリのIDまたはコード（relatedApp.app または relatedApp.code）の指定が必須です。');
+    }
+    
+    // relatedKeyField のチェック
+    if (!lookup.relatedKeyField) {
+        throw new Error('ルックアップフィールドには relatedKeyField の指定が必須です。');
+    }
+    
+    // fieldMappings のチェック
+    if (!lookup.fieldMappings || !Array.isArray(lookup.fieldMappings) || lookup.fieldMappings.length === 0) {
+        throw new Error('ルックアップフィールドには fieldMappings の指定が必須です。少なくとも1つのマッピングを含む配列である必要があります。');
+    }
+    
+    // 各フィールドマッピングのチェック
+    lookup.fieldMappings.forEach((mapping, index) => {
+        if (!mapping.field) {
+            throw new Error(`ルックアップフィールドの fieldMappings[${index}].field の指定が必須です。`);
+        }
+        if (!mapping.relatedField) {
+            throw new Error(`ルックアップフィールドの fieldMappings[${index}].relatedField の指定が必須です。`);
+        }
+        
+        // ルックアップのキー自体がマッピングに含まれていないかチェック
+        if (mapping.relatedField === lookup.relatedKeyField) {
+            throw new Error(`ルックアップのキーフィールド "${lookup.relatedKeyField}" はフィールドマッピングに含めないでください。`);
+        }
+    });
+    
+    // lookupPickerFieldsのチェック
+    if (!lookup.lookupPickerFields || !Array.isArray(lookup.lookupPickerFields) || lookup.lookupPickerFields.length === 0) {
+        console.error(`警告: lookupPickerFieldsが指定されていません。ルックアップピッカーに表示するフィールドを指定することを推奨します。`);
+    }
+    
+    // sortのチェック
+    if (!lookup.sort) {
+        console.error(`警告: sortが指定されていません。ルックアップの検索結果のソート順を指定することを推奨します。`);
+    }
+    
+    // ルックアップフィールドには推奨最小幅の情報を追加
+    // この情報はレイアウト更新時に利用される
+    return {
+        isValid: true,
+        _recommendedMinWidth: "250" // 推奨最小幅の情報を追加
+    };
 }

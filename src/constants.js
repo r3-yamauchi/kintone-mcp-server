@@ -73,9 +73,6 @@ export const CALC_FIELD_FORMATS = [
 export const LINK_FIELD_TYPE = 'LINK';
 export const VALID_LINK_PROTOCOLS = ['WEB', 'CALL', 'MAIL'];
 
-// LOOKUPフィールドの定数
-export const LOOKUP_FIELD_TYPE = 'LOOKUP';
-
 // 関連テーブルフィールドの定数
 export const REFERENCE_TABLE_FIELD_TYPE = 'REFERENCE_TABLE';
 
@@ -96,6 +93,21 @@ export const CREATOR_FIELD_TYPE = 'CREATOR';
 export const MODIFIER_FIELD_TYPE = 'MODIFIER';
 export const CREATED_TIME_FIELD_TYPE = 'CREATED_TIME';
 export const UPDATED_TIME_FIELD_TYPE = 'UPDATED_TIME';
+
+// システムフィールドの定数（レイアウトに含める必要がないフィールド）
+export const ID_FIELD_TYPE = '__ID__';
+export const REVISION_FIELD_TYPE = '__REVISION__';
+
+// システムフィールドの配列
+export const SYSTEM_FIELD_TYPES = [
+    RECORD_NUMBER_FIELD_TYPE,
+    ID_FIELD_TYPE,
+    REVISION_FIELD_TYPE,
+    CREATOR_FIELD_TYPE,
+    CREATED_TIME_FIELD_TYPE,
+    MODIFIER_FIELD_TYPE,
+    UPDATED_TIME_FIELD_TYPE
+];
 
 // レイアウト要素の定数（コンテナ要素と特殊フィールド要素）
 export const LAYOUT_ELEMENT_TYPES = [
@@ -136,7 +148,6 @@ export const ALL_FIELD_TYPES = [
     'MULTI_SELECT',
     'CALC',
     'LINK',
-    'LOOKUP',
     'REFERENCE_TABLE',
     'SUBTABLE',
     'STATUS',
@@ -158,12 +169,5 @@ export const CONTAINER_ELEMENT_TYPES = [
     'SUBTABLE'
 ];
 
-// サイズ単位の定数
-export const VALID_SIZE_UNITS = [
-    '%',
-    'px',
-    'em',
-    'rem',
-    'vh',
-    'vw'
-];
+// ルックアップフィールドの最小幅
+export const LOOKUP_FIELD_MIN_WIDTH = "250";

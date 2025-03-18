@@ -14,8 +14,13 @@ export function getOtherFieldDocumentation(fieldType) {
 ## 概要
 ルックアップフィールドは、他のkintoneアプリのレコードを参照し、その値を自動的に取得するフィールドです。ユーザーが参照先のレコードを選択すると、関連するフィールドの値が自動的にコピーされます。
 
+## 重要な注意点
+ルックアップフィールドは、実際には基本的なフィールドタイプ（SINGLE_LINE_TEXT、NUMBERなど）に、lookup属性を追加したものです。
+フィールドタイプとして "LOOKUP" を指定するのではなく、適切な基本タイプを指定し、その中にlookupプロパティを設定します。
+
 ## 主要なプロパティ
-1. \`lookup\` オブジェクト（必須）:
+1. \`type\`: 基本的なフィールドタイプ（"SINGLE_LINE_TEXT"など）
+2. \`lookup\` オブジェクト（必須）:
    - \`relatedApp\`: 参照先アプリの情報
      - \`app\`: 参照先アプリのID（数値または文字列）
      - \`code\`: 参照先アプリのコード（文字列）
@@ -24,10 +29,11 @@ export function getOtherFieldDocumentation(fieldType) {
    - \`fieldMappings\`: フィールドマッピングの配列（必須）
      - \`field\`: このアプリ側のフィールドコード
      - \`relatedField\`: 参照先アプリのフィールドコード
-   - \`lookupPickerFields\`: ルックアップピッカーに表示するフィールドコードの配列（省略可）
+     - 注意: ルックアップのキーフィールド自体はマッピングに含めないでください
+   - \`lookupPickerFields\`: ルックアップピッカーに表示するフィールドコードの配列（推奨）
    - \`filterCond\`: 参照先レコードの絞り込み条件（クエリ形式、省略可）
-   - \`sort\`: 参照先レコードのソート条件（クエリ形式、省略可）
-2. \`required\`: 必須フィールドかどうか（true/false、省略可）
+   - \`sort\`: 参照先レコードのソート条件（クエリ形式、推奨）
+3. \`required\`: 必須フィールドかどうか（true/false、省略可）
 
 ## ルックアップの仕組み
 
@@ -43,6 +49,7 @@ export function getOtherFieldDocumentation(fieldType) {
    - 参照先アプリのどのフィールドの値を、このアプリのどのフィールドにコピーするかを指定します
    - 複数のフィールドをマッピングできます
    - マッピング先のフィールドは事前に作成しておく必要があります
+   - ルックアップのキーフィールド自体はマッピングに含めないでください
 
 4. **ルックアップピッカー**:
    - ユーザーがルックアップフィールドをクリックすると表示される検索ダイアログ
@@ -54,7 +61,7 @@ export function getOtherFieldDocumentation(fieldType) {
 ### 基本的な顧客情報ルックアップ
 \`\`\`json
 {
-  "type": "LOOKUP",
+  "type": "SINGLE_LINE_TEXT",
   "code": "customer_lookup",
   "label": "顧客検索",
   "required": true,
@@ -88,7 +95,7 @@ export function getOtherFieldDocumentation(fieldType) {
 ### 商品情報ルックアップ（価格自動計算）
 \`\`\`json
 {
-  "type": "LOOKUP",
+  "type": "SINGLE_LINE_TEXT",
   "code": "product_lookup",
   "label": "商品検索",
   "lookup": {
@@ -113,6 +120,33 @@ export function getOtherFieldDocumentation(fieldType) {
     "lookupPickerFields": ["product_code", "name", "price", "available_stock", "category"],
     "filterCond": "available_stock > 0",
     "sort": "category asc, name asc"
+  }
+}
+\`\`\`
+
+### 数値フィールドをベースにしたルックアップ
+\`\`\`json
+{
+  "type": "NUMBER",
+  "code": "product_id_lookup",
+  "label": "商品ID検索",
+  "lookup": {
+    "relatedApp": {
+      "code": "products"
+    },
+    "relatedKeyField": "product_id",
+    "fieldMappings": [
+      {
+        "field": "product_name",
+        "relatedField": "name"
+      },
+      {
+        "field": "unit_price",
+        "relatedField": "price"
+      }
+    ],
+    "lookupPickerFields": ["product_id", "name", "price"],
+    "sort": "product_id asc"
   }
 }
 \`\`\`
@@ -145,6 +179,8 @@ unit_price * quantity
 4. 参照先アプリは運用環境にデプロイされている必要があります。プレビュー環境のアプリは参照できません。
 5. ルックアップフィールドの値が変更されると、マッピングされたフィールドの値も自動的に更新されます。
 6. ルックアップフィールドの作成は create_lookup_field ツールを使用すると簡単です。
+7. ルックアップのキーフィールド自体はフィールドマッピングに含めないでください。
+8. lookupPickerFieldsとsortは省略可能ですが、指定することを強く推奨します。
 
 ## 関連情報
 - ルックアップフィールドは、関連レコードリストフィールドや関連テーブルフィールドと組み合わせて使用することで、より高度なデータ連携が可能になります。

@@ -89,13 +89,76 @@ export async function executeToolRequest(request, repository) {
             result = await handleSpaceTools(name, args, repository);
         }
         
-else if (['add_fields', 'create_choice_field', 'create_reference_table_field', 'create_lookup_field',
-         'create_text_field', 'create_number_field', 'create_date_field', 'create_time_field',
-         'create_datetime_field', 'create_rich_text_field', 'create_attachment_field',
-         'create_user_select_field', 'create_subtable_field', 'create_calc_field',
-         'create_status_field', 'create_related_records_field', 'create_link_field',
-         'update_field'].includes(name)) {
+else if (['add_fields', 'update_field'].includes(name)) {
             result = await handleFieldTools(name, args, repository);
+        }
+        
+        else if (['create_choice_field', 'create_reference_table_field', 'create_text_field', 
+                 'create_number_field', 'create_date_field', 'create_time_field',
+                 'create_datetime_field', 'create_rich_text_field', 'create_attachment_field',
+                 'create_user_select_field', 'create_subtable_field', 'create_calc_field',
+                 'create_status_field', 'create_related_records_field', 'create_link_field'].includes(name)) {
+            result = await handleFieldTools(name, args, repository);
+        }
+        
+        else if (name === 'create_lookup_field') {
+            // ルックアップフィールド作成ツールの特別処理
+            const fieldConfig = await handleFieldTools(name, args, repository);
+            
+            // 注意書きを追加（ログとレスポンス両方に含める）
+            const note = `注意: create_lookup_field ツールは設定オブジェクトを生成するだけのヘルパーツールです。実際にフィールドを追加するには、この結果を add_fields ツールに渡してください。`;
+            console.error(note);
+            
+            // ルックアップフィールドの重要な注意点を追加
+            const lookupNote = `
+【重要】ルックアップフィールドについて
+- ルックアップフィールドは基本的なフィールドタイプ（SINGLE_LINE_TEXT、NUMBERなど）に、lookup属性を追加したものです
+- フィールドタイプとして "LOOKUP" を指定するのではなく、適切な基本タイプを指定し、その中にlookupプロパティを設定します
+- 参照先アプリは運用環境にデプロイされている必要があります
+- ルックアップのキーフィールド自体はフィールドマッピングに含めないでください
+- lookupPickerFieldsとsortは省略可能ですが、指定することを強く推奨します
+`;
+            console.error(lookupNote);
+            
+            // 使用例を追加（ログとレスポンス両方に含める）
+            const example = `使用例:
+add_fields({
+  app_id: アプリID,
+  properties: {
+    "${fieldConfig.code}": ${JSON.stringify(fieldConfig, null, 2)}
+  }
+});`;
+            console.error(example);
+            
+            // 注意書きと使用例を含めた結果オブジェクトを作成
+            result = {
+                ...fieldConfig,
+                _note: note,
+                _lookupNote: lookupNote,
+                _example: example
+            };
+            
+            // MCPプロトコルが期待する形式に変換して返す
+            return {
+                content: [
+                    {
+                        type: 'text',
+                        text: JSON.stringify(result, null, 2)
+                    },
+                    {
+                        type: 'text',
+                        text: note
+                    },
+                    {
+                        type: 'text',
+                        text: lookupNote
+                    },
+                    {
+                        type: 'text',
+                        text: example
+                    }
+                ]
+            };
         }
         
         else if (['get_field_type_documentation', 'get_available_field_types', 

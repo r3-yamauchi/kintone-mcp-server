@@ -56,6 +56,8 @@ export function getFieldTypeDocumentation(fieldType) {
         case 'LINK':
             return getLinkFieldDocumentation();
         case 'LOOKUP':
+            // 注意: 実際にはLOOKUPは特別なフィールドタイプではなく、基本タイプに属性を追加したものです
+            // このケースは互換性のためと、ドキュメント検索のために残しています
             return getLookupDocumentation();
         case 'REFERENCE_TABLE':
             return getReferenceTableDocumentation();
@@ -102,6 +104,8 @@ export function getAvailableFieldTypes() {
             { type: 'USER_SELECT', name: 'ユーザー選択' },
             { type: 'GROUP_SELECT', name: 'グループ選択' },
             { type: 'ORGANIZATION_SELECT', name: '組織選択' },
+            // 注意: 実際にはLOOKUPは特別なフィールドタイプではなく、基本タイプに属性を追加したものです
+            // ここでは互換性のためと、ドキュメント検索のために残しています
             { type: 'LOOKUP', name: 'ルックアップ' },
             { type: 'REFERENCE_TABLE', name: '関連テーブル' }
         ],
