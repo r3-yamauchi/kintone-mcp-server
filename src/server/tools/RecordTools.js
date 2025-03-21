@@ -70,24 +70,44 @@ export async function handleRecordTools(name, args, repository) {
             if (!args.app_id) {
                 throw new Error('app_id は必須パラメータです。');
             }
-            if (!args.record_id) {
-                throw new Error('record_id は必須パラメータです。');
+            
+            // レコードIDまたはupdateKeyのいずれかが必要
+            if (!args.record_id && !args.updateKey) {
+                throw new Error('record_id または updateKey は必須パラメータです。');
             }
+            
             if (!args.fields) {
                 throw new Error('fields は必須パラメータです。');
             }
             
             // デバッグ用のログ出力
-            console.error(`Updating record: ${args.app_id}/${args.record_id}`);
+            if (args.record_id) {
+                console.error(`Updating record by ID: ${args.app_id}/${args.record_id}`);
+            } else {
+                console.error(`Updating record by key: ${args.app_id}/${args.updateKey.field}=${args.updateKey.value}`);
+            }
             console.error(`Fields:`, JSON.stringify(args.fields, null, 2));
             
-            const response = await repository.updateRecord(
-                new KintoneRecord(
+            let response;
+            if (args.record_id) {
+                // レコードIDを使用した更新
+                response = await repository.updateRecord(
+                    new KintoneRecord(
+                        args.app_id,
+                        args.record_id,
+                        args.fields
+                    )
+                );
+            } else {
+                // updateKeyを使用した更新
+                response = await repository.updateRecordByKey(
                     args.app_id,
-                    args.record_id,
+                    args.updateKey.field,
+                    args.updateKey.value,
                     args.fields
-                )
-            );
+                );
+            }
+            
             return { success: true, revision: response.revision };
         }
         

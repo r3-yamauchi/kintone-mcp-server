@@ -135,6 +135,21 @@ export function getDocumentationToolDescription() {
 このツールは、kintoneのフィールドタイプに関する詳細なドキュメントを提供します。
 各フィールドタイプの仕様、プロパティ、使用例、応用例、注意事項などを確認できます。
 
+## 重要な注意事項
+
+### フォームレイアウトとフィールドの関係
+- **通常のフィールドは、レイアウトに含める前に必ず事前に作成しておく必要があります**
+- 存在しないフィールドコードをレイアウトに含めると、エラーが発生します
+- システムフィールド（RECORD_NUMBER, CREATOR, MODIFIER, CREATED_TIME, UPDATED_TIME）は事前作成不要です
+- レイアウト要素（LABEL, SPACER, HR）も事前作成不要です
+
+### 推奨されるワークフロー
+1. \`add_fields\` ツールでフィールドを作成（システムフィールドとレイアウト要素を除く）
+2. \`get_form_fields\` ツールで作成されたフィールドを確認
+3. \`update_form_layout\` ツールでレイアウトを更新
+
+詳細は \`get_field_type_documentation({ field_type: "LAYOUT" })\` で確認できます。
+
 ## 利用可能なフィールドタイプ
 
 ### 基本フィールド
@@ -186,6 +201,21 @@ export function getFieldCreationToolDescription() {
 
 このツールは、kintoneのフィールドを簡単に作成するためのヘルパー関数を提供します。
 各フィールドタイプに特化した関数を使用して、適切なフィールド定義を生成できます。
+
+## 重要な注意事項
+
+### フォームレイアウトとフィールドの関係
+- **通常のフィールドは、レイアウトに含める前に必ず事前に作成しておく必要があります**
+- フィールド作成ツールで生成したフィールド定義は、必ず \`add_fields\` ツールを使用してkintoneアプリに追加してください
+- レイアウト更新前に \`get_form_fields\` ツールを使用して、フィールドの存在を確認することを推奨します
+- システムフィールド（RECORD_NUMBER, CREATOR, MODIFIER, CREATED_TIME, UPDATED_TIME）は事前作成不要です
+- レイアウト要素（LABEL, SPACER, HR）も事前作成不要です
+
+### 推奨されるワークフロー
+1. フィールド作成ツールでフィールド定義を生成
+2. \`add_fields\` ツールでフィールドをkintoneアプリに追加
+3. \`get_form_fields\` ツールで作成されたフィールドを確認
+4. \`update_form_layout\` ツールでレイアウトを更新
 
 ## 利用可能なツール
 

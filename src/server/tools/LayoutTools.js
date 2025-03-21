@@ -19,6 +19,22 @@ function generateFieldCode(label) {
     return code;
 }
 
+// システムフィールドとレイアウト要素のリスト（事前作成不要）
+const SYSTEM_FIELD_TYPES = [
+    "RECORD_NUMBER", 
+    "CREATOR", 
+    "MODIFIER", 
+    "CREATED_TIME", 
+    "UPDATED_TIME"
+];
+
+// レイアウト要素のリスト（事前作成不要）
+const LAYOUT_ELEMENT_TYPES = [
+    "LABEL", 
+    "SPACER", 
+    "HR"
+];
+
 // レイアウトデータを再帰的に検証・修正する関数（同期版）
 function validateAndFixLayout(layout, existingFieldCodes = []) {
     // 使用済みフィールドコードのリスト（既存 + 新規追加済み）
@@ -81,6 +97,18 @@ function validateAndFixLayout(layout, existingFieldCodes = []) {
                     // フィールド要素のデフォルトタイプは SINGLE_LINE_TEXT
                     field.type = "SINGLE_LINE_TEXT";
                     console.error(`Warning: フィールド要素に type プロパティが指定されていません。自動的に "SINGLE_LINE_TEXT" を設定します。`);
+                }
+                
+                // フィールドコードが存在するかチェック（システムフィールドとレイアウト要素は除外）
+                if (field.code && 
+                    !existingFieldCodes.includes(field.code) && 
+                    !SYSTEM_FIELD_TYPES.includes(field.type) && 
+                    !LAYOUT_ELEMENT_TYPES.includes(field.type) && 
+                    field.type !== "REFERENCE_TABLE") {
+                    
+                    console.error(`Warning: フィールドコード "${field.code}" (タイプ: ${field.type}) は存在しません。` +
+                        `このフィールドはレイアウトに含める前に add_fields ツールで作成する必要があります。` +
+                        `システムフィールド（${SYSTEM_FIELD_TYPES.join(', ')}）とレイアウト要素（${LAYOUT_ELEMENT_TYPES.join(', ')}）は事前作成不要です。`);
                 }
                 
                 return field;

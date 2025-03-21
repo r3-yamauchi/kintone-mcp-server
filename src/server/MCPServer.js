@@ -19,7 +19,7 @@ export class MCPServer {
         this.server = new Server(
             {
                 name: 'kintonemcp',
-                version: '3.7.0',
+                version: '3.8.0',
             },
             {
                 capabilities: {
@@ -88,7 +88,21 @@ export class MCPServer {
                 },
                 {
                     name: 'create_record',
-                    description: 'kintoneアプリに新しいレコードを作成します',
+                    description: 'kintoneアプリに新しいレコードを作成します。各フィールドは { "value": ... } の形式で指定します。\n' +
+                        '例: {\n' +
+                        '  "app_id": 1,\n' +
+                        '  "fields": {\n' +
+                        '    "文字列1行": { "value": "テスト" },\n' +
+                        '    "文字列複数行": { "value": "テスト\\nテスト2" },\n' +
+                        '    "数値": { "value": "20" },\n' +
+                        '    "日時": { "value": "2014-02-16T08:57:00Z" },\n' +
+                        '    "チェックボックス": { "value": ["sample1", "sample2"] },\n' +
+                        '    "ユーザー選択": { "value": [{ "code": "sato" }] },\n' +
+                        '    "ドロップダウン": { "value": "sample1" },\n' +
+                        '    "リンク_ウェブ": { "value": "https://www.cybozu.com" },\n' +
+                        '    "テーブル": { "value": [{ "value": { "テーブル文字列": { "value": "テスト" } } }] }\n' +
+                        '  }\n' +
+                        '}',
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -98,7 +112,7 @@ export class MCPServer {
                             },
                             fields: {
                                 type: 'object',
-                                description: 'レコードのフィールド値'
+                                description: 'レコードのフィールド値（各フィールドは { "value": ... } の形式で指定）'
                             }
                         },
                         required: ['app_id', 'fields']
@@ -106,7 +120,37 @@ export class MCPServer {
                 },
                 {
                     name: 'update_record',
-                    description: 'kintoneアプリの既存レコードを更新します',
+                    description: 'kintoneアプリの既存レコードを更新します。各フィールドは { "value": ... } の形式で指定します。\n' +
+                        '例1（レコードIDを指定して更新）: {\n' +
+                        '  "app_id": 1,\n' +
+                        '  "record_id": 1001,\n' +
+                        '  "fields": {\n' +
+                        '    "文字列1行_0": { "value": "character string is changed" },\n' +
+                        '    "テーブル_0": { "value": [{\n' +
+                        '      "id": 1,\n' +
+                        '      "value": {\n' +
+                        '        "文字列1行_1": { "value": "character string is changed" }\n' +
+                        '      }\n' +
+                        '    }]}\n' +
+                        '  }\n' +
+                        '}\n\n' +
+                        '例2（重複禁止フィールドを指定して更新）: {\n' +
+                        '  "app_id": 1,\n' +
+                        '  "updateKey": {\n' +
+                        '    "field": "文字列1行_0",\n' +
+                        '    "value": "フィールドの値"\n' +
+                        '  },\n' +
+                        '  "fields": {\n' +
+                        '    "文字列1行_1": { "value": "character string is changed" },\n' +
+                        '    "テーブル_0": { "value": [{\n' +
+                        '      "id": 1,\n' +
+                        '      "value": {\n' +
+                        '        "文字列1行_2": { "value": "character string is changed" }\n' +
+                        '      }\n' +
+                        '    }]}\n' +
+                        '  }\n' +
+                        '}\n' +
+                        'レコードIDまたはupdateKeyのいずれかを指定して更新できます。updateKeyを使用する場合は、重複禁止に設定されたフィールドを指定してください。',
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -116,14 +160,29 @@ export class MCPServer {
                             },
                             record_id: {
                                 type: 'number',
-                                description: 'レコードID'
+                                description: 'レコードID（updateKeyを使用する場合は不要）'
+                            },
+                            updateKey: {
+                                type: 'object',
+                                properties: {
+                                    field: {
+                                        type: 'string',
+                                        description: '重複禁止に設定されたフィールドコード'
+                                    },
+                                    value: {
+                                        type: 'string',
+                                        description: 'フィールドの値'
+                                    }
+                                },
+                                required: ['field', 'value'],
+                                description: '重複禁止フィールドを使用してレコードを特定（record_idを使用する場合は不要）'
                             },
                             fields: {
                                 type: 'object',
-                                description: '更新するフィールド値'
+                                description: '更新するフィールド値（各フィールドは { "value": ... } の形式で指定）'
                             }
                         },
-                        required: ['app_id', 'record_id', 'fields']
+                        required: ['app_id', 'fields']
                     }
                 },
                 
@@ -733,7 +792,7 @@ export class MCPServer {
                 },
                 {
                     name: 'update_form_layout',
-                    description: 'kintoneアプリのフォームレイアウトを変更します。トップレベルには ROW と SUBTABLE と GROUP を配置できます。SUBTABLEやGROUPはトップレベルに配置する必要があります。ROW内に配置することはできません。また、ルックアップフィールドをフォームに配置する際は 250 以上の幅を明示的に指定してください。',
+                    description: 'kintoneアプリのフォームレイアウトを変更します。トップレベルには ROW と SUBTABLE と GROUP を配置できます。SUBTABLEやGROUPはトップレベルに配置する必要があります。ROW内に配置することはできません。SUBTABLEをレイアウトに含める際には、fieldsプロパティでテーブル内に表示するフィールドとその順序を指定する必要があります。また、ルックアップフィールドをフォームに配置する際は 250 以上の幅を明示的に指定してください。',
                     inputSchema: {
                         type: 'object',
                         properties: {

@@ -82,6 +82,24 @@ export class KintoneRecordRepository extends BaseKintoneRepository {
         }
     }
 
+    async updateRecordByKey(appId, keyField, keyValue, fields) {
+        try {
+            console.error(`Updating record by key: ${appId}/${keyField}=${keyValue}`);
+            const response = await this.client.record.updateRecordByUpdateKey({
+                app: appId,
+                updateKey: {
+                    field: keyField,
+                    value: keyValue
+                },
+                record: fields
+            });
+            console.error('Update by key response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `update record by key ${appId}/${keyField}=${keyValue}`);
+        }
+    }
+
     async addRecordComment(appId, recordId, text, mentions = []) {
         try {
             console.error(`Adding comment to record: ${appId}/${recordId}`);

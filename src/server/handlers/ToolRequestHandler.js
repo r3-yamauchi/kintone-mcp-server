@@ -39,6 +39,36 @@ async function handleFileTools(name, args, repository) {
     }
 }
 
+/**
+ * オブジェクト内の "DROPDOWN" フィールドタイプを "DROP_DOWN" に変換する関数
+ * @param {Object} obj 変換対象のオブジェクト
+ */
+function convertDropdownFieldType(obj) {
+    if (!obj || typeof obj !== 'object') return;
+    
+    // オブジェクトの各プロパティを再帰的に処理
+    for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            const value = obj[key];
+            
+            // type プロパティが "DROPDOWN" の場合、"DROP_DOWN" に変換
+            if (key === 'type' && value === 'DROPDOWN') {
+                obj[key] = 'DROP_DOWN';
+                console.error('フィールドタイプ "DROPDOWN" を "DROP_DOWN" に自動変換しました。');
+            }
+            // field_type プロパティが "DROPDOWN" の場合、"DROP_DOWN" に変換
+            else if (key === 'field_type' && value === 'DROPDOWN') {
+                obj[key] = 'DROP_DOWN';
+                console.error('フィールドタイプ "DROPDOWN" を "DROP_DOWN" に自動変換しました。');
+            }
+            // 値がオブジェクトまたは配列の場合、再帰的に処理
+            else if (value && typeof value === 'object') {
+                convertDropdownFieldType(value);
+            }
+        }
+    }
+}
+
 // ツールリクエストを実行する関数
 export async function executeToolRequest(request, repository) {
     // リクエスト全体をログ出力（デバッグ用）
@@ -61,6 +91,11 @@ export async function executeToolRequest(request, repository) {
             ErrorCode.InvalidParams,
             `ツール "${name}" の引数が指定されていません。`
         );
+    }
+    
+    // DROPDOWN を DROP_DOWN に変換する処理
+    if (args) {
+        convertDropdownFieldType(args);
     }
     
     // ツール実行前のログ出力
@@ -385,6 +420,32 @@ export function handleToolError(error) {
                 // 使用例を追加
                 helpText += "\n\n【使用例】\n```json\n{\n  \"app_id\": 123,\n  \"fields\": {\n    \"project_name\": { \"value\": \"プロジェクト名\" },\n    \"project_manager\": { \"value\": \"山田太郎\" }\n  }\n}\n```";
             }
+        }
+        // フィールド形式エラーの場合
+        else if (error.message.includes("value") || error.message.includes("record") || error.message.includes("fields")) {
+            helpText = formatErrorMessage(
+                "フィールド形式エラー",
+                "レコードのフィールド値の形式が正しくありません。",
+                [
+                    "各フィールドは { \"value\": ... } の形式で指定する必要があります。",
+                    "フィールドタイプに応じて適切な値の形式が異なります：",
+                    "- 文字列1行: { \"value\": \"テキスト\" }",
+                    "- 文字列複数行: { \"value\": \"テキスト\\nテキスト2\" }",
+                    "- 数値: { \"value\": \"20\" } (文字列として指定)",
+                    "- 日時: { \"value\": \"2014-02-16T08:57:00Z\" }",
+                    "- チェックボックス: { \"value\": [\"選択肢1\", \"選択肢2\"] } (配列)",
+                    "- ユーザー選択: { \"value\": [{ \"code\": \"ユーザーコード\" }] } (オブジェクトの配列)",
+                    "- ドロップダウン: { \"value\": \"選択肢1\" }",
+                    "- リンク: { \"value\": \"https://www.cybozu.com\" }",
+                    "- テーブル: { \"value\": [{ \"value\": { \"テーブル文字列\": { \"value\": \"テスト\" } } }] } (入れ子構造)"
+                ]
+            );
+            
+            // 使用例を追加
+            helpText += "\n\n【レコード作成の使用例】\n```json\n{\n  \"app_id\": 1,\n  \"fields\": {\n    \"文字列1行\": { \"value\": \"テスト\" },\n    \"文字列複数行\": { \"value\": \"テスト\\nテスト2\" },\n    \"数値\": { \"value\": \"20\" },\n    \"日時\": { \"value\": \"2014-02-16T08:57:00Z\" },\n    \"チェックボックス\": { \"value\": [\"sample1\", \"sample2\"] },\n    \"ユーザー選択\": { \"value\": [{ \"code\": \"sato\" }] },\n    \"ドロップダウン\": { \"value\": \"sample1\" },\n    \"リンク_ウェブ\": { \"value\": \"https://www.cybozu.com\" },\n    \"テーブル\": { \"value\": [{ \"value\": { \"テーブル文字列\": { \"value\": \"テスト\" } } }] }\n  }\n}\n```";
+            
+            // レコード更新の使用例を追加
+            helpText += "\n\n【レコード更新の使用例】\n```json\n{\n  \"app_id\": 1,\n  \"record_id\": 1001,\n  \"fields\": {\n    \"文字列1行_0\": { \"value\": \"character string is changed\" },\n    \"テーブル_0\": { \"value\": [{\n      \"id\": 1,\n      \"value\": {\n        \"文字列1行_1\": { \"value\": \"character string is changed\" }\n      }\n    }]}\n  }\n}\n```";
         }
     }
 
