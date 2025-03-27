@@ -17,7 +17,7 @@
   "description": "MCP server for kintone",
   "dependencies": {
     "@kintone/rest-api-client": "^5.7.1",
-    "@modelcontextprotocol/sdk": "^1.7.0",
+    "@modelcontextprotocol/sdk": "1.7.0",
     "dotenv": "^16.4.7"
   },
   "engines": {
