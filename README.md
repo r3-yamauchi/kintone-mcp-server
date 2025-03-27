@@ -62,6 +62,8 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 
 ### 7. この MCP server が提供している機能の一覧
 
+各ツールのアノテーション属性については [docs/tool-annotations.md](docs/tool-annotations.md) を参照してください。
+
 #### レコード操作
 
 - `get_record`: kintoneアプリの1レコードを取得

@@ -362,7 +362,7 @@ export function handleToolError(error) {
             isError: true
         };
     } else if (error instanceof KintoneRestAPIError) {
-        // Kintone API のエラーコードに応じて適切な MCP エラーコードを設定
+        // kintone API のエラーコードに応じて適切な MCP エラーコードを設定
         errorCode = error.status >= 500 ? 
             ErrorCode.InternalError : 
             ErrorCode.InvalidRequest;
