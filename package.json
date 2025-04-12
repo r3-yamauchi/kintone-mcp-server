@@ -12,7 +12,10 @@
     "mcp",
     "kintone"
   ],
-  "author": "r3-yamauchi https://www.r3it.com/blog/author/yamauchi",
+  "author": {
+    "name": "r3-yamauchi",
+    "url": "https://www.r3it.com/blog/author/yamauchi"
+  },
   "license": "MIT",
   "description": "MCP server for kintone",
   "dependencies": {
