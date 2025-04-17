@@ -344,6 +344,23 @@ export async function handleAppTools(name, args, repository) {
             }
         }
         
+        // アプリのアクション設定を取得するツール
+        case 'get_app_actions': {
+            // 引数のチェック
+            if (!args.app_id) {
+                throw new Error('app_id は必須パラメータです。');
+            }
+            
+            // デバッグ用のログ出力
+            console.error(`Fetching app actions for app: ${args.app_id}`);
+            
+            const actions = await repository.getAppActions(
+                args.app_id,
+                args.lang
+            );
+            return actions;
+        }
+        
         default:
             throw new Error(`Unknown app tool: ${name}`);
     }

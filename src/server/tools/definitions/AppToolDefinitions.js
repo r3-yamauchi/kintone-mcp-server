@@ -456,5 +456,32 @@ export const appToolDefinitions = [
             longRunning: false,
             impact: 'low'
         }
+    },
+    {
+        name: 'get_app_actions',
+        description: 'kintoneアプリのアクション設定を取得します',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                app_id: {
+                    type: 'number',
+                    description: 'kintoneアプリのID'
+                },
+                lang: {
+                    type: 'string',
+                    enum: ['ja', 'en', 'zh', 'user', 'default'],
+                    description: '取得する名称の言語（オプション）'
+                }
+            },
+            required: ['app_id']
+        },
+        annotations: {
+            readOnly: true,
+            safe: true,
+            category: 'app',
+            requiresConfirmation: false,
+            longRunning: false,
+            impact: 'low'
+        }
     }
 ];

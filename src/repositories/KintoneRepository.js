@@ -170,4 +170,9 @@ export class KintoneRepository {
     async getGroupUsers(groupCode) {
         return this.userRepo.getGroupUsers(groupCode);
     }
+    
+    // アプリのアクション設定を取得
+    async getAppActions(appId, lang) {
+        return this.appRepo.getAppActions(appId, lang);
+    }
 }

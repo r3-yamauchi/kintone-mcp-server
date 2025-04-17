@@ -222,4 +222,24 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             this.handleKintoneError(error, `move app ${appId} from space`);
         }
     }
+
+    /**
+     * アプリのアクション設定を取得
+     * @param {number} appId アプリID
+     * @param {string} lang 言語設定（オプション）
+     * @returns {Promise<Object>} アクション設定情報
+     */
+    async getAppActions(appId, lang) {
+        try {
+            console.error(`Fetching app actions for app: ${appId}`);
+            const params = { app: appId };
+            if (lang) params.lang = lang;
+            
+            const response = await this.client.app.getAppActions(params);
+            console.error('App actions response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get app actions for app ${appId}`);
+        }
+    }
 }
