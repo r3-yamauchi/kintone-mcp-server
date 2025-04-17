@@ -361,6 +361,20 @@ export async function handleAppTools(name, args, repository) {
             return actions;
         }
         
+        // アプリのプラグイン一覧を取得するツール
+        case 'get_app_plugins': {
+            // 引数のチェック
+            if (!args.app_id) {
+                throw new Error('app_id は必須パラメータです。');
+            }
+            
+            // デバッグ用のログ出力
+            console.error(`Fetching plugins for app: ${args.app_id}`);
+            
+            const plugins = await repository.getAppPlugins(args.app_id);
+            return plugins;
+        }
+        
         default:
             throw new Error(`Unknown app tool: ${name}`);
     }

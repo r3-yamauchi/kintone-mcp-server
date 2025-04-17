@@ -483,5 +483,27 @@ export const appToolDefinitions = [
             longRunning: false,
             impact: 'low'
         }
+    },
+    {
+        name: 'get_app_plugins',
+        description: 'kintoneアプリに追加されているプラグインの一覧を取得します',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                app_id: {
+                    type: 'number',
+                    description: 'kintoneアプリのID'
+                }
+            },
+            required: ['app_id']
+        },
+        annotations: {
+            readOnly: true,
+            safe: true,
+            category: 'app',
+            requiresConfirmation: false,
+            longRunning: false,
+            impact: 'low'
+        }
     }
 ];

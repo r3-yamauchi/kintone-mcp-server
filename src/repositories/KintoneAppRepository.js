@@ -242,4 +242,22 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             this.handleKintoneError(error, `get app actions for app ${appId}`);
         }
     }
+
+    /**
+     * アプリに追加されているプラグインの一覧を取得
+     * @param {number} appId アプリID
+     * @returns {Promise<Object>} プラグイン情報
+     */
+    async getAppPlugins(appId) {
+        try {
+            console.error(`Fetching plugins for app: ${appId}`);
+            const response = await this.client.app.getPlugins({
+                app: appId
+            });
+            console.error('Plugins response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get app plugins for app ${appId}`);
+        }
+    }
 }

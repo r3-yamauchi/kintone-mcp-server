@@ -114,7 +114,7 @@ export async function executeToolRequest(request, repository) {
         else if (['create_app', 'deploy_app', 'get_deploy_status', 'update_app_settings', 'get_apps_info', 
              'get_form_layout', 'update_form_layout', 'get_preview_app_settings', 
              'get_preview_form_fields', 'get_preview_form_layout', 
-             'move_app_to_space', 'move_app_from_space', 'get_app_actions'].includes(name)) {
+             'move_app_to_space', 'move_app_from_space', 'get_app_actions', 'get_app_plugins'].includes(name)) {
             result = await handleAppTools(name, args, repository);
         }
         

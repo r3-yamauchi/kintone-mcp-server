@@ -175,4 +175,9 @@ export class KintoneRepository {
     async getAppActions(appId, lang) {
         return this.appRepo.getAppActions(appId, lang);
     }
+    
+    // アプリのプラグイン一覧を取得
+    async getAppPlugins(appId) {
+        return this.appRepo.getAppPlugins(appId);
+    }
 }
