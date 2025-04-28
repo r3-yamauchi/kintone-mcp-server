@@ -260,4 +260,24 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             this.handleKintoneError(error, `get app plugins for app ${appId}`);
         }
     }
+
+    /**
+     * アプリのプロセス管理設定を取得
+     * @param {number} appId アプリID
+     * @returns {Promise<Object>} プロセス管理設定情報
+     */
+    async getProcessManagement(appId) {
+        try {
+            console.error(`Fetching process management for app: ${appId}`);
+            
+            const response = await this.client.app.getProcessManagement({
+                app: appId
+            });
+            
+            console.error('Process management response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get process management for app ${appId}`);
+        }
+    }
 }

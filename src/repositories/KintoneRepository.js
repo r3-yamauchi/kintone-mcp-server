@@ -180,4 +180,13 @@ export class KintoneRepository {
     async getAppPlugins(appId) {
         return this.appRepo.getAppPlugins(appId);
     }
+
+    // アプリのプロセス管理設定を取得
+    async getProcessManagement(appId, preview = false) {
+        if (preview) {
+            return this.appRepo.previewRepository.getPreviewProcessManagement(appId);
+        } else {
+            return this.appRepo.getProcessManagement(appId);
+        }
+    }
 }

@@ -83,6 +83,7 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 - `get_form_layout`: kintoneアプリのフォームレイアウトを取得
 - `get_app_actions`: kintoneアプリのアプリアクション設定を取得
 - `get_app_plugins`: kintoneアプリに追加されているプラグインの一覧を取得
+- `get_process_management`: kintoneアプリのプロセス管理設定を取得
 
 #### アプリ操作
 

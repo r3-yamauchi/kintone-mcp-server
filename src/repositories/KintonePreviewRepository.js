@@ -77,4 +77,26 @@ export class KintonePreviewRepository extends BaseKintoneRepository {
             this.handleKintoneError(error, `get preview form layout for app ${appId}`);
         }
     }
+
+    /**
+     * プレビュー環境のアプリのプロセス管理設定を取得
+     * @param {number} appId アプリID
+     * @returns {Promise<Object>} プロセス管理設定情報
+     */
+    async getPreviewProcessManagement(appId) {
+        try {
+            console.error(`Fetching preview process management for app: ${appId}`);
+            
+            // プレビュー環境のAPIを呼び出す
+            const response = await this.client.app.getProcessManagement({
+                app: appId,
+                preview: true // プレビュー環境を指定
+            });
+            
+            console.error('Preview process management response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get preview process management for app ${appId}`);
+        }
+    }
 }

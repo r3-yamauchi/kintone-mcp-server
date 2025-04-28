@@ -375,6 +375,25 @@ export async function handleAppTools(name, args, repository) {
             return plugins;
         }
         
+        // アプリのプロセス管理設定を取得するツール
+        case 'get_process_management': {
+            // 引数のチェック
+            if (!args.app_id) {
+                throw new Error('app_id は必須パラメータです。');
+            }
+            
+            // デバッグ用のログ出力
+            console.error(`Fetching process management for app: ${args.app_id}`);
+            
+            // プレビュー環境かどうかを判定
+            const preview = args.preview === true;
+            if (preview) {
+                console.error('Fetching from preview environment');
+            }
+            
+            return repository.getProcessManagement(args.app_id, preview);
+        }
+        
         default:
             throw new Error(`Unknown app tool: ${name}`);
     }

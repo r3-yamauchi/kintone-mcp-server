@@ -5,6 +5,32 @@
  */
 export const appToolDefinitions = [
     {
+        name: 'get_process_management',
+        description: 'kintoneアプリのプロセス管理設定を取得します',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                app_id: {
+                    type: 'number',
+                    description: 'kintoneアプリのID'
+                },
+                preview: {
+                    type: 'boolean',
+                    description: 'プレビュー環境の設定を取得する場合はtrue（省略時はfalse）'
+                }
+            },
+            required: ['app_id']
+        },
+        annotations: {
+            readOnly: true,
+            safe: true,
+            category: 'app',
+            requiresConfirmation: false,
+            longRunning: false,
+            impact: 'low'
+        }
+    },
+    {
         name: 'get_apps_info',
         description: '検索キーワードを指定して該当する複数のkintoneアプリの情報を取得します',
         inputSchema: {

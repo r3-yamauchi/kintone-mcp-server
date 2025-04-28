@@ -36,6 +36,7 @@ MCP仕様2025-03-26に対応するために追加されたツールアノテー�
 | get_form_layout | true | true | app | false | false | low | フォームレイアウト取得は読み取り専用で安全 |
 | get_app_actions | true | true | app | false | false | low | アプリアクションの設定取得は読み取り専用で安全 |
 | get_app_plugins | true | true | app | false | false | low | アプリのプラグイン一覧取得は読み取り専用で安全 |
+| get_process_management | true | true | app | false | false | low | プロセス管理設定取得は読み取り専用で安全 |
 | update_form_layout | false | false | app | true | false | medium | レイアウト変更は重要な変更操作 |
 | get_preview_app_settings | true | true | app | false | false | low | プレビュー設定取得は読み取り専用で安全 |
 | get_preview_form_fields | true | true | app | false | false | low | プレビューフィールド取得は読み取り専用で安全 |
