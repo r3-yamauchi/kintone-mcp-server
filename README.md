@@ -1,18 +1,18 @@
 # MCP server for kintone サンプル
 
-これは [kintone](https://kintone.cybozu.co.jp/) との連携目的で使用できる [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) サーバーの簡易なサンプルです。
+これは [kintone](https://kintone.cybozu.co.jp/) との連携目的で使用できる [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) サーバーのサンプルコードです。
 生成AIを用いて自動作成したものを現状有姿で提供します。
 
-この MCP server を使うと [Claude Desktop](https://claude.ai/download)アプリから kintoneデータへアクセス・更新できます。
-
-クライアントとして Claudeデスクトップアプリを使用する場合は Claude Pro プランのサブスクリプションが必要です。
-Windsurf や CLINE で使用することもできます。
+この MCP server を使うと [Claude Desktop](https://claude.ai/download)アプリなどの MCPホストアプリから
+kintoneデータを参照・更新したり、kintoneアプリ自体を作成するなどできます。
 
 <a href="https://glama.ai/mcp/servers/dki958qnks">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/dki958qnks/badge" alt="kintone Server MCP server" />
 </a>
 
-## 使い方
+このリポジトリの詳細は [DeepWikiドキュメント](https://deepwiki.com/r3-yamauchi/kintone-mcp-server) を参照してください。
+
+## [Claude Desktop](https://claude.ai/download)アプリ における使い方
 
 ### 1. ソースコードをダウンロードする
 
@@ -123,9 +123,10 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 
 ### 8. その他
 
-その他に、この MCP server を使用してどういったことが出来るか [ブログ](https://www.r3it.com/blog/kintone-mcp-server-20250115-yamauchi) に書いたので読んでみてください。
+この MCP server を使用してどういったことが出来るかブログに書いたので読んでみてください。
 
-他にも kintone用の MCP server を公開されている方がおられますので、参考にしながらご自身でオリジナルの MCP server を作ってみるのも良いかもしれません。
+- [kintoneと生成AI(Claude)のちょっとイイ関係](https://www.r3it.com/blog/kintone-mcp-server-20250115-yamauchi)
+- [kintone AIラボ と kintone用 MCP Server の現在地](https://www.r3it.com/blog/kintone-ai-lab-20250501-yamauchi)
 
 **「kintone」はサイボウズ株式会社の登録商標です。**
 
