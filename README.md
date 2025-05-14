@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/r3-yamauchi-kintone-mcp-server-badge.png)](https://mseep.ai/app/r3-yamauchi-kintone-mcp-server)
+
 # MCP server for kintone サンプル
 
 これは [kintone](https://kintone.cybozu.co.jp/) との連携目的で使用できる [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) サーバーの簡易なサンプルです。
