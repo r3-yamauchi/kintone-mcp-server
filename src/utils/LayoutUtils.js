@@ -169,9 +169,20 @@ export function extractFieldsFromLayout(layout) {
                 processLayout(item.layout);
             }
             
-            // SUBTABLEの場合、テーブル自体のコードを収集
-            if (item.type === "SUBTABLE" && item.code) {
-                fieldCodes.push(item.code);
+            // SUBTABLEの場合、テーブル自体のコードと内部フィールドのコードを収集
+            if (item.type === "SUBTABLE") {
+                if (item.code) {
+                    fieldCodes.push(item.code);
+                }
+
+                // テーブル内のフィールドも収集
+                if (item.fields && typeof item.fields === "object") {
+                    Object.values(item.fields).forEach(subField => {
+                        if (subField && subField.code) {
+                            fieldCodes.push(subField.code);
+                        }
+                    });
+                }
             }
         });
     };
