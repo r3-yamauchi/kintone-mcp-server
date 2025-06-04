@@ -10,7 +10,7 @@ kintoneデータを参照・更新したり、kintoneアプリ自体を作成す
   <img width="380" height="200" src="https://glama.ai/mcp/servers/dki958qnks/badge" alt="kintone Server MCP server" />
 </a>
 
-このリポジトリの詳細は [DeepWikiドキュメント](https://deepwiki.com/r3-yamauchi/kintone-mcp-server) を参照してください。
+このリポジトリの詳細は [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/r3-yamauchi/kintone-mcp-server) を参照してください。
 
 ## [Claude Desktop](https://claude.ai/download)アプリ における使い方
 
@@ -127,6 +127,8 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 
 - [kintoneと生成AI(Claude)のちょっとイイ関係](https://www.r3it.com/blog/kintone-mcp-server-20250115-yamauchi)
 - [kintone AIラボ と kintone用 MCP Server の現在地](https://www.r3it.com/blog/kintone-ai-lab-20250501-yamauchi)
+
+Webブラウザー版の Claude からも利用できる OAuth をサポートした リモートMCP Server が 別途 [こちら](https://github.com/r3-yamauchi/kintone-oauth-mcp-server-cfw) にあります。
 
 **「kintone」はサイボウズ株式会社の登録商標です。**
 
