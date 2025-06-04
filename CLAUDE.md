@@ -1,120 +1,296 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+このファイルは、このリポジトリでコードを扱う際のClaude Code (claude.ai/code) への指針を提供します。
 
-## Development Commands
+## 開発コマンド
 
-- **Start server**: `npm start` (runs `node server.js`)
-- **Install dependencies**: `npm i`
-- **Node.js requirement**: Version 18 or higher
-- **Test**: Currently not implemented (`npm test` will fail)
+- **サーバー起動**: `npm start` (`node server.js`を実行)
+- **依存関係のインストール**: `npm i`
+- **Node.js要件**: バージョン18以上
+- **テスト**: 現在未実装 (`npm test`は失敗します)
 
-## Quick Setup
+## クイックセットアップ
 
-1. Copy `.env.sample` to `.env`
-2. Set your kintone credentials:
-   ```
+1. `.env.sample`を`.env`にコピー
+2. kintone認証情報を設定:
+
+   ```bash
    KINTONE_DOMAIN=your-domain.cybozu.com
    KINTONE_USERNAME=your-username
    KINTONE_PASSWORD=your-password
    ```
-3. Run `npm install` then `npm start`
 
-## Architecture Overview
+3. `npm install`を実行後、`npm start`で起動
 
-This is a Model Context Protocol (MCP) server for kintone integration. The codebase follows a modular architecture with clear separation between tool definitions and implementations.
+## 開発ワークフロー
 
-### Core Structure
+### 典型的な開発フロー
 
-- **Entry point**: `server.js` → `src/index.js`
-- **Main server**: `src/server/MCPServer.js` - Initializes MCP server with kintone credentials
-- **Tool orchestration**: `src/server/handlers/ToolRequestHandler.js` - Routes tool requests to appropriate handlers
-- **Tool implementations**: `src/server/tools/` - Contains actual tool logic organized by category
-- **Tool definitions**: `src/server/tools/definitions/` - Contains MCP tool schemas and metadata
+#### 1. 新規アプリ作成
 
-### Tool Categories
+```
+create_app → add_fields → create_layout → deploy_app → get_deploy_status
+```
 
-The server provides 47 tools across 9 categories:
+#### 2. 既存アプリ更新
 
-- **Records**: CRUD operations on kintone records (note: delete intentionally excluded for safety)
-- **Apps**: App creation, field management, deployment
-- **Spaces**: Space and thread management
-- **Fields**: Field configuration and validation
-- **Files**: Upload/download operations (note: 1MB+ downloads not supported)
-- **Layout**: Form layout management
-- **Users**: User and group information
-- **System**: Connection info and diagnostics
-- **Documentation**: Field type documentation
+```
+get_preview_fields → update_field → update_layout → deploy_app
+```
 
-### Repository Pattern
+#### 3. レコード操作
 
-All kintone API interactions go through repository classes in `src/repositories/`:
+```
+create_record → get_record → update_record (deleteは意図的に未実装)
+```
 
-- `KintoneRepository.js` - Main repository orchestrator
-- Category-specific repositories inherit from `BaseKintoneRepository.js`
-- Uses `@kintone/rest-api-client` for API communication
+### 開発時の確認コマンド
 
-### Configuration
+- **接続テスト**: `get_kintone_domain`
+- **アプリ一覧**: `get_apps`
+- **フィールド確認**: `get_fields`（本番）または `get_preview_fields`（プレビュー）
+- **デプロイ状態**: `get_deploy_status`
 
-- Environment variables: `KINTONE_DOMAIN`, `KINTONE_USERNAME`, `KINTONE_PASSWORD`
-- Falls back to `.env` file if environment variables not set
-- Credentials managed through `KintoneCredentials.js` model
+## アーキテクチャ概要
 
-### Tool Annotations
+これはkintone統合のためのModel Context Protocol (MCP) サーバーです。コードベースは、ツール定義と実装を明確に分離したモジュラーアーキテクチャに従っています。
 
-All tools include MCP 2025-03-26 specification annotations:
+### コア構造
 
-- `readOnly`: Whether tool modifies data
-- `safe`: Risk level of operation
-- `category`: Functional grouping
-- `requiresConfirmation`: Whether user confirmation recommended
-- `longRunning`: Execution time expectations
-- `impact`: Operation impact level (low/medium/high)
+- **エントリーポイント**: `server.js` → `src/index.js` → `src/server/MCPServer.js`
+- **メインサーバー**: `src/server/MCPServer.js` - kintone認証情報でMCPサーバーを初期化
+- **リクエストフロー**: `ToolRequestHandler.js` → `ToolRouter.js` → カテゴリー別ツール実装
+- **ツール実装**: `src/server/tools/` - カテゴリー別に整理された実際のツールロジック
+- **ツール定義**: `src/server/tools/definitions/` - MCPツールスキーマとメタデータ
+- **定数**: `src/constants.js` - フィールドタイプ、検証パターン、システムフィールド
 
-## Coding Standards
+### ツール実装パターン
 
-- **Language**: ES modules with `type: "module"` in package.json
-- **Async**: Use async/await consistently
-- **Naming**: PascalCase for classes, camelCase for methods/variables
-- **Error handling**: Provide meaningful error messages and types
-- **No code duplication**: Abstract common functionality into utilities
-- **Comments**: Explain complex logic, use Japanese for user-facing messages
-- **File access**: Never access files outside the project directory
+実際のツール実装は以下のフローで行われます：
 
-## Adding New Tools
+```text
+User Request → ToolRouter → CategoryTools → Repository → kintone API
+                    ↓              ↓             ↓
+               (ルーティング)  (ビジネスロジック) (API通信)
+```
 
-1. Create tool definition in `src/server/tools/definitions/CategoryToolDefinitions.js`
-2. Implement tool logic in `src/server/tools/CategoryTools.js`
-3. Update repository class if new API methods needed
-4. Add routing in `ToolRequestHandler.js`
-5. Follow existing patterns for consistency
+例：`get_record`ツールの場合
 
-## kintone Specific Constraints
+1. ToolRouter.jsがリクエストを受信
+2. RecordTools.jsの`getRecord`メソッドを呼び出し
+3. KintoneRecordRepository.jsがkintone APIと通信
+4. BaseKintoneRepository.jsのエラーハンドリングを継承
 
-- **Lookup fields**: Implemented as base field type + lookup attribute
-- **Calculated fields**: Only kintone standard functions supported
-- **File size limit**: Download limited to 1MB per file
-- **Rate limits**: Be mindful of kintone API rate limits
-- **Field type documentation**: See `src/server/tools/documentation/` for detailed field info
+### ツールカテゴリー
 
-## Important Notes
+サーバーは9つのカテゴリーにわたる47のツールを提供します：
 
-- **Version management**: Update version in both `package.json` AND `MCPServer.js`
-- **No delete operations**: Intentionally excluded for data safety
-- **Test framework**: Not yet implemented, future addition planned
-- **Batch operations**: JSON-RPC batching planned but not yet implemented
+- **レコード (Records)**: kintoneレコードのCRUD操作（安全のためdeleteは意図的に除外）
+- **アプリ (Apps)**: アプリ作成、フィールド管理、デプロイ
+- **スペース (Spaces)**: スペースとスレッド管理
+- **フィールド (Fields)**: フィールド設定と検証
+- **ファイル (Files)**: アップロード/ダウンロード操作（1MB以上のダウンロードは未サポート）
+- **レイアウト (Layout)**: フォームレイアウト管理
+- **ユーザー (Users)**: ユーザーとグループ情報
+- **システム (System)**: 接続情報と診断
+- **ドキュメンテーション (Documentation)**: フィールドタイプのドキュメント
 
-## Project Documentation
+### リポジトリパターン
 
-- **Architecture details**: `docs/mcp-server-architecture.md`
-- **Coding standards**: `clinerules-bank/01-coding-standards.md`
-- **Implementation status**: `docs/implementation-status.md`
-- **MCP specifications**: `docs/mcp-specification/`
-- **Future plans**: See `clinerules-bank/` for implementation plans
+すべてのkintone APIとのやり取りは`src/repositories/`内のリポジトリクラスを通じて行われます：
 
-## Troubleshooting
+- `KintoneRepository.js` - メインリポジトリオーケストレーター
+- カテゴリー別リポジトリは`BaseKintoneRepository.js`を継承
+- API通信には`@kintone/rest-api-client`を使用
+- フィールドとレイアウトの検証用バリデーターは`src/repositories/validators/`に配置
 
-- **Connection errors**: Check credentials in `.env` file
-- **API errors**: Verify kintone app permissions and field configurations
-- **Tool not found**: Ensure tool is properly registered in definitions and handler
-- **Version mismatch**: Update both `package.json` and `MCPServer.js` versions
+### 設定
+
+- 環境変数: `KINTONE_DOMAIN`, `KINTONE_USERNAME`, `KINTONE_PASSWORD`
+- 環境変数が設定されていない場合は`.env`ファイルにフォールバック
+- 認証情報は`KintoneCredentials.js`モデルで管理
+- **重要**: `KINTONE_DOMAIN`は`https://`を含めない (例: `your-domain.cybozu.com`)
+
+### 特殊フィールドタイプ
+
+#### LOOKUP (ルックアップ)
+
+- 基本フィールドタイプ + lookupアトリビュート
+- 参照先アプリは本番環境にデプロイ済みである必要あり
+- `create_lookup_field`ヘルパーを使用推奨
+
+#### SUBTABLE (テーブル)
+
+- 他のフィールドを含むコンテナ
+- ネスト不可（テーブル内にテーブルは配置できない）
+- フィールドコードにテーブル名を含めない
+
+#### CALC (計算)
+
+- kintone標準関数のみサポート
+- `get_calc_field_documentation`で使用可能な関数を確認
+- `create_calc_field`でバリデーション実行
+
+### ツールアノテーション
+
+すべてのツールにはMCP 2025-03-26仕様のアノテーションが含まれています：
+
+- `readOnly`: ツールがデータを変更するかどうか
+- `safe`: 操作のリスクレベル
+- `category`: 機能グループ
+- `requiresConfirmation`: ユーザー確認が推奨されるかどうか
+- `longRunning`: 実行時間の予測
+- `impact`: 操作の影響レベル (low/medium/high)
+
+## コーディング規約
+
+- **言語**: `package.json`で`type: "module"`を使用したESモジュール
+- **非同期処理**: async/awaitを一貫して使用
+- **命名規則**: クラスはPascalCase、メソッド/変数はcamelCase
+- **エラーハンドリング**: 意味のあるエラーメッセージとタイプを提供
+- **コード重複の排除**: 共通機能をユーティリティに抽象化
+- **コメント**: 複雑なロジックを説明、ユーザー向けメッセージは日本語を使用
+- **ファイルアクセス**: プロジェクトディレクトリ外のファイルには決してアクセスしない
+- **Gitコミット**: 絵文字プレフィックスを使用、日本語のコミットメッセージ（`clinerules-bank/01-coding-standards.md`を参照）
+
+## 新しいツールの追加
+
+1. `src/server/tools/definitions/CategoryToolDefinitions.js`にツール定義を作成
+2. `src/server/tools/CategoryTools.js`にツールロジックを実装
+3. 新しいAPIメソッドが必要な場合はリポジトリクラスを更新
+4. `ToolRouter.js`にルーティングを追加（ToolRequestHandler.jsではない）
+5. `src/server/tools/definitions/index.js`にツール定義を登録
+6. 既存のパターンに従い一貫性を保つ
+
+### 実装例: 新しいレコードツールの追加
+
+**1. ツール定義** (`RecordToolDefinitions.js`):
+
+```javascript
+{
+  name: "search_records",
+  description: "レコードを検索",
+  inputSchema: {
+    type: "object",
+    properties: {
+      app_id: { type: "string", description: "アプリID" },
+      query: { type: "string", description: "検索クエリ" }
+    },
+    required: ["app_id", "query"]
+  },
+  annotations: {
+    readOnly: true,
+    safe: true,
+    category: "records",
+    impact: "low"
+  }
+}
+```
+
+**2. ツール実装** (`RecordTools.js`):
+
+```javascript
+async searchRecords({ app_id, query }) {
+  const records = await this.recordRepository.search(app_id, query);
+  return { records };
+}
+```
+
+**3. リポジトリメソッド** (`KintoneRecordRepository.js`):
+
+```javascript
+async search(appId, query) {
+  const result = await this.client.record.getRecords({
+    app: appId,
+    query: query
+  });
+  return result.records;
+}
+```
+
+## kintone固有の制約
+
+- **ルックアップフィールド**: 基本フィールドタイプ + lookupアトリビュートとして実装（本番環境へのデプロイが必要）
+- **計算フィールド**: kintone標準関数のみサポート（カスタム関数は使用不可）
+- **ファイルサイズ制限**: ダウンロードは1MBまで（大きなファイルはタイムアウトする可能性）
+- **レート制限**: kintone APIのレート制限に注意
+- **フィールドタイプドキュメント**: 詳細は`src/server/tools/documentation/`を参照
+- **クエリ構文**: 並び替えのみの場合は `$id > 0` プレフィックスが必要
+- **サブテーブルフィールド**: テーブル名を含めない（例: `field_code`のみ、`table.field_code`は不可）
+- **デプロイライフサイクル**: create_app → add_fields → deploy_app → 完了待機
+
+### フィールド値フォーマットの例
+
+各フィールドタイプの正しい値フォーマット：
+
+```json
+{
+  "文字列（1行）": { "value": "テキスト" },
+  "数値": { "value": "123" },  // 文字列として指定
+  "日付": { "value": "2024-01-01" },
+  "ユーザー選択": { "value": [{ "code": "user1" }] },
+  "チェックボックス": { "value": ["選択肢1", "選択肢2"] },
+  "テーブル": { 
+    "value": [
+      { 
+        "value": { 
+          "列1": { "value": "値1" },
+          "列2": { "value": "値2" }
+        } 
+      }
+    ] 
+  }
+}
+```
+
+## 重要な注意事項
+
+- **バージョン管理**: `package.json`と`MCPServer.js`の両方でバージョンを更新（現在5.3.0）
+- **削除操作なし**: データの安全性のため意図的に除外
+- **テストフレームワーク**: 未実装、将来的に追加予定
+- **バッチ操作**: JSON-RPCバッチング予定だが未実装
+- **エラーハンドラー**: `src/server/handlers/ErrorHandlers.js`に集約
+- **データトランスフォーマー**: レスポンスフォーマット用のユーティリティは`src/utils/DataTransformers.js`に配置
+
+## プロジェクトドキュメント
+
+- **アーキテクチャ詳細**: `docs/mcp-server-architecture.md`
+- **コーディング標準**: `clinerules-bank/01-coding-standards.md`
+- **実装状況**: `docs/implementation-status.md`
+- **MCP仕様**: `docs/mcp-specification/`
+- **将来の計画**: `clinerules-bank/`の実装計画を参照
+
+## トラブルシューティング
+
+### よくあるエラーと解決方法
+
+**認証エラー**
+- 原因: `.env`ファイルの認証情報が不正
+- 解決: `KINTONE_DOMAIN`にhttps://を含めない、パスワードは平文で指定
+
+**フィールドが見つからない**
+- 原因: アプリが本番環境にデプロイされていない
+- 解決: `deploy_app`を実行してから`get_deploy_status`で確認
+
+**フィールド値フォーマットエラー**
+- 原因: フィールドタイプに応じた正しいフォーマットを使用していない
+- 解決: 上記の「フィールド値フォーマットの例」を参照
+
+**ルックアップフィールドの設定エラー**
+- 原因: 参照先アプリが本番環境にない
+- 解決: 参照先アプリを先にデプロイしてから設定
+
+**計算フィールドのエラー**
+- 原因: サポートされていない関数を使用
+- 解決: `get_calc_field_documentation`でサポート関数を確認
+
+**デプロイの順序エラー**
+- 原因: フィールド追加前にデプロイを実行
+- 解決: create_app → add_fields → deploy_app の順序を守る
+
+### デバッグのヒント
+
+- **接続確認**: 最初に`get_kintone_domain`を実行して接続を確認
+- **ログ確認**: サーバーはstderr（console.error）にデバッグログを出力
+- **プレビュー確認**: `get_preview_*`ツールで未コミットの変更を確認
+- **エラー詳細**: ErrorHandlers.jsが詳細なエラー情報とサジェストを提供
