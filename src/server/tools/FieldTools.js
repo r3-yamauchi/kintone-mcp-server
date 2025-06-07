@@ -1,5 +1,9 @@
 // src/server/tools/FieldTools.js
 import { UNIT_POSITION_PATTERNS, LOOKUP_FIELD_MIN_WIDTH } from '../../constants.js';
+import { ValidationUtils } from '../../utils/ValidationUtils.js';
+import { LoggingUtils } from '../../utils/LoggingUtils.js';
+import { ResponseBuilder } from '../../utils/ResponseBuilder.js';
+import { FieldValidationUtils } from '../../utils/FieldValidationUtils.js';
 
 /**
  * 単位記号に基づいて適切な unitPosition を判定する関数
@@ -13,21 +17,21 @@ function determineUnitPosition(unit) {
     // 単位が指定されていない場合
     if (!unit) {
         reason = "単位が指定されていないため";
-        console.error(`単位位置判定: ${reason}、デフォルト値 "AFTER" を設定`);
+        LoggingUtils.logDetailedOperation('単位位置判定', reason, { defaultValue: 'AFTER' });
         return "AFTER";
     }
     
     // 単位の長さが4文字以上の場合
     if (unit.length >= 4) {
         reason = `単位の長さが4文字以上 (${unit.length}文字) のため`;
-        console.error(`単位位置判定: ${reason}、"AFTER" を設定`);
+        LoggingUtils.logDetailedOperation('単位位置判定', reason, { unitPosition: 'AFTER' });
         return "AFTER";
     }
     
     // 複合単位の判定（スペースや特殊記号を含む）
     if (/[\s\/\-\+]/.test(unit) || (unit.length > 1 && /[^\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(unit))) {
         reason = `複合単位 "${unit}" と判断されるため`;
-        console.error(`単位位置判定: ${reason}、"AFTER" を設定`);
+        LoggingUtils.logDetailedOperation('単位位置判定', reason, { unitPosition: 'AFTER' });
         return "AFTER";
     }
     
@@ -38,21 +42,21 @@ function determineUnitPosition(unit) {
     // 両方のパターンに一致する場合
     if (isBeforeExact && isAfterExact) {
         reason = `単位 "${unit}" が BEFORE と AFTER の両方のパターンに一致するため`;
-        console.error(`単位位置判定: ${reason}、"AFTER" を優先設定`);
+        LoggingUtils.logDetailedOperation('単位位置判定', reason, { unitPosition: 'AFTER (優先)' });
         return "AFTER";
     }
     
     // BEFOREパターンに完全一致
     if (isBeforeExact) {
         reason = `単位 "${unit}" が BEFORE パターンに完全一致するため`;
-        console.error(`単位位置判定: ${reason}、"BEFORE" を設定`);
+        LoggingUtils.logDetailedOperation('単位位置判定', reason, { unitPosition: 'BEFORE' });
         return "BEFORE";
     }
     
     // AFTERパターンに完全一致
     if (isAfterExact) {
         reason = `単位 "${unit}" が AFTER パターンに完全一致するため`;
-        console.error(`単位位置判定: ${reason}、"AFTER" を設定`);
+        LoggingUtils.logDetailedOperation('単位位置判定', reason, { unitPosition: 'AFTER' });
         return "AFTER";
     }
     
@@ -63,27 +67,27 @@ function determineUnitPosition(unit) {
     // 両方のパターンに部分一致する場合
     if (beforeMatches.length > 0 && afterMatches.length > 0) {
         reason = `単位 "${unit}" が BEFORE パターン [${beforeMatches.join(', ')}] と AFTER パターン [${afterMatches.join(', ')}] の両方に部分一致するため`;
-        console.error(`単位位置判定: ${reason}、"AFTER" を優先設定`);
+        LoggingUtils.logDetailedOperation('単位位置判定', reason, { unitPosition: 'AFTER (優先)' });
         return "AFTER";
     }
     
     // BEFOREパターンに部分一致
     if (beforeMatches.length > 0) {
         reason = `単位 "${unit}" が BEFORE パターン [${beforeMatches.join(', ')}] に部分一致するため`;
-        console.error(`単位位置判定: ${reason}、"BEFORE" を設定`);
+        LoggingUtils.logDetailedOperation('単位位置判定', reason, { unitPosition: 'BEFORE' });
         return "BEFORE";
     }
     
     // AFTERパターンに部分一致
     if (afterMatches.length > 0) {
         reason = `単位 "${unit}" が AFTER パターン [${afterMatches.join(', ')}] に部分一致するため`;
-        console.error(`単位位置判定: ${reason}、"AFTER" を設定`);
+        LoggingUtils.logDetailedOperation('単位位置判定', reason, { unitPosition: 'AFTER' });
         return "AFTER";
     }
     
     // どのパターンにも一致しない場合
     reason = `単位 "${unit}" がどのパターンにも一致しないため`;
-    console.error(`単位位置判定: ${reason}、デフォルト値 "AFTER" を設定`);
+    LoggingUtils.logDetailedOperation('単位位置判定', reason, { defaultValue: 'AFTER' });
     return "AFTER";
 }
 
@@ -100,14 +104,14 @@ export function autoCorrectUnitPosition(field) {
     if (field.type === "NUMBER" && field.unit && !field.unitPosition) {
         // 単位記号に基づいて適切な unitPosition を判定
         correctedField.unitPosition = determineUnitPosition(field.unit);
-        console.error(`NUMBER フィールド "${field.code || ''}" の unitPosition を "${correctedField.unitPosition}" に自動設定しました。`);
+        LoggingUtils.logDetailedOperation('フィールド修正', `NUMBER フィールドの unitPosition を自動設定`, { fieldCode: field.code, unitPosition: correctedField.unitPosition });
     }
     
     // CALC フィールドの場合
     if (field.type === "CALC" && field.format === "NUMBER" && field.unit && !field.unitPosition) {
         // 単位記号に基づいて適切な unitPosition を判定
         correctedField.unitPosition = determineUnitPosition(field.unit);
-        console.error(`CALC フィールド "${field.code || ''}" の unitPosition を "${correctedField.unitPosition}" に自動設定しました。`);
+        LoggingUtils.logDetailedOperation('フィールド修正', `CALC フィールドの unitPosition を自動設定`, { fieldCode: field.code, unitPosition: correctedField.unitPosition });
     }
     
     // サブテーブルフィールドの場合、内部のフィールドも再帰的に処理
@@ -116,7 +120,7 @@ export function autoCorrectUnitPosition(field) {
         for (const [fieldKey, fieldDef] of Object.entries(field.fields)) {
             correctedField.fields[fieldKey] = autoCorrectUnitPosition(fieldDef);
         }
-        console.error(`SUBTABLE フィールド "${field.code || ''}" 内のフィールドの単位位置を自動修正しました。`);
+        LoggingUtils.logDetailedOperation('フィールド修正', `SUBTABLE フィールド内の単位位置を自動修正`, { fieldCode: field.code });
     }
     
     return correctedField;
@@ -149,25 +153,17 @@ function checkUnitPositionWarning(unit, unitPosition) {
 
 // フィールド関連のツールを処理する関数
 export async function handleFieldTools(name, args, repository) {
+    // 共通のツール実行ログ
+    LoggingUtils.logToolExecution('field', name, args);
+    
     switch (name) {
         case 'add_fields': {
-            // 引数のチェック
-            if (!args.app_id) {
-                throw new Error('app_id は必須パラメータです。');
-            }
-            if (!args.properties) {
-                throw new Error('properties は必須パラメータです。');
-            }
-            if (typeof args.properties !== 'object' || Array.isArray(args.properties)) {
-                throw new Error('properties はオブジェクト形式で指定する必要があります。');
-            }
+            ValidationUtils.validateRequired(args, ['app_id', 'properties']);
+            ValidationUtils.validateObject(args.properties, 'properties');
+            
             if (Object.keys(args.properties).length === 0) {
                 throw new Error('properties には少なくとも1つのフィールド定義を指定する必要があります。');
             }
-            
-            // デバッグ用のログ出力
-            console.error(`Adding fields to app: ${args.app_id}`);
-            console.error(`Properties:`, JSON.stringify(args.properties, null, 2));
             
             // レイアウト要素（SPACER, HR, LABEL）のチェック
             const layoutElementTypes = ['SPACER', 'HR', 'LABEL'];
@@ -209,7 +205,7 @@ export async function handleFieldTools(name, args, repository) {
                         .replace(/[^a-zA-Z0-9ぁ-んァ-ヶー一-龠々＿_･・＄￥]/g, '')
                         .toLowerCase();
                     field.code = code || `field_${Date.now()}`;
-                    console.error(`フィールドコードを自動生成しました: ${field.code}`);
+                    LoggingUtils.logDetailedOperation('フィールド処理', 'フィールドコードを自動生成', { code: field.code });
                 }
                 
                 // フィールドタイプが指定されていない場合はエラー
@@ -221,13 +217,13 @@ export async function handleFieldTools(name, args, repository) {
                 if (field.type === "CALC" && field.formula !== undefined && field.expression === undefined) {
                     field.expression = field.formula;
                     delete field.formula;
-                    console.error(`警告: 計算フィールド "${field.code}" の計算式は formula ではなく expression に指定してください。今回は自動的に変換しました。`);
+                    LoggingUtils.logWarning('add_fields', `計算フィールド "${field.code}" の計算式は formula ではなく expression に指定してください。今回は自動的に変換しました。`);
                 }
                 
                 // 数値フィールドの場合、displayScaleが空文字列なら削除
                 if (field.type === "NUMBER" && field.displayScale === "") {
                     delete field.displayScale;
-                    console.error(`数値フィールド "${field.code}" の displayScale に空文字列が指定されたため、指定を削除しました。`);
+                    LoggingUtils.logWarning('add_fields', `数値フィールド "${field.code}" の displayScale に空文字列が指定されたため、指定を削除しました。`);
                 }
                 
                 processedProperties[field.code] = field;
@@ -238,32 +234,12 @@ export async function handleFieldTools(name, args, repository) {
                 processedProperties
             );
             
-            // 警告メッセージがある場合は結果に含める
-            const result = {
-                revision: response.revision
-            };
-            
-            if (response.warnings) {
-                result.warnings = response.warnings;
-            }
-            
-            return result;
+            return ResponseBuilder.withRevisionAndWarnings(response.revision, response.warnings);
         }
         
         case 'create_choice_field': {
-            // 引数のチェック
-            if (!args.field_type) {
-                throw new Error('field_type は必須パラメータです。');
-            }
-            if (!args.label) {
-                throw new Error('label は必須パラメータです。');
-            }
-            if (!args.choices) {
-                throw new Error('choices は必須パラメータです。');
-            }
-            if (!Array.isArray(args.choices)) {
-                throw new Error('choices は配列形式で指定する必要があります。');
-            }
+            ValidationUtils.validateRequired(args, ['field_type', 'label', 'choices']);
+            ValidationUtils.validateArray(args.choices, 'choices');
             
             // 有効なフィールドタイプかチェック
             const validFieldTypes = ["RADIO_BUTTON", "CHECK_BOX", "DROP_DOWN", "MULTI_SELECT"];
@@ -284,16 +260,10 @@ export async function handleFieldTools(name, args, repository) {
                     code = 'f_' + code;
                 }
                 
-                console.error(`フィールドコードを自動生成しました: ${code}`);
+                LoggingUtils.logDetailedOperation('create_choice_field', 'フィールドコードを自動生成', { code });
             }
             
             const { field_type, label, choices, required = false, align = "HORIZONTAL" } = args;
-            
-            // デバッグ用のログ出力
-            console.error(`Creating choice field: ${code}`);
-            console.error(`Field type: ${field_type}`);
-            console.error(`Label: ${label}`);
-            console.error(`Choices:`, JSON.stringify(choices, null, 2));
             
             // options オブジェクトの生成
             const options = {};
@@ -331,16 +301,8 @@ export async function handleFieldTools(name, args, repository) {
         }
         
         case 'create_reference_table_field': {
-            // 引数のチェック
-            if (!args.label) {
-                throw new Error('label は必須パラメータです。');
-            }
-            if (!args.conditionField) {
-                throw new Error('conditionField は必須パラメータです。');
-            }
-            if (!args.relatedConditionField) {
-                throw new Error('relatedConditionField は必須パラメータです。');
-            }
+            ValidationUtils.validateRequired(args, ['label', 'conditionField', 'relatedConditionField']);
+            
             if (!args.relatedAppId && !args.relatedAppCode) {
                 throw new Error('relatedAppId または relatedAppCode のいずれかは必須パラメータです。');
             }
@@ -358,7 +320,7 @@ export async function handleFieldTools(name, args, repository) {
                     code = 'f_' + code;
                 }
                 
-                console.error(`フィールドコードを自動生成しました: ${code}`);
+                LoggingUtils.logDetailedOperation('create_reference_table_field', 'フィールドコードを自動生成', { code });
             }
             
             const { 
@@ -373,12 +335,6 @@ export async function handleFieldTools(name, args, repository) {
                 size, 
                 noLabel = true 
             } = args;
-            
-            // デバッグ用のログ出力
-            console.error(`Creating reference table field: ${code}`);
-            console.error(`Label: ${label}`);
-            console.error(`Related app: ${relatedAppCode || relatedAppId}`);
-            console.error(`Condition: ${conditionField} -> ${relatedConditionField}`);
             
             // フィールド設定の基本部分
             const fieldConfig = {
@@ -413,13 +369,8 @@ export async function handleFieldTools(name, args, repository) {
         }
         
         case 'create_lookup_field': {
-            // 引数のチェック
-            if (!args.label) {
-                throw new Error('label は必須パラメータです。');
-            }
-            if (!args.relatedKeyField) {
-                throw new Error('relatedKeyField は必須パラメータです。');
-            }
+            ValidationUtils.validateRequired(args, ['label', 'relatedKeyField']);
+            
             if (!args.relatedAppId && !args.relatedAppCode) {
                 throw new Error('relatedAppId または relatedAppCode のいずれかは必須パラメータです。');
             }
@@ -437,7 +388,7 @@ export async function handleFieldTools(name, args, repository) {
                     code = 'f_' + code;
                 }
                 
-                console.error(`フィールドコードを自動生成しました: ${code}`);
+                LoggingUtils.logDetailedOperation('create_lookup_field', 'フィールドコードを自動生成', { code });
             }
             
             const { 
@@ -453,17 +404,8 @@ export async function handleFieldTools(name, args, repository) {
                 fieldType = "SINGLE_LINE_TEXT" // デフォルトのフィールドタイプ
             } = args;
             
-            // デバッグ用のログ出力
-            console.error(`Creating lookup field: ${code}`);
-            console.error(`Label: ${label}`);
-            console.error(`Field type: ${fieldType}`);
-            console.error(`Related app: ${relatedAppCode || relatedAppId}`);
-            console.error(`Related key field: ${relatedKeyField}`);
-            
             // バリデーション
-            if (!fieldMappings || !Array.isArray(fieldMappings) || fieldMappings.length === 0) {
-                throw new Error('fieldMappingsは少なくとも1つのマッピングを含む配列である必要があります');
-            }
+            ValidationUtils.validateArray(fieldMappings, 'fieldMappings', { minLength: 1 });
             
             // フィールドマッピングの各要素をチェック
             fieldMappings.forEach((mapping, index) => {
@@ -482,16 +424,13 @@ export async function handleFieldTools(name, args, repository) {
             
             // lookupPickerFieldsのチェック
             if (!lookupPickerFields || !Array.isArray(lookupPickerFields) || lookupPickerFields.length === 0) {
-                console.error(`警告: lookupPickerFieldsが指定されていません。ルックアップピッカーに表示するフィールドを指定することを推奨します。`);
+                LoggingUtils.logWarning('create_lookup_field', 'lookupPickerFieldsが指定されていません。ルックアップピッカーに表示するフィールドを指定することを推奨します。');
             }
             
             // sortのチェック
             if (!sort) {
-                console.error(`警告: sortが指定されていません。ルックアップの検索結果のソート順を指定することを推奨します。`);
+                LoggingUtils.logWarning('create_lookup_field', 'sortが指定されていません。ルックアップの検索結果のソート順を指定することを推奨します。');
             }
-            
-            // デバッグ用のログ出力（フィールドマッピング）
-            console.error(`Field mappings:`, JSON.stringify(fieldMappings, null, 2));
             
             // フィールド設定の基本部分
             const fieldConfig = {
@@ -510,12 +449,12 @@ export async function handleFieldTools(name, args, repository) {
             // 幅が指定されていない場合、または指定された幅が最小幅より小さい場合は最小幅を設定
             if (!args.size) {
                 fieldConfig.size = { width: LOOKUP_FIELD_MIN_WIDTH };
-                console.error(`ルックアップフィールド "${code}" の幅が指定されていないため、最小幅 ${LOOKUP_FIELD_MIN_WIDTH} を設定しました。`);
+                LoggingUtils.logDetailedOperation('create_lookup_field', 'ルックアップフィールドの幅を最小幅に設定', { code, minWidth: LOOKUP_FIELD_MIN_WIDTH });
             } else if (args.size) {
                 fieldConfig.size = { ...args.size };
                 if (!fieldConfig.size.width || parseInt(fieldConfig.size.width, 10) < parseInt(LOOKUP_FIELD_MIN_WIDTH, 10)) {
                     fieldConfig.size.width = LOOKUP_FIELD_MIN_WIDTH;
-                    console.error(`ルックアップフィールド "${code}" の幅が最小幅 ${LOOKUP_FIELD_MIN_WIDTH} より小さいため、最小幅を設定しました。`);
+                    LoggingUtils.logDetailedOperation('create_lookup_field', 'ルックアップフィールドの幅を最小幅に補正', { code, minWidth: LOOKUP_FIELD_MIN_WIDTH });
                 }
             }
             
@@ -534,7 +473,7 @@ export async function handleFieldTools(name, args, repository) {
                 // デフォルトのlookupPickerFieldsを設定
                 // 少なくともキーフィールドは含める
                 fieldConfig.lookup.lookupPickerFields = [relatedKeyField];
-                console.error(`lookupPickerFieldsが指定されていないため、デフォルト値 [${relatedKeyField}] を設定しました。`);
+                LoggingUtils.logDetailedOperation('create_lookup_field', 'lookupPickerFieldsのデフォルト値を設定', { defaultValue: [relatedKeyField] });
             }
             
             if (filterCond) fieldConfig.lookup.filterCond = filterCond;
@@ -544,33 +483,17 @@ export async function handleFieldTools(name, args, repository) {
             } else {
                 // デフォルトのsortを設定
                 fieldConfig.lookup.sort = `${relatedKeyField} asc`;
-                console.error(`sortが指定されていないため、デフォルト値 "${relatedKeyField} asc" を設定しました。`);
+                LoggingUtils.logDetailedOperation('create_lookup_field', 'sortのデフォルト値を設定', { defaultValue: `${relatedKeyField} asc` });
             }
-            
-            // 注意書きを追加
-            console.error(`
-【注意】ルックアップフィールドについて
-- ルックアップフィールドは基本的なフィールドタイプ（SINGLE_LINE_TEXT、NUMBERなど）に、lookup属性を追加したものです
-- フィールドタイプとして "LOOKUP" を指定するのではなく、適切な基本タイプを指定し、その中にlookupプロパティを設定します
-- 参照先アプリは運用環境にデプロイされている必要があります
-- ルックアップのキーフィールド自体はフィールドマッピングに含めないでください
-- lookupPickerFieldsとsortは省略可能ですが、指定することを強く推奨します
-`);
             
             return fieldConfig;
         }
         
         case 'create_text_field': {
-            // 引数のチェック
-            if (!args.code) {
-                throw new Error('code は必須パラメータです。');
-            }
-            if (!args.label) {
-                throw new Error('label は必須パラメータです。');
-            }
-            if (!args.field_type || !['SINGLE_LINE_TEXT', 'MULTI_LINE_TEXT'].includes(args.field_type)) {
-                throw new Error('field_type は SINGLE_LINE_TEXT または MULTI_LINE_TEXT である必要があります。');
-            }
+            ValidationUtils.validateRequired(args, ['code', 'label', 'field_type']);
+            ValidationUtils.validateString(args.field_type, 'field_type', {
+                allowedValues: ['SINGLE_LINE_TEXT', 'MULTI_LINE_TEXT']
+            });
             
             const { 
                 field_type, 
@@ -583,11 +506,6 @@ export async function handleFieldTools(name, args, repository) {
                 minLength,
                 defaultValue = ""
             } = args;
-            
-            // デバッグ用のログ出力
-            console.error(`Creating text field: ${code}`);
-            console.error(`Field type: ${field_type}`);
-            console.error(`Label: ${label}`);
             
             // フィールド設定の基本部分
             const fieldConfig = {
@@ -608,13 +526,7 @@ export async function handleFieldTools(name, args, repository) {
         }
         
         case 'create_number_field': {
-            // 引数のチェック
-            if (!args.code) {
-                throw new Error('code は必須パラメータです。');
-            }
-            if (!args.label) {
-                throw new Error('label は必須パラメータです。');
-            }
+            ValidationUtils.validateRequired(args, ['code', 'label']);
             
             const { 
                 code, 
@@ -631,10 +543,6 @@ export async function handleFieldTools(name, args, repository) {
                 displayScale
             } = args;
             
-            // デバッグ用のログ出力
-            console.error(`Creating number field: ${code}`);
-            console.error(`Label: ${label}`);
-            
             // 単位記号に基づいて適切な unitPosition を判定
             let effectiveUnitPosition;
             
@@ -646,13 +554,13 @@ export async function handleFieldTools(name, args, repository) {
                 if (unit) {
                     const warning = checkUnitPositionWarning(unit, unitPosition);
                     if (warning) {
-                        console.error(`警告: ${warning}`);
+                        LoggingUtils.logWarning('create_number_field', warning);
                     }
                 }
             } else if (unit) {
                 // 単位記号が指定されている場合は自動判定
                 effectiveUnitPosition = determineUnitPosition(unit);
-                console.error(`単位記号「${unit}」に基づいて unitPosition を "${effectiveUnitPosition}" に自動設定しました。`);
+                LoggingUtils.logDetailedOperation('create_number_field', 'unitPositionを自動設定', { unit, unitPosition: effectiveUnitPosition });
             } else {
                 // どちらも指定されていない場合はデフォルト値を AFTER に変更
                 effectiveUnitPosition = "AFTER";
@@ -678,7 +586,7 @@ export async function handleFieldTools(name, args, repository) {
             
             // displayScaleが空文字列なら削除、それ以外は設定
             if (displayScale === "") {
-                console.error(`数値フィールド "${code}" の displayScale に空文字列が指定されたため、指定を削除しました。`);
+                LoggingUtils.logWarning('create_number_field', `数値フィールド "${code}" の displayScale に空文字列が指定されたため、指定を削除しました。`);
                 // displayScaleを設定しない
             } else if (displayScale !== undefined) {
                 // displayScaleの値の範囲チェック
@@ -693,13 +601,7 @@ export async function handleFieldTools(name, args, repository) {
         }
         
         case 'create_date_field': {
-            // 引数のチェック
-            if (!args.code) {
-                throw new Error('code は必須パラメータです。');
-            }
-            if (!args.label) {
-                throw new Error('label は必須パラメータです。');
-            }
+            ValidationUtils.validateRequired(args, ['code', 'label']);
             
             const { 
                 code, 
@@ -709,10 +611,6 @@ export async function handleFieldTools(name, args, repository) {
                 unique = false,
                 defaultValue = ""
             } = args;
-            
-            // デバッグ用のログ出力
-            console.error(`Creating date field: ${code}`);
-            console.error(`Label: ${label}`);
             
             // フィールド設定の基本部分
             const fieldConfig = {
@@ -731,13 +629,7 @@ export async function handleFieldTools(name, args, repository) {
         }
         
         case 'create_time_field': {
-            // 引数のチェック
-            if (!args.code) {
-                throw new Error('code は必須パラメータです。');
-            }
-            if (!args.label) {
-                throw new Error('label は必須パラメータです。');
-            }
+            ValidationUtils.validateRequired(args, ['code', 'label']);
             
             const { 
                 code, 
@@ -747,10 +639,6 @@ export async function handleFieldTools(name, args, repository) {
                 unique = false,
                 defaultValue = ""
             } = args;
-            
-            // デバッグ用のログ出力
-            console.error(`Creating time field: ${code}`);
-            console.error(`Label: ${label}`);
             
             // フィールド設定の基本部分
             const fieldConfig = {
@@ -769,13 +657,7 @@ export async function handleFieldTools(name, args, repository) {
         }
         
         case 'create_datetime_field': {
-            // 引数のチェック
-            if (!args.code) {
-                throw new Error('code は必須パラメータです。');
-            }
-            if (!args.label) {
-                throw new Error('label は必須パラメータです。');
-            }
+            ValidationUtils.validateRequired(args, ['code', 'label']);
             
             const { 
                 code, 
@@ -785,10 +667,6 @@ export async function handleFieldTools(name, args, repository) {
                 unique = false,
                 defaultValue = ""
             } = args;
-            
-            // デバッグ用のログ出力
-            console.error(`Creating datetime field: ${code}`);
-            console.error(`Label: ${label}`);
             
             // フィールド設定の基本部分
             const fieldConfig = {
@@ -807,13 +685,7 @@ export async function handleFieldTools(name, args, repository) {
         }
         
         case 'create_rich_text_field': {
-            // 引数のチェック
-            if (!args.code) {
-                throw new Error('code は必須パラメータです。');
-            }
-            if (!args.label) {
-                throw new Error('label は必須パラメータです。');
-            }
+            ValidationUtils.validateRequired(args, ['code', 'label']);
             
             const { 
                 code, 
@@ -822,10 +694,6 @@ export async function handleFieldTools(name, args, repository) {
                 noLabel = false,
                 defaultValue = ""
             } = args;
-            
-            // デバッグ用のログ出力
-            console.error(`Creating rich text field: ${code}`);
-            console.error(`Label: ${label}`);
             
             // フィールド設定の基本部分
             const fieldConfig = {
@@ -843,13 +711,7 @@ export async function handleFieldTools(name, args, repository) {
         }
         
         case 'create_attachment_field': {
-            // 引数のチェック
-            if (!args.code) {
-                throw new Error('code は必須パラメータです。');
-            }
-            if (!args.label) {
-                throw new Error('label は必須パラメータです。');
-            }
+            ValidationUtils.validateRequired(args, ['code', 'label']);
             
             const { 
                 code, 
@@ -857,10 +719,6 @@ export async function handleFieldTools(name, args, repository) {
                 required = false, 
                 noLabel = false
             } = args;
-            
-            // デバッグ用のログ出力
-            console.error(`Creating attachment field: ${code}`);
-            console.error(`Label: ${label}`);
             
             // フィールド設定の基本部分
             const fieldConfig = {
@@ -875,16 +733,10 @@ export async function handleFieldTools(name, args, repository) {
         }
         
         case 'create_user_select_field': {
-            // 引数のチェック
-            if (!args.code) {
-                throw new Error('code は必須パラメータです。');
-            }
-            if (!args.label) {
-                throw new Error('label は必須パラメータです。');
-            }
-            if (!args.field_type || !['USER_SELECT', 'GROUP_SELECT', 'ORGANIZATION_SELECT'].includes(args.field_type)) {
-                throw new Error('field_type は USER_SELECT, GROUP_SELECT, ORGANIZATION_SELECT のいずれかである必要があります。');
-            }
+            ValidationUtils.validateRequired(args, ['code', 'label', 'field_type']);
+            ValidationUtils.validateString(args.field_type, 'field_type', {
+                allowedValues: ['USER_SELECT', 'GROUP_SELECT', 'ORGANIZATION_SELECT']
+            });
             
             const { 
                 field_type,
@@ -895,10 +747,6 @@ export async function handleFieldTools(name, args, repository) {
                 defaultValue = [],
                 entities = []
             } = args;
-            
-            // デバッグ用のログ出力
-            console.error(`Creating ${field_type} field: ${code}`);
-            console.error(`Label: ${label}`);
             
             // フィールド設定の基本部分
             const fieldConfig = {
@@ -917,27 +765,14 @@ export async function handleFieldTools(name, args, repository) {
         }
         
         case 'create_subtable_field': {
-            // 引数のチェック
-            if (!args.code) {
-                throw new Error('code は必須パラメータです。');
-            }
-            if (!args.label) {
-                throw new Error('label は必須パラメータです。');
-            }
-            if (!args.fields || !Array.isArray(args.fields) || args.fields.length === 0) {
-                throw new Error('fields は必須パラメータで、少なくとも1つのフィールド定義を含む配列である必要があります。');
-            }
+            ValidationUtils.validateRequired(args, ['code', 'label', 'fields']);
+            ValidationUtils.validateArray(args.fields, 'fields', { minLength: 1 });
             
             const { 
                 code, 
                 label, 
                 fields
             } = args;
-            
-            // デバッグ用のログ出力
-            console.error(`Creating table field: ${code}`);
-            console.error(`Label: ${label}`);
-            console.error(`Fields:`, JSON.stringify(fields, null, 2));
             
             // テーブル内のフィールド定義を構築
             const subtableFields = {};
@@ -988,29 +823,7 @@ export async function handleFieldTools(name, args, repository) {
         }
         
         case 'create_calc_field': {
-            // 計算フィールドの仕様に関する警告を表示
-            console.error(`
-【注意】kintoneの計算フィールドについて
-- kintoneの計算フィールドは独自の構文と関数セットを持っています
-- Excel/Spreadsheetなどで使用できる関数の多くはサポートされていません
-- サブテーブル内のフィールドを参照する場合は、テーブル名を指定せず、フィールドコードのみを使用してください
-  正しい例: SUM(金額)
-  誤った例: SUM(経費明細.金額)
-- 日付の差分計算は DATE_FORMAT(日付1, "YYYY/MM/DD") - DATE_FORMAT(日付2, "YYYY/MM/DD") で行います
-- 詳細な仕様は get_field_type_documentation ツールで確認できます
-  例: get_field_type_documentation({ field_type: "CALC" })
-`);
-
-            // 引数のチェック
-            if (!args.code) {
-                throw new Error('code は必須パラメータです。');
-            }
-            if (!args.label) {
-                throw new Error('label は必須パラメータです。');
-            }
-            if (!args.expression) {
-                throw new Error('expression は必須パラメータです。');
-            }
+            ValidationUtils.validateRequired(args, ['code', 'label', 'expression']);
             
             const { 
                 code, 
@@ -1025,11 +838,6 @@ export async function handleFieldTools(name, args, repository) {
                 unitPosition
             } = args;
             
-            // デバッグ用のログ出力
-            console.error(`Creating calculation field: ${code}`);
-            console.error(`Label: ${label}`);
-            console.error(`Expression: ${expression}`);
-            
             // フィールド設定の基本部分
             const fieldConfig = {
                 type: "CALC",
@@ -1043,14 +851,13 @@ export async function handleFieldTools(name, args, repository) {
             // digit=trueの場合はNUMBER_DIGITを使用、それ以外はformatパラメータまたはデフォルト値を使用
             if (digit === true) {
                 fieldConfig.format = "NUMBER_DIGIT";
-                console.error(`桁区切り表示が有効なため、format を "NUMBER_DIGIT" に設定しました。`);
+                LoggingUtils.logDetailedOperation('create_calc_field', 'formatをNUMBER_DIGITに設定', { reason: '桁区切り表示が有効' });
             } else if (format) {
                 fieldConfig.format = format;
-                console.error(`Format: ${format}`);
             } else {
                 // デフォルトでNUMBER_DIGITを使用（桁区切り表示をデフォルトにする）
                 fieldConfig.format = "NUMBER_DIGIT";
-                console.error(`formatが指定されていないため、デフォルト値 "NUMBER_DIGIT" を設定しました。`);
+                LoggingUtils.logDetailedOperation('create_calc_field', 'formatのデフォルト値を設定', { defaultValue: 'NUMBER_DIGIT' });
             }
             
             // 数値形式の場合の追加設定
@@ -1071,13 +878,13 @@ export async function handleFieldTools(name, args, repository) {
                     if (unit) {
                         const warning = checkUnitPositionWarning(unit, unitPosition);
                         if (warning) {
-                            console.error(`警告: ${warning}`);
+                            LoggingUtils.logWarning('create_calc_field', warning);
                         }
                     }
                 } else if (unit) {
                     // 単位記号が指定されている場合は自動判定
                     effectiveUnitPosition = determineUnitPosition(unit);
-                    console.error(`単位記号「${unit}」に基づいて unitPosition を "${effectiveUnitPosition}" に自動設定しました。`);
+                    LoggingUtils.logDetailedOperation('create_calc_field', 'unitPositionを自動設定', { unit, unitPosition: effectiveUnitPosition });
                 } else {
                     // どちらも指定されていない場合はデフォルト値を AFTER に変更
                     effectiveUnitPosition = "AFTER";
@@ -1090,16 +897,8 @@ export async function handleFieldTools(name, args, repository) {
         }
         
         case 'create_status_field': {
-            // 引数のチェック
-            if (!args.code) {
-                throw new Error('code は必須パラメータです。');
-            }
-            if (!args.label) {
-                throw new Error('label は必須パラメータです。');
-            }
-            if (!args.states || !Array.isArray(args.states) || args.states.length === 0) {
-                throw new Error('states は必須パラメータで、少なくとも1つの状態定義を含む配列である必要があります。');
-            }
+            ValidationUtils.validateRequired(args, ['code', 'label', 'states']);
+            ValidationUtils.validateArray(args.states, 'states', { minLength: 1 });
             
             const { 
                 code, 
@@ -1108,11 +907,6 @@ export async function handleFieldTools(name, args, repository) {
                 defaultState = states[0].name,
                 noLabel = false
             } = args;
-            
-            // デバッグ用のログ出力
-            console.error(`Creating status field: ${code}`);
-            console.error(`Label: ${label}`);
-            console.error(`States:`, JSON.stringify(states, null, 2));
             
             // 状態定義を構築
             const statesObj = {};
@@ -1145,25 +939,9 @@ export async function handleFieldTools(name, args, repository) {
         }
         
         case 'create_related_records_field': {
-            // 引数のチェック
-            if (!args.code) {
-                throw new Error('code は必須パラメータです。');
-            }
-            if (!args.label) {
-                throw new Error('label は必須パラメータです。');
-            }
-            if (!args.relatedApp) {
-                throw new Error('relatedApp は必須パラメータです。');
-            }
-            if (!args.condition) {
-                throw new Error('condition は必須パラメータです。');
-            }
-            if (!args.condition.field) {
-                throw new Error('condition.field は必須パラメータです。');
-            }
-            if (!args.condition.relatedField) {
-                throw new Error('condition.relatedField は必須パラメータです。');
-            }
+            ValidationUtils.validateRequired(args, ['code', 'label', 'relatedApp', 'condition']);
+            ValidationUtils.validateObject(args.condition, 'condition');
+            ValidationUtils.validateRequired(args.condition, ['field', 'relatedField']);
             
             const { 
                 code, 
@@ -1175,12 +953,6 @@ export async function handleFieldTools(name, args, repository) {
                 sort,
                 noLabel = false
             } = args;
-            
-            // デバッグ用のログ出力
-            console.error(`Creating related records field: ${code}`);
-            console.error(`Label: ${label}`);
-            console.error(`Related app:`, JSON.stringify(relatedApp, null, 2));
-            console.error(`Condition:`, JSON.stringify(condition, null, 2));
             
             // フィールド設定の基本部分
             const fieldConfig = {
@@ -1201,16 +973,10 @@ export async function handleFieldTools(name, args, repository) {
         }
         
         case 'create_link_field': {
-            // 引数のチェック
-            if (!args.code) {
-                throw new Error('code は必須パラメータです。');
-            }
-            if (!args.label) {
-                throw new Error('label は必須パラメータです。');
-            }
-            if (!args.protocol || !['WEB', 'MAIL', 'CALL'].includes(args.protocol)) {
-                throw new Error('protocol は WEB, MAIL, CALL のいずれかである必要があります。');
-            }
+            ValidationUtils.validateRequired(args, ['code', 'label', 'protocol']);
+            ValidationUtils.validateString(args.protocol, 'protocol', {
+                allowedValues: ['WEB', 'MAIL', 'CALL']
+            });
             
             const { 
                 code, 
@@ -1223,11 +989,6 @@ export async function handleFieldTools(name, args, repository) {
                 minLength,
                 defaultValue = ""
             } = args;
-            
-            // デバッグ用のログ出力
-            console.error(`Creating link field: ${code}`);
-            console.error(`Label: ${label}`);
-            console.error(`Protocol: ${protocol}`);
             
             // フィールド設定の基本部分
             const fieldConfig = {
@@ -1249,24 +1010,8 @@ export async function handleFieldTools(name, args, repository) {
         }
         
         case 'update_field': {
-            // 引数のチェック
-            if (!args.app_id) {
-                throw new Error('app_id は必須パラメータです。');
-            }
-            if (!args.field_code) {
-                throw new Error('field_code は必須パラメータです。');
-            }
-            if (!args.field) {
-                throw new Error('field は必須パラメータです。');
-            }
-            if (typeof args.field !== 'object' || Array.isArray(args.field)) {
-                throw new Error('field はオブジェクト形式で指定する必要があります。');
-            }
-            
-            // デバッグ用のログ出力
-            console.error(`Updating field in app: ${args.app_id}`);
-            console.error(`Field code: ${args.field_code}`);
-            console.error(`Field:`, JSON.stringify(args.field, null, 2));
+            ValidationUtils.validateRequired(args, ['app_id', 'field_code', 'field']);
+            ValidationUtils.validateObject(args.field, 'field');
             
             // フィールドのタイプチェック
             if (!args.field.type) {
@@ -1299,9 +1044,7 @@ export async function handleFieldTools(name, args, repository) {
                 args.revision || -1
             );
             
-            return {
-                revision: response.revision
-            };
+            return ResponseBuilder.withRevision(response.revision);
         }
         
         default:

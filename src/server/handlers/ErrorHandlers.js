@@ -1,5 +1,6 @@
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import { KintoneRestAPIError } from '@kintone/rest-api-client';
+import { LoggingUtils } from '../../utils/LoggingUtils.js';
 
 function formatErrorMessage(errorType, errorDetail, suggestions) {
     return `

@@ -3,6 +3,7 @@ import { BaseKintoneRepository } from './base/BaseKintoneRepository.js';
 import { KintoneRestAPIError } from '@kintone/rest-api-client';
 import { KintoneFormRepository } from './KintoneFormRepository.js';
 import { KintonePreviewRepository } from './KintonePreviewRepository.js';
+import { LoggingUtils } from '../utils/LoggingUtils.js';
 
 /**
  * kintoneアプリの基本操作を担当するリポジトリクラス
@@ -19,31 +20,26 @@ export class KintoneAppRepository extends BaseKintoneRepository {
     }
 
     async getAppsInfo(appName) {
-        try {
-            console.error(`Fetching apps info: ${appName}`);
-            const response = await this.client.app.getApps({
-                name: appName,
-            });
-            console.error('Response:', response);
-            return response;
-        } catch (error) {
-            this.handleKintoneError(error, `get apps info ${appName}`);
-        }
+        const params = { name: appName };
+        return this.executeWithDetailedLogging(
+            'getApps',
+            params,
+            () => this.client.app.getApps(params),
+            `get apps info ${appName}`
+        );
     }
 
     async createApp(name, space = null, thread = null) {
-        try {
-            console.error(`Creating new app: ${name}`);
-            const params = { name };
-            if (space) params.space = space;
-            if (thread) params.thread = thread;
+        const params = { name };
+        if (space) params.space = space;
+        if (thread) params.thread = thread;
 
-            const response = await this.client.app.addApp(params);
-            console.error('App creation response:', response);
-            return response;
-        } catch (error) {
-            this.handleKintoneError(error, `create app ${name}`);
-        }
+        return this.executeWithDetailedLogging(
+            'addApp',
+            params,
+            () => this.client.app.addApp(params),
+            `create app ${name}`
+        );
     }
 
     /**
@@ -57,50 +53,41 @@ export class KintoneAppRepository extends BaseKintoneRepository {
     }
 
     async deployApp(apps) {
-        try {
-            console.error(`Deploying apps:`, apps);
-            const response = await this.client.app.deployApp({
-                apps: apps.map(appId => ({
-                    app: appId,
-                    revision: -1 // 最新のリビジョンを使用
-                }))
-            });
-            console.error('Deploy response:', response);
-            return response;
-        } catch (error) {
-            this.handleKintoneError(error, `deploy apps ${apps.join(', ')}`);
-        }
+        const params = {
+            apps: apps.map(appId => ({
+                app: appId,
+                revision: -1 // 最新のリビジョンを使用
+            }))
+        };
+        return this.executeWithDetailedLogging(
+            'deployApp',
+            params,
+            () => this.client.app.deployApp(params),
+            `deploy apps ${apps.join(', ')}`
+        );
     }
 
     async getDeployStatus(apps) {
-        try {
-            console.error(`Checking deploy status for apps:`, apps);
-            const response = await this.client.app.getDeployStatus({
-                apps: apps
-            });
-            console.error('Deploy status:', response);
-            return response;
-        } catch (error) {
-            this.handleKintoneError(error, `get deploy status for apps ${apps.join(', ')}`);
-        }
+        const params = { apps: apps };
+        return this.executeWithDetailedLogging(
+            'getDeployStatus',
+            params,
+            () => this.client.app.getDeployStatus(params),
+            `get deploy status for apps ${apps.join(', ')}`
+        );
     }
 
     async updateAppSettings(appId, settings) {
-        try {
-            console.error(`Updating app settings for app ${appId}`);
-            console.error('Settings:', settings);
-
-            const params = {
-                app: appId,
-                ...settings
-            };
-
-            const response = await this.client.app.updateAppSettings(params);
-            console.error('Update response:', response);
-            return response;
-        } catch (error) {
-            this.handleKintoneError(error, `update app settings for app ${appId}`);
-        }
+        const params = {
+            app: appId,
+            ...settings
+        };
+        return this.executeWithDetailedLogging(
+            'updateAppSettings',
+            params,
+            () => this.client.app.updateAppSettings(params),
+            `update app settings for app ${appId}`
+        );
     }
 
     /**
@@ -278,6 +265,596 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             return response;
         } catch (error) {
             this.handleKintoneError(error, `get process management for app ${appId}`);
+        }
+    }
+
+    /**
+     * アプリのプロセス管理設定を更新
+     * @param {number} appId アプリID
+     * @param {boolean} enable プロセス管理を有効にするか
+     * @param {Object} states ステータス設定
+     * @param {Array} actions アクション設定
+     * @param {number} revision リビジョン番号
+     * @returns {Promise<Object>} 更新結果
+     */
+    async updateProcessManagement(appId, enable, states, actions, revision = -1) {
+        try {
+            console.error(`Updating process management for app: ${appId}`);
+            console.error('Enable:', enable);
+            console.error('States:', states);
+            console.error('Actions:', actions);
+            
+            const params = {
+                app: appId,
+                enable: enable
+            };
+            
+            if (states) {
+                params.states = states;
+            }
+            
+            if (actions) {
+                params.actions = actions;
+            }
+            
+            if (revision && revision !== -1) {
+                params.revision = revision;
+            }
+            
+            const response = await this.client.app.updateProcessManagement(params);
+            console.error('Update process management response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `update process management for app ${appId}`);
+        }
+    }
+
+    /**
+     * アプリのビュー設定を取得
+     * @param {number} appId アプリID
+     * @param {boolean} preview プレビュー環境かどうか
+     * @returns {Promise<Object>} ビュー設定情報
+     */
+    async getViews(appId, preview = false) {
+        try {
+            console.error(`Fetching views for app: ${appId}, preview: ${preview}`);
+            
+            const params = { app: appId };
+            if (preview) {
+                params.preview = true;
+            }
+            
+            const response = await this.client.app.getViews(params);
+            console.error('Views response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get views for app ${appId}`);
+        }
+    }
+
+    /**
+     * アプリのビュー設定を更新
+     * @param {number} appId アプリID
+     * @param {Object} views ビュー設定
+     * @param {number} revision リビジョン番号
+     * @returns {Promise<Object>} 更新結果
+     */
+    async updateViews(appId, views, revision = -1) {
+        try {
+            console.error(`Updating views for app: ${appId}`);
+            console.error('Views:', views);
+            
+            const params = {
+                app: appId,
+                views: views
+            };
+            
+            if (revision && revision !== -1) {
+                params.revision = revision;
+            }
+            
+            const response = await this.client.app.updateViews(params);
+            console.error('Update views response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `update views for app ${appId}`);
+        }
+    }
+
+    /**
+     * アプリのアクセス権限を取得
+     * @param {number} appId アプリID
+     * @param {boolean} preview プレビュー環境かどうか
+     * @returns {Promise<Object>} アクセス権限情報
+     */
+    async getAppAcl(appId, preview = false) {
+        try {
+            console.error(`Fetching app ACL for app: ${appId}, preview: ${preview}`);
+            
+            const params = { app: appId };
+            if (preview) {
+                params.preview = true;
+            }
+            
+            const response = await this.client.app.getAppAcl(params);
+            console.error('App ACL response:', response);
+            return {
+                acl: response.rights,
+                revision: response.revision
+            };
+        } catch (error) {
+            this.handleKintoneError(error, `get app ACL for app ${appId}`);
+        }
+    }
+
+    /**
+     * フィールドのアクセス権限を取得
+     * @param {number} appId アプリID
+     * @param {boolean} preview プレビュー環境かどうか
+     * @returns {Promise<Object>} フィールドアクセス権限情報
+     */
+    async getFieldAcl(appId, preview = false) {
+        try {
+            console.error(`Fetching field ACL for app: ${appId}, preview: ${preview}`);
+            
+            const params = { app: appId };
+            if (preview) {
+                params.preview = true;
+            }
+            
+            const response = await this.client.app.getFieldAcl(params);
+            console.error('Field ACL response:', response);
+            return {
+                rights: response.rights,
+                revision: response.revision
+            };
+        } catch (error) {
+            this.handleKintoneError(error, `get field ACL for app ${appId}`);
+        }
+    }
+
+    /**
+     * フィールドのアクセス権限を更新
+     * @param {number} appId アプリID
+     * @param {Array} rights フィールドアクセス権限設定
+     * @param {number} revision リビジョン番号
+     * @returns {Promise<Object>} 更新結果
+     */
+    async updateFieldAcl(appId, rights, revision = -1) {
+        try {
+            console.error(`Updating field ACL for app: ${appId}`);
+            console.error('Rights:', rights);
+            
+            const params = {
+                app: appId,
+                rights: rights
+            };
+            
+            if (revision && revision !== -1) {
+                params.revision = revision;
+            }
+            
+            const response = await this.client.app.updateFieldAcl(params);
+            console.error('Update field ACL response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `update field ACL for app ${appId}`);
+        }
+    }
+
+    /**
+     * グラフ設定を取得
+     * @param {number} appId アプリID
+     * @param {boolean} preview プレビュー環境かどうか
+     * @returns {Promise<Object>} グラフ設定情報
+     */
+    async getReports(appId, preview = false) {
+        try {
+            console.error(`Fetching reports for app: ${appId}, preview: ${preview}`);
+            
+            const params = { app: appId };
+            if (preview) {
+                params.preview = true;
+            }
+            
+            const response = await this.client.app.getReports(params);
+            console.error('Reports response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get reports for app ${appId}`);
+        }
+    }
+
+    /**
+     * グラフ設定を更新
+     * @param {number} appId アプリID
+     * @param {Object} reports グラフ設定
+     * @param {number} revision リビジョン番号
+     * @returns {Promise<Object>} 更新結果
+     */
+    async updateReports(appId, reports, revision = -1) {
+        try {
+            console.error(`Updating reports for app: ${appId}`);
+            console.error('Reports:', reports);
+            
+            const params = {
+                app: appId,
+                reports: reports
+            };
+            
+            if (revision && revision !== -1) {
+                params.revision = revision;
+            }
+            
+            const response = await this.client.app.updateReports(params);
+            console.error('Update reports response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `update reports for app ${appId}`);
+        }
+    }
+
+    /**
+     * 通知条件設定を取得
+     * @param {number} appId アプリID
+     * @param {boolean} preview プレビュー環境かどうか
+     * @returns {Promise<Object>} 通知条件設定情報
+     */
+    async getNotifications(appId, preview = false) {
+        try {
+            console.error(`Fetching notifications for app: ${appId}, preview: ${preview}`);
+            
+            const params = { app: appId };
+            if (preview) {
+                params.preview = true;
+            }
+            
+            const response = await this.client.app.getGeneralNotifications(params);
+            console.error('Notifications response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get notifications for app ${appId}`);
+        }
+    }
+
+    /**
+     * 通知条件設定を更新
+     * @param {number} appId アプリID
+     * @param {Array} notifications 通知条件設定
+     * @param {number} revision リビジョン番号
+     * @returns {Promise<Object>} 更新結果
+     */
+    async updateNotifications(appId, notifications, revision = -1) {
+        try {
+            console.error(`Updating notifications for app: ${appId}`);
+            console.error('Notifications:', notifications);
+            
+            const params = {
+                app: appId,
+                notifications: notifications
+            };
+            
+            if (revision && revision !== -1) {
+                params.revision = revision;
+            }
+            
+            const response = await this.client.app.updateGeneralNotifications(params);
+            console.error('Update notifications response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `update notifications for app ${appId}`);
+        }
+    }
+
+    /**
+     * レコード単位の通知設定を取得
+     * @param {number} appId アプリID
+     * @param {boolean} preview プレビュー環境かどうか
+     * @returns {Promise<Object>} 通知設定情報
+     */
+    async getPerRecordNotifications(appId, preview = false) {
+        try {
+            console.error(`Fetching per-record notifications for app: ${appId}, preview: ${preview}`);
+            
+            const params = { app: appId };
+            if (preview) {
+                params.preview = true;
+            }
+            
+            const response = await this.client.app.getPerRecordNotifications(params);
+            console.error('Per-record notifications response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get per-record notifications for app ${appId}`);
+        }
+    }
+
+    /**
+     * レコード単位の通知設定を更新
+     * @param {number} appId アプリID
+     * @param {Array} notifications 通知設定
+     * @param {number} revision リビジョン番号
+     * @returns {Promise<Object>} 更新結果
+     */
+    async updatePerRecordNotifications(appId, notifications, revision = -1) {
+        try {
+            console.error(`Updating per-record notifications for app: ${appId}`);
+            console.error('Notifications:', notifications);
+            
+            const params = {
+                app: appId,
+                notifications: notifications
+            };
+            
+            if (revision && revision !== -1) {
+                params.revision = revision;
+            }
+            
+            const response = await this.client.app.updatePerRecordNotifications(params);
+            console.error('Update per-record notifications response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `update per-record notifications for app ${appId}`);
+        }
+    }
+
+    /**
+     * リマインダー通知設定を取得
+     * @param {number} appId アプリID
+     * @param {boolean} preview プレビュー環境かどうか
+     * @returns {Promise<Object>} 通知設定情報
+     */
+    async getReminderNotifications(appId, preview = false) {
+        try {
+            console.error(`Fetching reminder notifications for app: ${appId}, preview: ${preview}`);
+            
+            const params = { app: appId };
+            if (preview) {
+                params.preview = true;
+            }
+            
+            const response = await this.client.app.getReminderNotifications(params);
+            console.error('Reminder notifications response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get reminder notifications for app ${appId}`);
+        }
+    }
+
+    /**
+     * リマインダー通知設定を更新
+     * @param {number} appId アプリID
+     * @param {Array} notifications 通知設定
+     * @param {number} revision リビジョン番号
+     * @returns {Promise<Object>} 更新結果
+     */
+    async updateReminderNotifications(appId, notifications, revision = -1) {
+        try {
+            console.error(`Updating reminder notifications for app: ${appId}`);
+            console.error('Notifications:', notifications);
+            
+            const params = {
+                app: appId,
+                notifications: notifications
+            };
+            
+            if (revision && revision !== -1) {
+                params.revision = revision;
+            }
+            
+            const response = await this.client.app.updateReminderNotifications(params);
+            console.error('Update reminder notifications response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `update reminder notifications for app ${appId}`);
+        }
+    }
+
+    /**
+     * アプリアクション設定を更新
+     * @param {number} appId アプリID
+     * @param {Object} actions アクション設定
+     * @param {number} revision リビジョン番号
+     * @returns {Promise<Object>} 更新結果
+     */
+    async updateAppActions(appId, actions, revision = -1) {
+        try {
+            console.error(`Updating app actions for app: ${appId}`);
+            console.error('Actions:', actions);
+            
+            const params = {
+                app: appId,
+                actions: actions
+            };
+            
+            if (revision && revision !== -1) {
+                params.revision = revision;
+            }
+            
+            const response = await this.client.app.updateAppActions(params);
+            console.error('Update app actions response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `update app actions for app ${appId}`);
+        }
+    }
+
+    /**
+     * プラグイン設定を更新
+     * @param {number} appId アプリID
+     * @param {Object} plugins プラグイン設定
+     * @param {number} revision リビジョン番号
+     * @returns {Promise<Object>} 更新結果
+     */
+    async updatePlugins(appId, plugins, revision = -1) {
+        try {
+            console.error(`Updating plugins for app: ${appId}`);
+            console.error('Plugins:', plugins);
+            
+            const params = {
+                app: appId,
+                plugins: plugins
+            };
+            
+            if (revision && revision !== -1) {
+                params.revision = revision;
+            }
+            
+            const response = await this.client.app.updatePlugins(params);
+            console.error('Update plugins response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `update plugins for app ${appId}`);
+        }
+    }
+
+    /**
+     * JavaScript/CSSカスタマイズ設定を取得
+     * @param {number} appId アプリID
+     * @param {boolean} preview プレビュー環境かどうか
+     * @returns {Promise<Object>} カスタマイズ設定情報
+     */
+    async getAppCustomize(appId, preview = false) {
+        try {
+            console.error(`Fetching app customize for app: ${appId}, preview: ${preview}`);
+            
+            const params = { app: appId };
+            if (preview) {
+                params.preview = true;
+            }
+            
+            const response = await this.client.app.getAppCustomize(params);
+            console.error('App customize response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get app customize for app ${appId}`);
+        }
+    }
+
+    /**
+     * JavaScript/CSSカスタマイズ設定を更新
+     * @param {number} appId アプリID
+     * @param {string} scope 適用範囲
+     * @param {Object} desktop PC用設定
+     * @param {Object} mobile モバイル用設定
+     * @param {number} revision リビジョン番号
+     * @returns {Promise<Object>} 更新結果
+     */
+    async updateAppCustomize(appId, scope, desktop, mobile, revision = -1) {
+        try {
+            console.error(`Updating app customize for app: ${appId}`);
+            console.error('Scope:', scope);
+            console.error('Desktop:', desktop);
+            console.error('Mobile:', mobile);
+            
+            const params = {
+                app: appId,
+                scope: scope
+            };
+            
+            if (desktop) {
+                params.desktop = desktop;
+            }
+            
+            if (mobile) {
+                params.mobile = mobile;
+            }
+            
+            if (revision && revision !== -1) {
+                params.revision = revision;
+            }
+            
+            const response = await this.client.app.updateAppCustomize(params);
+            console.error('Update app customize response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `update app customize for app ${appId}`);
+        }
+    }
+
+    /**
+     * アプリのアクセス権限を更新
+     * @param {number} appId アプリID
+     * @param {Array} rights アクセス権限設定
+     * @param {number} revision リビジョン番号
+     * @returns {Promise<Object>} 更新結果
+     */
+    async updateAppAcl(appId, rights, revision = -1) {
+        try {
+            console.error(`Updating app ACL for app: ${appId}`);
+            console.error('Rights:', rights);
+            
+            const params = {
+                app: appId,
+                rights: rights
+            };
+            
+            if (revision && revision !== -1) {
+                params.revision = revision;
+            }
+            
+            const response = await this.client.app.updateAppAcl(params);
+            console.error('Update app ACL response:', response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `update app ACL for app ${appId}`);
+        }
+    }
+
+    /**
+     * レコードのアクセス権限を取得
+     * @param {number} appId - アプリID
+     * @param {number} recordId - レコードID
+     * @returns {Promise<Object>} アクセス権限情報
+     */
+    async getRecordAcl(appId, recordId) {
+        try {
+            LoggingUtils.logDetailedOperation('getRecordAcl', 'レコードアクセス権限取得', { appId, recordId });
+            
+            const params = {
+                app: appId,
+                id: recordId
+            };
+            
+            const response = await this.client.app.getRecordAcl(params);
+            LoggingUtils.logDetailedOperation('getRecordAcl', 'レコードアクセス権限取得完了', { 
+                appId, 
+                recordId,
+                rights: response.rights ? response.rights.length : 0 
+            });
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `get record ACL for app ${appId}, record ${recordId}`);
+        }
+    }
+
+    /**
+     * 複数レコードのアクセス権限を評価
+     * @param {number} appId - アプリID
+     * @param {number[]} recordIds - レコードIDの配列
+     * @returns {Promise<Object>} 評価結果
+     */
+    async evaluateRecordsAcl(appId, recordIds) {
+        try {
+            LoggingUtils.logDetailedOperation('evaluateRecordsAcl', 'レコードアクセス権限評価', { 
+                appId, 
+                recordCount: recordIds.length 
+            });
+            
+            const params = {
+                app: appId,
+                ids: recordIds
+            };
+            
+            const response = await this.client.app.evaluateRecordsAcl(params);
+            LoggingUtils.logDetailedOperation('evaluateRecordsAcl', 'レコードアクセス権限評価完了', { 
+                appId, 
+                recordCount: recordIds.length,
+                evaluatedCount: response.rights ? Object.keys(response.rights).length : 0
+            });
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, `evaluate records ACL for app ${appId}`);
         }
     }
 }

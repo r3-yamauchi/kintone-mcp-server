@@ -1,5 +1,8 @@
 // src/server/tools/LayoutTools.js
 import { autoCorrectFieldWidth, autoCorrectLayoutWidths } from '../../utils/LayoutUtils.js';
+import { ValidationUtils } from '../../utils/ValidationUtils.js';
+import { LoggingUtils } from '../../utils/LoggingUtils.js';
+import { ResponseBuilder } from '../../utils/ResponseBuilder.js';
 
 // フィールドコードの自動生成関数
 function generateFieldCode(label) {
@@ -40,7 +43,7 @@ function validateAndFixLayout(layout, existingFieldCodes = []) {
     // 使用済みフィールドコードのリスト（既存 + 新規追加済み）
     const usedFieldCodes = [...existingFieldCodes];
     if (!Array.isArray(layout)) {
-        console.error(`Warning: レイアウトが配列ではありません。自動的に配列に変換します。`);
+        LoggingUtils.logWarning('validateAndFixLayout', 'レイアウトが配列ではありません。自動的に配列に変換します。');
         layout = [layout];
     }
     
@@ -53,7 +56,7 @@ function validateAndFixLayout(layout, existingFieldCodes = []) {
         if (!item.type) {
             // トップレベルの要素は ROW, GROUP, SUBTABLE のいずれかである必要がある
             item.type = "ROW"; // デフォルトは ROW
-            console.error(`Warning: レイアウト要素に type プロパティが指定されていません。自動的に "ROW" を設定します。`);
+            LoggingUtils.logWarning('validateAndFixLayout', 'レイアウト要素に type プロパティが指定されていません。自動的に "ROW" を設定します。');
         }
         
         // 要素タイプに応じた検証・修正
@@ -61,19 +64,19 @@ function validateAndFixLayout(layout, existingFieldCodes = []) {
             // fieldsプロパティが指定されていない場合は自動的に補完
             if (!item.fields) {
                 item.fields = [];
-                console.error(`Warning: ROW要素に fields プロパティが指定されていません。空の配列を設定します。`);
+                LoggingUtils.logWarning('validateAndFixLayout', 'ROW要素に fields プロパティが指定されていません。空の配列を設定します。');
             }
             
             // fieldsプロパティが配列でない場合は配列に変換
             if (!Array.isArray(item.fields)) {
-                console.error(`Warning: ROW要素の fields プロパティが配列ではありません。自動的に配列に変換します。`);
+                LoggingUtils.logWarning('validateAndFixLayout', 'ROW要素の fields プロパティが配列ではありません。自動的に配列に変換します。');
                 item.fields = [item.fields];
             }
             
             // ROW要素内からGROUP要素を抽出してトップレベルに移動
             const groupFields = item.fields.filter(field => field.type === "GROUP");
             if (groupFields.length > 0) {
-                console.error(`Warning: ROW要素内のGROUP要素を自動的にトップレベルに移動しました。kintoneの仕様により、グループフィールドはトップレベルに配置する必要があります。`);
+                LoggingUtils.logWarning('validateAndFixLayout', 'ROW要素内のGROUP要素を自動的にトップレベルに移動しました。kintoneの仕様により、グループフィールドはトップレベルに配置する必要があります。');
                 // GROUP要素をトップレベルに移動するために保存
                 extractedElements.push(...groupFields);
                 // ROW内からは除外
@@ -83,7 +86,7 @@ function validateAndFixLayout(layout, existingFieldCodes = []) {
             // ROW要素内からSUBTABLE要素を抽出してトップレベルに移動
             const subtableFields = item.fields.filter(field => field.type === "SUBTABLE");
             if (subtableFields.length > 0) {
-                console.error(`Warning: ROW要素内のSUBTABLE要素を自動的にトップレベルに移動しました。kintoneの仕様により、テーブルはトップレベルに配置する必要があります。`);
+                LoggingUtils.logWarning('validateAndFixLayout', 'ROW要素内のSUBTABLE要素を自動的にトップレベルに移動しました。kintoneの仕様により、テーブルはトップレベルに配置する必要があります。');
                 // SUBTABLE要素をトップレベルに移動するために保存
                 extractedElements.push(...subtableFields);
                 // ROW内からは除外
@@ -96,7 +99,7 @@ function validateAndFixLayout(layout, existingFieldCodes = []) {
                 if (!field.type) {
                     // フィールド要素のデフォルトタイプは SINGLE_LINE_TEXT
                     field.type = "SINGLE_LINE_TEXT";
-                    console.error(`Warning: フィールド要素に type プロパティが指定されていません。自動的に "SINGLE_LINE_TEXT" を設定します。`);
+                    LoggingUtils.logWarning('validateAndFixLayout', 'フィールド要素に type プロパティが指定されていません。自動的に "SINGLE_LINE_TEXT" を設定します。');
                 }
                 
                 // フィールドコードが存在するかチェック（システムフィールドとレイアウト要素は除外）
@@ -106,7 +109,8 @@ function validateAndFixLayout(layout, existingFieldCodes = []) {
                     !LAYOUT_ELEMENT_TYPES.includes(field.type) && 
                     field.type !== "REFERENCE_TABLE") {
                     
-                    console.error(`Warning: フィールドコード "${field.code}" (タイプ: ${field.type}) は存在しません。` +
+                    LoggingUtils.logWarning('validateAndFixLayout', 
+                        `フィールドコード "${field.code}" (タイプ: ${field.type}) は存在しません。` +
                         `このフィールドはレイアウトに含める前に add_fields ツールで作成する必要があります。` +
                         `システムフィールド（${SYSTEM_FIELD_TYPES.join(', ')}）とレイアウト要素（${LAYOUT_ELEMENT_TYPES.join(', ')}）は事前作成不要です。`);
                 }
@@ -117,19 +121,19 @@ function validateAndFixLayout(layout, existingFieldCodes = []) {
             // labelプロパティが指定されていない場合は自動的に補完
             if (!item.label) {
                 item.label = `グループ${Date.now()}`;
-                console.error(`Warning: GROUP要素に label プロパティが指定されていません。自動的に "${item.label}" を設定します。`);
+                LoggingUtils.logWarning('validateAndFixLayout', `GROUP要素に label プロパティが指定されていません。自動的に "${item.label}" を設定します。`);
             }
             
             // codeプロパティが指定されていない場合は自動的に補完
             if (!item.code) {
                 // labelから自動生成
                 item.code = generateFieldCode(item.label);
-                console.error(`Warning: GROUP要素に code プロパティが指定されていません。label から自動生成しました: "${item.code}"`);
+                LoggingUtils.logDetailedOperation('validateAndFixLayout', 'GROUP要素のコードを自動生成', { code: item.code });
             }
             
             // fieldsプロパティが指定されている場合はlayoutプロパティに変換
             if (item.fields !== undefined) {
-                console.error(`Warning: GROUP要素 "${item.code}" に fields プロパティが指定されています。layout プロパティに変換します。GROUP要素には fields ではなく layout プロパティを使用してください。`);
+                LoggingUtils.logWarning('validateAndFixLayout', `GROUP要素 "${item.code}" に fields プロパティが指定されています。layout プロパティに変換します。GROUP要素には fields ではなく layout プロパティを使用してください。`);
                 
                 // fieldsプロパティが配列でない場合は配列に変換
                 if (!Array.isArray(item.fields)) {
@@ -165,7 +169,7 @@ function validateAndFixLayout(layout, existingFieldCodes = []) {
                 
                 // フィールドコードを更新
                 item.code = newCode;
-                console.error(`Warning: GROUP要素のフィールドコードが重複しているため、自動的に "${item.code}" に変更しました。`);
+                LoggingUtils.logDetailedOperation('validateAndFixLayout', 'GROUP要素のフィールドコード重複を解消', { newCode: item.code });
             }
             
             // 使用済みリストに追加
@@ -175,18 +179,18 @@ function validateAndFixLayout(layout, existingFieldCodes = []) {
             // kintoneの仕様では省略すると false になるが、このMCP Serverでは明示的に true を設定
             if (item.openGroup === undefined) {
                 item.openGroup = true;
-                console.error(`Warning: GROUP要素 "${item.code}" の openGroup プロパティが指定されていません。自動的に true を設定します。`);
+                LoggingUtils.logDetailedOperation('validateAndFixLayout', 'GROUP要素のopenGroupを自動設定', { code: item.code, openGroup: true });
             }
             
             // layoutプロパティが指定されていない場合は空の配列を設定
             if (item.layout === undefined) {
                 item.layout = [];
-                console.error(`Warning: GROUP要素 "${item.code}" に layout プロパティが指定されていません。空の配列を設定します。`);
+                LoggingUtils.logWarning('validateAndFixLayout', `GROUP要素 "${item.code}" に layout プロパティが指定されていません。空の配列を設定します。`);
             }
             
             // layoutプロパティが配列でない場合は配列に変換
             if (!Array.isArray(item.layout)) {
-                console.error(`Warning: GROUP要素 "${item.code}" の layout プロパティが配列ではありません。自動的に配列に変換します。`);
+                LoggingUtils.logWarning('validateAndFixLayout', `GROUP要素 "${item.code}" の layout プロパティが配列ではありません。自動的に配列に変換します。`);
                 item.layout = [item.layout];
             }
             
@@ -194,10 +198,10 @@ function validateAndFixLayout(layout, existingFieldCodes = []) {
             const filteredLayout = [];
             for (const subItem of item.layout) {
                 if (subItem.type === "SUBTABLE") {
-                    console.error(`Warning: GROUP要素 "${item.code}" 内のSUBTABLE要素を自動的にトップレベルに移動しました。kintoneの仕様により、グループフィールド内にテーブルを入れることはできません。`);
+                    LoggingUtils.logWarning('validateAndFixLayout', `GROUP要素 "${item.code}" 内のSUBTABLE要素を自動的にトップレベルに移動しました。kintoneの仕様により、グループフィールド内にテーブルを入れることはできません。`);
                     extractedElements.push(subItem);
                 } else if (subItem.type === "GROUP") {
-                    console.error(`Warning: GROUP要素 "${item.code}" 内のGROUP要素を自動的にトップレベルに移動しました。kintoneの仕様により、グループフィールド内にグループフィールドを入れることはできません。`);
+                    LoggingUtils.logWarning('validateAndFixLayout', `GROUP要素 "${item.code}" 内のGROUP要素を自動的にトップレベルに移動しました。kintoneの仕様により、グループフィールド内にグループフィールドを入れることはできません。`);
                     extractedElements.push(subItem);
                 } else {
                     filteredLayout.push(subItem);
@@ -214,14 +218,14 @@ function validateAndFixLayout(layout, existingFieldCodes = []) {
             // labelプロパティが指定されていない場合は自動的に補完
             if (!item.label) {
                 item.label = `テーブル${Date.now()}`;
-                console.error(`Warning: SUBTABLE要素に label プロパティが指定されていません。自動的に "${item.label}" を設定します。`);
+                LoggingUtils.logWarning('validateAndFixLayout', `SUBTABLE要素に label プロパティが指定されていません。自動的に "${item.label}" を設定します。`);
             }
             
             // codeプロパティが指定されていない場合は自動的に補完
             if (!item.code) {
                 // labelから自動生成
                 item.code = generateFieldCode(item.label);
-                console.error(`Warning: SUBTABLE要素に code プロパティが指定されていません。label から自動生成しました: "${item.code}"`);
+                LoggingUtils.logDetailedOperation('validateAndFixLayout', 'SUBTABLE要素のコードを自動生成', { code: item.code });
             }
             
             // 既存のフィールドコードとの重複チェック
@@ -239,7 +243,7 @@ function validateAndFixLayout(layout, existingFieldCodes = []) {
                 
                 // フィールドコードを更新
                 item.code = newCode;
-                console.error(`Warning: SUBTABLE要素のフィールドコードが重複しているため、自動的に "${item.code}" に変更しました。`);
+                LoggingUtils.logDetailedOperation('validateAndFixLayout', 'SUBTABLE要素のフィールドコード重複を解消', { newCode: item.code });
             }
             
             // 使用済みリストに追加
@@ -250,7 +254,7 @@ function validateAndFixLayout(layout, existingFieldCodes = []) {
                 // GROUP要素がテーブル内に含まれていないことを確認
                 const groupFields = Object.entries(item.fields).filter(([_, field]) => field.type === "GROUP");
                 if (groupFields.length > 0) {
-                    console.error(`Warning: SUBTABLE要素内にGROUP要素が含まれています。kintoneの仕様により、グループフィールドはテーブル化できません。GROUP要素を自動的に除外します。`);
+                    LoggingUtils.logWarning('validateAndFixLayout', 'SUBTABLE要素内にGROUP要素が含まれています。kintoneの仕槕により、グループフィールドはテーブル化できません。GROUP要素を自動的に除外します。');
                     
                     // GROUP要素を除外
                     groupFields.forEach(([key, _]) => {
@@ -346,15 +350,14 @@ function cleanupGroupElements(layout) {
 
 // レイアウト関連のツールを処理する関数
 export async function handleLayoutTools(name, args, repository) {
+    // 共通のツール実行ログ
+    LoggingUtils.logToolExecution('layout', name, args);
+    
     switch (name) {
         case 'get_form_layout': {
-            // 引数のチェック
-            if (!args.app_id) {
-                throw new Error('app_id は必須パラメータです。');
-            }
+            ValidationUtils.validateRequired(args, ['app_id']);
             
-            // デバッグ用のログ出力
-            console.error(`Getting form layout for app: ${args.app_id}`);
+            LoggingUtils.logDetailedOperation('get_form_layout', 'フォームレイアウト取得', { appId: args.app_id });
             
             const response = await repository.getFormLayout(args.app_id);
             
@@ -362,60 +365,55 @@ export async function handleLayoutTools(name, args, repository) {
         }
         
         case 'update_form_layout': {
-            // 引数のチェック
-            if (!args.app_id) {
-                throw new Error('app_id は必須パラメータです。');
-            }
-            if (!args.layout) {
-                throw new Error('layout は必須パラメータです。');
-            }
+            ValidationUtils.validateRequired(args, ['app_id', 'layout']);
+            ValidationUtils.validateArray(args.layout, 'layout');
             
-            // デバッグ用のログ出力
-            console.error(`Updating form layout for app: ${args.app_id}`);
-            console.error('Input layout:', JSON.stringify(args.layout, null, 2));
+            LoggingUtils.logDetailedOperation('update_form_layout', 'フォームレイアウト更新開始', { appId: args.app_id });
+            LoggingUtils.logDetailedOperation('update_form_layout', '入力レイアウト', { layout: args.layout });
             
             // 既存のフィールド情報を取得
             let existingFieldCodes = [];
             try {
                 const existingFields = await repository.getFormFields(args.app_id);
                 existingFieldCodes = Object.keys(existingFields.properties || {});
-                console.error(`Existing field codes: ${existingFieldCodes.join(', ')}`);
+                LoggingUtils.logDetailedOperation('update_form_layout', '既存フィールド一覧', { fieldCodes: existingFieldCodes });
             } catch (error) {
-                console.error(`Failed to get existing fields: ${error.message}`);
-                console.error('Continuing without duplicate check');
+                LoggingUtils.logWarning('update_form_layout', `既存フィールドの取得に失敗: ${error.message}`);
+                LoggingUtils.logWarning('update_form_layout', '重複チェックなしで続行します');
             }
             
             // レイアウトデータを検証・修正（同期的に呼び出し）
             const validatedLayout = validateAndFixLayout(args.layout, existingFieldCodes);
             
             // 変換後のレイアウトをログに出力
-            console.error(`Converted layout:`, JSON.stringify(validatedLayout, null, 2));
+            LoggingUtils.logDetailedOperation('update_form_layout', '検証済みレイアウト', { layout: validatedLayout });
             
             // フォームフィールド情報を取得
             let formFields = null;
             try {
-                console.error(`フォームフィールド情報を取得中: アプリID ${args.app_id}`);
+                LoggingUtils.logDetailedOperation('update_form_layout', 'フォームフィールド情報取得中', { appId: args.app_id });
                 const fieldsResponse = await repository.getFormFields(args.app_id);
                 formFields = fieldsResponse.properties || {};
-                console.error(`フォームフィールド情報の取得に成功: ${Object.keys(formFields).length} フィールド`);
+                LoggingUtils.logDetailedOperation('update_form_layout', 'フォームフィールド情報取得完了', { fieldCount: Object.keys(formFields).length });
                 
                 // ルックアップフィールドの情報をログに出力（デバッグ用）
                 const lookupFields = Object.entries(formFields).filter(([_, field]) => field.lookup !== undefined);
                 if (lookupFields.length > 0) {
-                    console.error(`ルックアップフィールドを検出: ${lookupFields.length}件`);
+                    LoggingUtils.logDetailedOperation('update_form_layout', 'ルックアップフィールド検出', { count: lookupFields.length });
                     lookupFields.forEach(([code, field]) => {
-                        console.error(`ルックアップフィールド "${code}": ${JSON.stringify({
+                        LoggingUtils.logDetailedOperation('update_form_layout', 'ルックアップフィールド詳細', {
+                            code,
                             type: field.type,
                             relatedApp: field.lookup.relatedApp?.app,
                             relatedKeyField: field.lookup.relatedKeyField
-                        })}`);
+                        });
                     });
                 } else {
-                    console.error('ルックアップフィールドは見つかりませんでした');
+                    LoggingUtils.logDetailedOperation('update_form_layout', 'ルックアップフィールドなし', {});
                 }
             } catch (error) {
-                console.error(`フォームフィールド情報の取得に失敗: ${error.message}`);
-                console.error('幅の自動補正をスキップします');
+                LoggingUtils.logWarning('update_form_layout', `フォームフィールド情報の取得に失敗: ${error.message}`);
+                LoggingUtils.logWarning('update_form_layout', '幅の自動補正をスキップします');
                 formFields = null;
             }
             
@@ -424,7 +422,7 @@ export async function handleLayoutTools(name, args, repository) {
             let layoutGuidances = [];
             
             if (formFields) {
-                console.error(`レイアウトの幅を自動補正します`);
+                LoggingUtils.logDetailedOperation('update_form_layout', 'レイアウト幅の自動補正開始', {});
                 
                 // 補正前のレイアウト情報をログに出力
                 const fieldsBeforeCorrection = [];
@@ -447,17 +445,17 @@ export async function handleLayoutTools(name, args, repository) {
                     });
                 };
                 extractFieldInfo(validatedLayout);
-                console.error(`補正前のフィールド情報: ${JSON.stringify(fieldsBeforeCorrection)}`);
+                LoggingUtils.logDetailedOperation('update_form_layout', '補正前のフィールド情報', { fields: fieldsBeforeCorrection });
                 
                 // 幅の自動補正を実行
                 const correctionResult = autoCorrectLayoutWidths(validatedLayout, formFields);
                 correctedLayout = correctionResult.layout;
                 layoutGuidances = correctionResult.guidances;
-                console.error(`レイアウトの幅の自動補正が完了しました`);
+                LoggingUtils.logDetailedOperation('update_form_layout', 'レイアウト幅の自動補正完了', {});
                 
                 // ガイダンスメッセージがあれば出力
                 if (layoutGuidances.length > 0) {
-                    console.error(`ガイダンスメッセージ: ${layoutGuidances.join('\n')}`);
+                    LoggingUtils.logDetailedOperation('update_form_layout', 'ガイダンスメッセージ', { messages: layoutGuidances });
                 }
                 
                 // 補正後のレイアウト情報をログに出力
@@ -481,7 +479,7 @@ export async function handleLayoutTools(name, args, repository) {
                     });
                 };
                 extractCorrectedFieldInfo(correctedLayout);
-                console.error(`補正後のフィールド情報: ${JSON.stringify(fieldsAfterCorrection)}`);
+                LoggingUtils.logDetailedOperation('update_form_layout', '補正後のフィールド情報', { fields: fieldsAfterCorrection });
                 
                 // 変更があったフィールドを特定
                 const changedFields = fieldsAfterCorrection.filter((field, index) => {
@@ -489,12 +487,12 @@ export async function handleLayoutTools(name, args, repository) {
                     return beforeField && field.width !== beforeField.width;
                 });
                 if (changedFields.length > 0) {
-                    console.error(`幅が変更されたフィールド: ${JSON.stringify(changedFields)}`);
+                    LoggingUtils.logDetailedOperation('update_form_layout', '幅が変更されたフィールド', { fields: changedFields });
                 } else {
-                    console.error(`幅が変更されたフィールドはありません`);
+                    LoggingUtils.logDetailedOperation('update_form_layout', '幅が変更されたフィールドなし', {});
                 }
             } else {
-                console.error(`フォームフィールド情報が取得できなかったため、幅の自動補正をスキップします`);
+                LoggingUtils.logWarning('update_form_layout', 'フォームフィールド情報が取得できなかったため、幅の自動補正をスキップします');
             }
             
             // GROUPフィールドのlabelプロパティを削除し、layoutが空配列の場合はlayoutプロパティ自体を削除
@@ -504,7 +502,7 @@ export async function handleLayoutTools(name, args, repository) {
             const finalLayout = JSON.parse(JSON.stringify(cleanedLayout));
             
             // 最終的なレイアウトをログに出力
-            console.error(`Final layout (before API call):`, JSON.stringify(finalLayout, null, 2));
+            LoggingUtils.logDetailedOperation('update_form_layout', '最終レイアウト（API呼び出し前）', { layout: finalLayout });
             
             const revision = args.revision || -1; // リビジョン番号（省略時は最新）
             
@@ -526,36 +524,30 @@ export async function handleLayoutTools(name, args, repository) {
                 return response;
             } catch (error) {
                 // エラーの詳細情報を出力
-                console.error('Error updating form layout:', error);
+                LoggingUtils.logError('update_form_layout', 'フォームレイアウトの更新エラー', error);
                 if (error.errors) {
-                    console.error('Detailed errors:', JSON.stringify(error.errors, null, 2));
+                    LoggingUtils.logError('update_form_layout', '詳細エラー', error.errors);
                 }
                 throw error;
             }
         }
         
         case 'create_form_layout': {
-            // 引数のチェック
-            if (!args.app_id) {
-                throw new Error('app_id は必須パラメータです。');
-            }
-            if (!args.fields || !Array.isArray(args.fields)) {
-                throw new Error('fields は必須パラメータで、配列形式で指定する必要があります。');
-            }
+            ValidationUtils.validateRequired(args, ['app_id', 'fields']);
+            ValidationUtils.validateArray(args.fields, 'fields');
             
-            // デバッグ用のログ出力
-            console.error(`Creating form layout for app: ${args.app_id}`);
-            console.error(`Fields:`, JSON.stringify(args.fields, null, 2));
+            LoggingUtils.logDetailedOperation('create_form_layout', 'フォームレイアウト作成開始', { appId: args.app_id });
+            LoggingUtils.logDetailedOperation('create_form_layout', 'フィールド定義', { fields: args.fields });
             
             // 既存のフィールド情報を取得
             let existingFieldCodes = [];
             try {
                 const existingFields = await repository.getFormFields(args.app_id);
                 existingFieldCodes = Object.keys(existingFields.properties || {});
-                console.error(`Existing field codes: ${existingFieldCodes.join(', ')}`);
+                LoggingUtils.logDetailedOperation('update_form_layout', '既存フィールド一覧', { fieldCodes: existingFieldCodes });
             } catch (error) {
-                console.error(`Failed to get existing fields: ${error.message}`);
-                console.error('Continuing without duplicate check');
+                LoggingUtils.logWarning('update_form_layout', `既存フィールドの取得に失敗: ${error.message}`);
+                LoggingUtils.logWarning('update_form_layout', '重複チェックなしで続行します');
             }
             
             // レイアウト構造を構築
@@ -569,18 +561,18 @@ export async function handleLayoutTools(name, args, repository) {
             try {
                 const fieldsResponse = await repository.getFormFields(args.app_id);
                 formFields = fieldsResponse.properties || {};
-                console.error(`Retrieved form fields for width correction: ${Object.keys(formFields).length} fields`);
+                LoggingUtils.logDetailedOperation('create_form_layout', '幅補正用フォームフィールド取得完了', { fieldCount: Object.keys(formFields).length });
                 
                 // ルックアップフィールドの情報をログに出力（デバッグ用）
                 const lookupFields = Object.entries(formFields).filter(([_, field]) => field.lookup !== undefined);
                 if (lookupFields.length > 0) {
-                    console.error(`Found ${lookupFields.length} lookup fields: ${lookupFields.map(([code]) => code).join(', ')}`);
+                    LoggingUtils.logDetailedOperation('create_form_layout', 'ルックアップフィールド検出', { count: lookupFields.length, fields: lookupFields.map(([code]) => code) });
                 } else {
-                    console.error('No lookup fields found in form fields');
+                    LoggingUtils.logDetailedOperation('create_form_layout', 'ルックアップフィールドなし', {});
                 }
             } catch (error) {
-                console.error(`Failed to get form fields for width correction: ${error.message}`);
-                console.error('Continuing without width correction');
+                LoggingUtils.logWarning('create_form_layout', `幅補正用フィールド情報の取得に失敗: ${error.message}`);
+                LoggingUtils.logWarning('create_form_layout', '幅補正なしで続行します');
             }
             
             // レイアウトの幅を自動補正
@@ -591,11 +583,11 @@ export async function handleLayoutTools(name, args, repository) {
                 const correctionResult = autoCorrectLayoutWidths(validatedLayout, formFields);
                 correctedLayout = correctionResult.layout;
                 layoutGuidances = correctionResult.guidances;
-                console.error(`Applied width correction to layout`);
+                LoggingUtils.logDetailedOperation('create_form_layout', 'レイアウト幅補正適用完了', {});
                 
                 // ガイダンスメッセージがあれば出力
                 if (layoutGuidances.length > 0) {
-                    console.error(`ガイダンスメッセージ: ${layoutGuidances.join('\n')}`);
+                    LoggingUtils.logDetailedOperation('update_form_layout', 'ガイダンスメッセージ', { messages: layoutGuidances });
                 }
             }
             
@@ -603,7 +595,7 @@ export async function handleLayoutTools(name, args, repository) {
             const finalLayout = JSON.parse(JSON.stringify(correctedLayout));
             
             // 最終的なレイアウトをログに出力
-            console.error(`Final layout (before API call):`, JSON.stringify(finalLayout, null, 2));
+            LoggingUtils.logDetailedOperation('update_form_layout', '最終レイアウト（API呼び出し前）', { layout: finalLayout });
             
             try {
                 // レイアウトを更新
@@ -628,29 +620,23 @@ export async function handleLayoutTools(name, args, repository) {
                 }
             } catch (error) {
                 // エラーの詳細情報を出力
-                console.error('Error creating form layout:', error);
+                LoggingUtils.logError('create_form_layout', 'フォームレイアウトの作成エラー', error);
                 if (error.errors) {
-                    console.error('Detailed errors:', JSON.stringify(error.errors, null, 2));
+                    LoggingUtils.logError('create_form_layout', '詳細エラー', error.errors);
                 }
                 throw error;
             }
         }
         
         case 'add_layout_element': {
-            // 引数のチェック
-            if (!args.app_id) {
-                throw new Error('app_id は必須パラメータです。');
-            }
-            if (!args.element) {
-                throw new Error('element は必須パラメータです。');
-            }
-            if (args.position !== undefined && typeof args.position !== 'object') {
-                throw new Error('position はオブジェクト形式で指定する必要があります。');
+            ValidationUtils.validateRequired(args, ['app_id', 'element']);
+            ValidationUtils.validateObject(args.element, 'element');
+            if (args.position !== undefined) {
+                ValidationUtils.validateObject(args.position, 'position');
             }
             
-            // デバッグ用のログ出力
-            console.error(`Adding layout element to app: ${args.app_id}`);
-            console.error(`Element:`, JSON.stringify(args.element, null, 2));
+            LoggingUtils.logDetailedOperation('add_layout_element', 'レイアウト要素追加開始', { appId: args.app_id });
+            LoggingUtils.logDetailedOperation('add_layout_element', '追加要素', { element: args.element });
             
             // 現在のレイアウトを取得
             const currentLayout = await repository.getFormLayout(args.app_id);
@@ -660,10 +646,10 @@ export async function handleLayoutTools(name, args, repository) {
             try {
                 const existingFields = await repository.getFormFields(args.app_id);
                 existingFieldCodes = Object.keys(existingFields.properties || {});
-                console.error(`Existing field codes: ${existingFieldCodes.join(', ')}`);
+                LoggingUtils.logDetailedOperation('update_form_layout', '既存フィールド一覧', { fieldCodes: existingFieldCodes });
             } catch (error) {
-                console.error(`Failed to get existing fields: ${error.message}`);
-                console.error('Continuing without duplicate check');
+                LoggingUtils.logWarning('update_form_layout', `既存フィールドの取得に失敗: ${error.message}`);
+                LoggingUtils.logWarning('update_form_layout', '重複チェックなしで続行します');
             }
             
             // 要素を検証・修正
@@ -686,10 +672,10 @@ export async function handleLayoutTools(name, args, repository) {
             try {
                 const fieldsResponse = await repository.getFormFields(args.app_id);
                 formFields = fieldsResponse.properties || {};
-                console.error(`Retrieved form fields for width correction`);
+                LoggingUtils.logDetailedOperation('add_layout_element', '幅補正用フォームフィールド取得完了', {});
             } catch (error) {
-                console.error(`Failed to get form fields for width correction: ${error.message}`);
-                console.error('Continuing without width correction');
+                LoggingUtils.logWarning('create_form_layout', `幅補正用フィールド情報の取得に失敗: ${error.message}`);
+                LoggingUtils.logWarning('create_form_layout', '幅補正なしで続行します');
             }
             
             // レイアウトの幅を自動補正
@@ -700,11 +686,11 @@ export async function handleLayoutTools(name, args, repository) {
                 const correctionResult = autoCorrectLayoutWidths(newLayout, formFields);
                 correctedLayout = correctionResult.layout;
                 layoutGuidances = correctionResult.guidances;
-                console.error(`Applied width correction to layout`);
+                LoggingUtils.logDetailedOperation('create_form_layout', 'レイアウト幅補正適用完了', {});
                 
                 // ガイダンスメッセージがあれば出力
                 if (layoutGuidances.length > 0) {
-                    console.error(`ガイダンスメッセージ: ${layoutGuidances.join('\n')}`);
+                    LoggingUtils.logDetailedOperation('update_form_layout', 'ガイダンスメッセージ', { messages: layoutGuidances });
                 }
             }
             
@@ -712,7 +698,7 @@ export async function handleLayoutTools(name, args, repository) {
             const finalLayout = JSON.parse(JSON.stringify(correctedLayout));
             
             // 最終的なレイアウトをログに出力
-            console.error(`Final layout (before API call):`, JSON.stringify(finalLayout, null, 2));
+            LoggingUtils.logDetailedOperation('update_form_layout', '最終レイアウト（API呼び出し前）', { layout: finalLayout });
             
             try {
                 // レイアウトを更新
@@ -737,30 +723,23 @@ export async function handleLayoutTools(name, args, repository) {
                 }
             } catch (error) {
                 // エラーの詳細情報を出力
-                console.error('Error adding layout element:', error);
+                LoggingUtils.logError('add_layout_element', 'レイアウト要素の追加エラー', error);
                 if (error.errors) {
-                    console.error('Detailed errors:', JSON.stringify(error.errors, null, 2));
+                    LoggingUtils.logError('add_layout_element', '詳細エラー', error.errors);
                 }
                 throw error;
             }
         }
         
         case 'create_group_layout': {
-            // 引数のチェック
-            if (!args.code) {
-                throw new Error('code は必須パラメータです。');
-            }
-            if (!args.label) {
-                throw new Error('label は必須パラメータです。');
-            }
-            if (!args.fields || !Array.isArray(args.fields)) {
-                throw new Error('fields は必須パラメータで、配列形式で指定する必要があります。');
-            }
+            ValidationUtils.validateRequired(args, ['code', 'label', 'fields']);
+            ValidationUtils.validateArray(args.fields, 'fields');
             
-            // デバッグ用のログ出力
-            console.error(`Creating group layout: ${args.code}`);
-            console.error(`Label: ${args.label}`);
-            console.error(`Fields:`, JSON.stringify(args.fields, null, 2));
+            LoggingUtils.logDetailedOperation('create_group_layout', 'グループレイアウト作成', { 
+                code: args.code, 
+                label: args.label,
+                fields: args.fields 
+            });
             
             // グループ内のレイアウトを構築
             const groupLayout = buildGroupLayout(args.fields, args.options || {});
@@ -778,13 +757,10 @@ export async function handleLayoutTools(name, args, repository) {
         }
         
         case 'create_table_layout': {
-            // 引数のチェック
-            if (!args.rows || !Array.isArray(args.rows)) {
-                throw new Error('rows は必須パラメータで、配列形式で指定する必要があります。');
-            }
+            ValidationUtils.validateRequired(args, ['rows']);
+            ValidationUtils.validateArray(args.rows, 'rows');
             
-            // デバッグ用のログ出力
-            console.error(`Creating table layout with ${args.rows.length} rows`);
+            LoggingUtils.logDetailedOperation('create_table_layout', 'テーブルレイアウト作成', { rowCount: args.rows.length });
             
             // テーブルレイアウトを構築
             const tableLayout = buildTableLayout(args.rows, args.options || {});
@@ -793,7 +769,6 @@ export async function handleLayoutTools(name, args, repository) {
         }
         
         case 'create_spacer_element': {
-            // 引数のチェック
             const elementId = args.elementId;
             const size = {};
             
@@ -805,11 +780,11 @@ export async function handleLayoutTools(name, args, repository) {
                 size.height = args.height;
             }
             
-            // デバッグ用のログ出力
-            console.error(`Creating spacer element${elementId ? ` with ID: ${elementId}` : ''}`);
+            const logData = { elementId };
             if (Object.keys(size).length > 0) {
-                console.error(`Size:`, JSON.stringify(size, null, 2));
+                logData.size = size;
             }
+            LoggingUtils.logDetailedOperation('create_spacer_element', 'スペーサー要素作成', logData);
             
             // スペース要素を作成
             const spacerElement = createSpacerElement(
@@ -821,11 +796,9 @@ export async function handleLayoutTools(name, args, repository) {
         }
         
         case 'create_hr_element': {
-            // 引数のチェック
             const elementId = args.elementId;
             
-            // デバッグ用のログ出力
-            console.error(`Creating hr element${elementId ? ` with ID: ${elementId}` : ''}`);
+            LoggingUtils.logDetailedOperation('create_hr_element', '罫線要素作成', { elementId });
             
             // 罫線要素を作成
             const hrElement = createHrElement(elementId);
@@ -834,16 +807,12 @@ export async function handleLayoutTools(name, args, repository) {
         }
         
         case 'create_label_element': {
-            // 引数のチェック
-            if (!args.value) {
-                throw new Error('value は必須パラメータです。');
-            }
+            ValidationUtils.validateRequired(args, ['value']);
             
             const value = args.value;
             const elementId = args.elementId;
             
-            // デバッグ用のログ出力
-            console.error(`Creating label element with value: "${value}"`);
+            LoggingUtils.logDetailedOperation('create_label_element', 'ラベル要素作成', { value, elementId });
             
             // ラベル要素を作成
             const labelElement = createLabelElement(value, elementId);

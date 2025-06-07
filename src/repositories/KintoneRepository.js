@@ -53,6 +53,46 @@ export class KintoneRepository {
         return this.recordRepo.addRecordComment(appId, recordId, text, mentions);
     }
 
+    async getRecordAcl(appId, recordId) {
+        return this.appRepo.getRecordAcl(appId, recordId);
+    }
+
+    async evaluateRecordsAcl(appId, recordIds) {
+        return this.appRepo.evaluateRecordsAcl(appId, recordIds);
+    }
+
+    async updateRecordStatus(appId, recordId, action, assignee = null) {
+        return this.recordRepo.updateRecordStatus(appId, recordId, action, assignee);
+    }
+
+    async updateRecordAssignees(appId, recordId, assignees) {
+        return this.recordRepo.updateRecordAssignees(appId, recordId, assignees);
+    }
+
+    async getRecordComments(appId, recordId, order = 'desc', offset = 0, limit = 10) {
+        return this.recordRepo.getRecordComments(appId, recordId, order, offset, limit);
+    }
+
+    async updateRecordComment(appId, recordId, commentId, text, mentions = []) {
+        return this.recordRepo.updateRecordComment(appId, recordId, commentId, text, mentions);
+    }
+
+    async createRecords(appId, records) {
+        return this.recordRepo.createRecords(appId, records);
+    }
+
+    async updateRecords(appId, records) {
+        return this.recordRepo.updateRecords(appId, records);
+    }
+
+    async upsertRecord(appId, updateKey, fields) {
+        return this.recordRepo.upsertRecord(appId, updateKey, fields);
+    }
+
+    async updateRecordByKey(appId, keyField, keyValue, fields) {
+        return this.recordRepo.updateRecordByKey(appId, keyField, keyValue, fields);
+    }
+
     // アプリ関連
     async getAppsInfo(appName) {
         return this.appRepo.getAppsInfo(appName);
@@ -188,5 +228,100 @@ export class KintoneRepository {
         } else {
             return this.appRepo.getProcessManagement(appId);
         }
+    }
+
+    // アプリのプロセス管理設定を更新
+    async updateProcessManagement(appId, enable, states, actions, revision = -1) {
+        return this.appRepo.updateProcessManagement(appId, enable, states, actions, revision);
+    }
+
+    // アプリのビュー設定を取得
+    async getViews(appId, preview = false) {
+        return this.appRepo.getViews(appId, preview);
+    }
+
+    // アプリのビュー設定を更新
+    async updateViews(appId, views, revision = -1) {
+        return this.appRepo.updateViews(appId, views, revision);
+    }
+
+    // アプリのアクセス権限を取得
+    async getAppAcl(appId, preview = false) {
+        return this.appRepo.getAppAcl(appId, preview);
+    }
+
+    // フィールドのアクセス権限を取得
+    async getFieldAcl(appId, preview = false) {
+        return this.appRepo.getFieldAcl(appId, preview);
+    }
+
+    // フィールドのアクセス権限を更新
+    async updateFieldAcl(appId, rights, revision = -1) {
+        return this.appRepo.updateFieldAcl(appId, rights, revision);
+    }
+
+    // グラフ設定を取得
+    async getReports(appId, preview = false) {
+        return this.appRepo.getReports(appId, preview);
+    }
+
+    // グラフ設定を更新
+    async updateReports(appId, reports, revision = -1) {
+        return this.appRepo.updateReports(appId, reports, revision);
+    }
+
+    // 通知条件設定を取得
+    async getNotifications(appId, preview = false) {
+        return this.appRepo.getNotifications(appId, preview);
+    }
+
+    // 通知条件設定を更新
+    async updateNotifications(appId, notifications, revision = -1) {
+        return this.appRepo.updateNotifications(appId, notifications, revision);
+    }
+
+    // レコード単位の通知設定を取得
+    async getPerRecordNotifications(appId, preview = false) {
+        return this.appRepo.getPerRecordNotifications(appId, preview);
+    }
+
+    // レコード単位の通知設定を更新
+    async updatePerRecordNotifications(appId, notifications, revision = -1) {
+        return this.appRepo.updatePerRecordNotifications(appId, notifications, revision);
+    }
+
+    // リマインダー通知設定を取得
+    async getReminderNotifications(appId, preview = false) {
+        return this.appRepo.getReminderNotifications(appId, preview);
+    }
+
+    // リマインダー通知設定を更新
+    async updateReminderNotifications(appId, notifications, revision = -1) {
+        return this.appRepo.updateReminderNotifications(appId, notifications, revision);
+    }
+
+    // アプリアクション設定を更新
+    async updateAppActions(appId, actions, revision = -1) {
+        return this.appRepo.updateAppActions(appId, actions, revision);
+    }
+
+    // プラグイン設定を更新
+    async updatePlugins(appId, plugins, revision = -1) {
+        return this.appRepo.updatePlugins(appId, plugins, revision);
+    }
+
+    // JavaScript/CSSカスタマイズ設定を取得
+    async getAppCustomize(appId, preview = false) {
+        return this.appRepo.getAppCustomize(appId, preview);
+    }
+
+    // JavaScript/CSSカスタマイズ設定を更新
+    async updateAppCustomize(appId, scope, desktop, mobile, revision = -1) {
+        return this.appRepo.updateAppCustomize(appId, scope, desktop, mobile, revision);
+    }
+
+    // アプリのアクセス権限を更新
+    async updateAppAcl(appId, rights, revision = -1) {
+        return this.appRepo.updateAppAcl(appId, rights, revision);
     }
 }

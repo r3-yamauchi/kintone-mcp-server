@@ -1,5 +1,6 @@
 // src/repositories/base/BaseKintoneRepository.js
 import { KintoneRestAPIClient, KintoneRestAPIError } from '@kintone/rest-api-client';
+import { LoggingUtils } from '../../utils/LoggingUtils.js';
 
 export class BaseKintoneRepository {
     constructor(credentials) {
@@ -26,5 +27,42 @@ export class BaseKintoneRepository {
         }
         console.error('Unexpected Error:', error);
         throw new Error(`Failed to ${operation}: ${error.message}`);
+    }
+    
+    /**
+     * ログ付きでAPIを実行する共通メソッド
+     * @param {string} operation - 操作名
+     * @param {Function} apiCall - API呼び出し関数
+     * @param {string} errorContext - エラーコンテキスト
+     * @returns {Promise<*>} APIレスポンス
+     */
+    async executeWithLogging(operation, apiCall, errorContext) {
+        try {
+            LoggingUtils.logOperation(operation, '');
+            const response = await apiCall();
+            LoggingUtils.logApiResponse(operation, response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, errorContext);
+        }
+    }
+    
+    /**
+     * パラメータログ付きでAPIを実行する共通メソッド
+     * @param {string} operation - 操作名
+     * @param {Object} params - APIパラメータ
+     * @param {Function} apiCall - API呼び出し関数
+     * @param {string} errorContext - エラーコンテキスト
+     * @returns {Promise<*>} APIレスポンス
+     */
+    async executeWithDetailedLogging(operation, params, apiCall, errorContext) {
+        try {
+            LoggingUtils.logApiCall(operation, params);
+            const response = await apiCall();
+            LoggingUtils.logApiResponse(operation, response);
+            return response;
+        } catch (error) {
+            this.handleKintoneError(error, errorContext);
+        }
     }
 }

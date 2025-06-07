@@ -70,7 +70,12 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 - `search_records`: kintoneアプリのレコードを検索
 - `create_record`: kintoneアプリに新しいレコードを作成
 - `update_record`: kintoneアプリの既存レコードを更新
+- `upsert_record`: kintoneアプリの重複禁止フィールドを指定してレコードを作成または更新（Upsert操作）
 - `add_record_comment`: kintoneレコードにコメントを追加
+- `update_record_status`: kintoneレコードのステータスを更新（プロセス管理）
+- `update_record_assignees`: kintoneレコードの作業者を更新（プロセス管理）
+- `get_record_comments`: kintoneレコードのコメントを取得
+- `update_record_comment`: kintoneレコードの既存コメントを更新
 
 #### ファイル操作
 
@@ -84,6 +89,15 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 - `get_app_actions`: kintoneアプリのアプリアクション設定を取得
 - `get_app_plugins`: kintoneアプリに追加されているプラグインの一覧を取得
 - `get_process_management`: kintoneアプリのプロセス管理設定を取得
+- `get_app_acl`: kintoneアプリのアクセス権限を取得
+- `get_field_acl`: kintoneアプリのフィールドのアクセス権限を取得
+- `get_record_acl`: 指定したレコードのアクセス権限を取得
+- `evaluate_records_acl`: 指定した条件でレコードのアクセス権限を評価
+- `get_views`: kintoneアプリの一覧（ビュー）の設定を取得
+- `get_reports`: kintoneアプリのグラフ設定を取得
+- `get_notifications`: kintoneアプリの通知条件設定を取得
+- `get_per_record_notifications`: kintoneアプリのレコード単位の通知設定を取得
+- `get_reminder_notifications`: kintoneアプリのリマインダー通知設定を取得
 
 #### アプリ操作
 
@@ -96,6 +110,15 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 - `get_deploy_status`: アプリ設定の運用環境への反映状況を確認する
 - `move_app_to_space`: kintoneアプリを指定したスペースに移動
 - `move_app_from_space`: kintoneアプリをスペースに所属させないようにする
+- `update_app_acl`: kintoneアプリのアクセス権限を更新
+- `update_field_acl`: kintoneアプリのフィールドのアクセス権限を更新
+- `update_views`: kintoneアプリの一覧（ビュー）の設定を更新
+- `update_reports`: kintoneアプリのグラフ設定を更新
+- `update_notifications`: kintoneアプリの通知条件設定を更新
+- `update_per_record_notifications`: kintoneアプリのレコード単位の通知設定を更新
+- `update_reminder_notifications`: kintoneアプリのリマインダー通知設定を更新
+- `update_process_management`: kintoneアプリのプロセス管理設定を更新
+- `update_app_actions`: kintoneアプリのアクション設定を更新
 
 #### スペース操作
 
@@ -128,7 +151,7 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 - [kintoneと生成AI(Claude)のちょっとイイ関係](https://www.r3it.com/blog/kintone-mcp-server-20250115-yamauchi)
 - [kintone AIラボ と kintone用 MCP Server の現在地](https://www.r3it.com/blog/kintone-ai-lab-20250501-yamauchi)
 
-Webブラウザー版の Claude からも利用できる OAuth をサポートした リモートMCP Server が 別途 [こちら](https://github.com/r3-yamauchi/kintone-oauth-mcp-server-cfw) にあります。
+Webブラウザー版の Claude からも利用できる OAuth をサポートした リモートMCPサーバー のコードを 別途 [こちら](https://github.com/r3-yamauchi/kintone-oauth-mcp-server-cfw) で公開しています。
 
 **「kintone」はサイボウズ株式会社の登録商標です。**
 

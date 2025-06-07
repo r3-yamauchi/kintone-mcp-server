@@ -1,4 +1,5 @@
 // src/server/tools/SystemTools.js
+import { LoggingUtils } from '../../utils/LoggingUtils.js';
 
 /**
  * システム関連のツールを実装するモジュール
@@ -8,6 +9,8 @@
  * 例外的な対応です。パスワードは引き続き厳重に保護し、一切表示しません。
  */
 export async function handleSystemTools(name, args, repository) {
+    // 共通のツール実行ログ
+    LoggingUtils.logToolExecution('system', name, args);
     switch (name) {
         case 'get_kintone_domain': {
             // 接続先ドメインを文字列として直接返す

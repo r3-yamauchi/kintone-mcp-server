@@ -13,7 +13,9 @@ export class ToolRouter {
     constructor() {
         this.toolCategories = {
             record: {
-                tools: ['get_record', 'search_records', 'create_record', 'update_record', 'add_record_comment'],
+                tools: ['get_record', 'search_records', 'create_record', 'update_record', 'add_record_comment', 
+                       'update_record_status', 'update_record_assignees',
+                       'get_record_comments', 'update_record_comment', 'create_records', 'upsert_record'],
                 handler: handleRecordTools
             },
             app: {
@@ -22,7 +24,11 @@ export class ToolRouter {
                     'get_form_layout', 'update_form_layout', 'get_preview_app_settings',
                     'get_preview_form_fields', 'get_preview_form_layout',
                     'move_app_to_space', 'move_app_from_space', 'get_app_actions', 'get_app_plugins',
-                    'get_process_management'
+                    'get_process_management', 'update_process_management', 'get_views', 'update_views', 'get_app_acl',
+                    'get_field_acl', 'update_field_acl', 'get_reports', 'update_reports',
+                    'get_notifications', 'update_notifications', 'get_per_record_notifications', 'update_per_record_notifications',
+                    'get_reminder_notifications', 'update_reminder_notifications', 'update_app_actions', 'update_plugins',
+                    'get_app_customize', 'update_app_customize', 'update_app_acl', 'get_record_acl', 'evaluate_records_acl'
                 ],
                 handler: handleAppTools
             },

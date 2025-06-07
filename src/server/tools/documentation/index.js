@@ -1,22 +1,43 @@
 // src/server/tools/documentation/index.js
 
-// 各ドキュメントファイルからエクスポート
-export { getTextFieldDocumentation } from './textFields.js';
-export { getNumberFieldDocumentation } from './numberField.js';
-export { getDateFieldDocumentation } from './dateField.js';
-export { getTimeFieldDocumentation } from './timeField.js';
-export { getDateTimeFieldDocumentation } from './dateTimeField.js';
-export { getRichTextDocumentation } from './richText.js';
-export { getFileFieldDocumentation } from './fileField.js';
-export { getUserSelectDocumentation } from './userSelect.js';
-export { getSubtableDocumentation } from './subtable.js';
-export { getCalcFieldDocumentation } from './calcField.js';
-export { getChoiceFieldDocumentation } from './choiceFields.js';
-export { getLinkFieldDocumentation } from './linkField.js';
-export { getLookupDocumentation } from './lookup.js';
-export { getReferenceTableDocumentation } from './referenceTable.js';
-export { getSystemFieldDocumentation } from './systemFields.js';
-export { getLayoutFieldDocumentation, groupElementStructure } from './layoutFields.js';
+// 各ドキュメントファイルからインポート
+import { getTextFieldDocumentation } from './textFields.js';
+import { getNumberFieldDocumentation } from './numberField.js';
+import { getDateFieldDocumentation } from './dateField.js';
+import { getTimeFieldDocumentation } from './timeField.js';
+import { getDateTimeFieldDocumentation } from './dateTimeField.js';
+import { getRichTextDocumentation } from './richText.js';
+import { getFileFieldDocumentation } from './fileField.js';
+import { getUserSelectDocumentation } from './userSelect.js';
+import { getSubtableDocumentation } from './subtable.js';
+import { getCalcFieldDocumentation } from './calcField.js';
+import { getChoiceFieldDocumentation } from './choiceFields.js';
+import { getLinkFieldDocumentation } from './linkField.js';
+import { getLookupDocumentation } from './lookup.js';
+import { getReferenceTableDocumentation } from './referenceTable.js';
+import { getSystemFieldDocumentation } from './systemFields.js';
+import { getLayoutFieldDocumentation, groupElementStructure } from './layoutFields.js';
+
+// 再エクスポート
+export {
+    getTextFieldDocumentation,
+    getNumberFieldDocumentation,
+    getDateFieldDocumentation,
+    getTimeFieldDocumentation,
+    getDateTimeFieldDocumentation,
+    getRichTextDocumentation,
+    getFileFieldDocumentation,
+    getUserSelectDocumentation,
+    getSubtableDocumentation,
+    getCalcFieldDocumentation,
+    getChoiceFieldDocumentation,
+    getLinkFieldDocumentation,
+    getLookupDocumentation,
+    getReferenceTableDocumentation,
+    getSystemFieldDocumentation,
+    getLayoutFieldDocumentation,
+    groupElementStructure
+};
 
 /**
  * フィールドタイプに基づいてドキュメントを取得する
@@ -45,6 +66,7 @@ export function getFieldTypeDocumentation(fieldType) {
         case 'ORGANIZATION_SELECT':
             return getUserSelectDocumentation(fieldType);
         case 'SUBTABLE':
+        case 'TABLE':
             return getSubtableDocumentation();
         case 'CALC':
             return getCalcFieldDocumentation();

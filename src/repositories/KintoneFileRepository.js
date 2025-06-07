@@ -1,10 +1,11 @@
 // src/repositories/KintoneFileRepository.js
 import { BaseKintoneRepository } from './base/BaseKintoneRepository.js';
+import { LoggingUtils } from '../utils/LoggingUtils.js';
 
 export class KintoneFileRepository extends BaseKintoneRepository {
     async uploadFile(fileName, fileData) {
         try {
-            console.error(`Uploading file: ${fileName}`);
+            LoggingUtils.logDetailedOperation('uploadFile', 'ファイルアップロード開始', { fileName });
             const buffer = Buffer.from(fileData, 'base64');
             const response = await this.client.file.uploadFile({
                 file: {
@@ -12,7 +13,10 @@ export class KintoneFileRepository extends BaseKintoneRepository {
                     data: buffer
                 }
             });
-            console.error('File upload response:', response);
+            LoggingUtils.logDetailedOperation('uploadFile', 'ファイルアップロード完了', { 
+                fileName,
+                fileKey: response.fileKey 
+            });
             return response;
         } catch (error) {
             this.handleKintoneError(error, `upload file ${fileName}`);
@@ -21,9 +25,12 @@ export class KintoneFileRepository extends BaseKintoneRepository {
 
     async downloadFile(fileKey) {
         try {
-            console.error(`Downloading file with key: ${fileKey}`);
+            LoggingUtils.logDetailedOperation('downloadFile', 'ファイルダウンロード開始', { fileKey });
             const response = await this.client.file.downloadFile({ fileKey: fileKey });
-            console.error('File download response:', response);
+            LoggingUtils.logDetailedOperation('downloadFile', 'ファイルダウンロード完了', { 
+                fileKey,
+                contentType: response.contentType || 'unknown' 
+            });
             return response;
         } catch (error) {
             this.handleKintoneError(error, `download file with key ${fileKey}`);
