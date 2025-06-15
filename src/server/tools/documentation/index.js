@@ -17,6 +17,7 @@ import { getLookupDocumentation } from './lookup.js';
 import { getReferenceTableDocumentation } from './referenceTable.js';
 import { getSystemFieldDocumentation } from './systemFields.js';
 import { getLayoutFieldDocumentation, groupElementStructure } from './layoutFields.js';
+import { getQueryLanguageDocumentation } from './queryLanguage.js';
 
 // 再エクスポート
 export {
@@ -36,7 +37,8 @@ export {
     getReferenceTableDocumentation,
     getSystemFieldDocumentation,
     getLayoutFieldDocumentation,
-    groupElementStructure
+    groupElementStructure,
+    getQueryLanguageDocumentation
 };
 
 /**

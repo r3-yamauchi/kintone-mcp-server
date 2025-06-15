@@ -73,5 +73,21 @@ export const documentationToolDefinitions = [
             longRunning: false,
             impact: 'low'
         }
+    },
+    {
+        name: 'get_query_language_documentation',
+        description: 'kintoneクエリ言語（検索クエリ）に関する詳細なドキュメントを取得します。演算子、条件式、並び替え、ページングなどの使い方を説明します。',
+        inputSchema: {
+            type: 'object',
+            properties: {}
+        },
+        annotations: {
+            readOnly: true,
+            safe: true,
+            category: 'documentation',
+            requiresConfirmation: false,
+            longRunning: false,
+            impact: 'low'
+        }
     }
 ];

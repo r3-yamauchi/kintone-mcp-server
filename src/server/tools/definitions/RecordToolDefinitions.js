@@ -32,7 +32,7 @@ export const recordToolDefinitions = [
     },
     {
         name: 'search_records',
-        description: 'kintoneアプリのレコードを検索します',
+        description: 'kintoneアプリのレコードを検索します。クエリ構文の詳細はget_query_language_documentationツールで確認できます。',
         inputSchema: {
             type: 'object',
             properties: {
@@ -42,7 +42,7 @@ export const recordToolDefinitions = [
                 },
                 query: {
                     type: 'string',
-                    description: '検索クエリ'
+                    description: '検索クエリ（例: status = "完了" and priority = "高" order by 更新日時 desc limit 10）。詳細な構文はget_query_language_documentationを参照してください。'
                 },
                 fields: {
                     type: 'array',

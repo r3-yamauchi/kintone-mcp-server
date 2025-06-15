@@ -1,6 +1,6 @@
 {
   "name": "kintone-mcp-server",
-  "version": "7.0.0",
+  "version": "7.1.0",
   "main": "server.js",
   "type": "module",
   "scripts": {

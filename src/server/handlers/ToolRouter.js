@@ -54,7 +54,7 @@ export class ToolRouter {
                 tools: [
                     'get_field_type_documentation', 'get_available_field_types',
                     'get_documentation_tool_description', 'get_field_creation_tool_description',
-                    'get_group_element_structure'
+                    'get_group_element_structure', 'get_query_language_documentation'
                 ],
                 handler: handleDocumentationTools
             },

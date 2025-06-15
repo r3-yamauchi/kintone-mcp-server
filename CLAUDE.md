@@ -98,7 +98,7 @@ User Request → ToolRouter → CategoryTools → Repository → kintone API
 
 ### ツールカテゴリー
 
-サーバーは9つのカテゴリーにわたる89のツールを提供します：
+サーバーは9つのカテゴリーにわたる79のツールを提供します：
 
 - **レコード (Records)**: kintoneレコードのCRUD操作（安全のためdeleteは意図的に除外）、新しくupsert_recordを追加
 - **アプリ (Apps)**: アプリ作成、フィールド管理、デプロイ
@@ -108,7 +108,7 @@ User Request → ToolRouter → CategoryTools → Repository → kintone API
 - **レイアウト (Layout)**: フォームレイアウト管理
 - **ユーザー (Users)**: ユーザーとグループ情報
 - **システム (System)**: 接続情報と診断
-- **ドキュメンテーション (Documentation)**: フィールドタイプのドキュメント
+- **ドキュメンテーション (Documentation)**: フィールドタイプとクエリ言語のドキュメント
 
 ### リポジトリパターン
 
@@ -344,7 +344,7 @@ if (existingFields[fieldCode]) {
 
 ## 重要な注意事項
 
-- **バージョン管理**: `package.json`と`MCPServer.js`の両方でバージョンを更新（現在7.0.0）
+- **バージョン管理**: `package.json`と`MCPServer.js`の両方でバージョンを更新（現在7.1.0）
 - **削除操作なし**: データの安全性のため意図的に除外
 - **テストフレームワーク**: 未実装、将来的に追加予定
 - **バッチ操作**: JSON-RPCバッチング予定だが未実装
@@ -353,7 +353,7 @@ if (existingFields[fieldCode]) {
 
 ## 実装済みAPIと今後の実装
 
-### 実装済みAPI (83ツール)
+### 実装済みAPI (79ツール)
 
 #### レコード操作 (15ツール)
 - `get_record`, `search_records`, `create_record`, `update_record`
@@ -388,7 +388,7 @@ if (existingFields[fieldCode]) {
 - **ファイル操作** (2ツール): `upload_file`, `download_file`
 - **ユーザー管理** (3ツール): `get_users`, `get_groups`, `get_group_users`
 - **システム** (2ツール): `get_kintone_domain`, `get_fields`
-- **ドキュメント** (5ツール): フィールドタイプのドキュメント取得
+- **ドキュメント** (6ツール): フィールドタイプとクエリ言語のドキュメント取得
 
 ### 実装しない主要なAPI
 
@@ -463,7 +463,7 @@ if (existingFields[fieldCode]) {
 ## APIカバレッジ
 
 - **実装率**: 約95%（削除系APIを除く）
-- **総ツール数**: 89ツール
+- **総ツール数**: 79ツール
 - **カテゴリー数**: 9カテゴリー
 - **対応kintone APIバージョン**: 最新（2025年時点）
 

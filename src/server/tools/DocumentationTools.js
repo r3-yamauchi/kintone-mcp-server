@@ -4,7 +4,8 @@ import {
     getAvailableFieldTypes,
     getDocumentationToolDescription,
     getFieldCreationToolDescription,
-    groupElementStructure
+    groupElementStructure,
+    getQueryLanguageDocumentation
 } from './documentation/index.js';
 import { ValidationUtils } from '../../utils/ValidationUtils.js';
 import { LoggingUtils } from '../../utils/LoggingUtils.js';
@@ -53,6 +54,12 @@ export async function handleDocumentationTools(name, args) {
             LoggingUtils.logDetailedOperation('get_group_element_structure', 'GROUP要素構造ドキュメント取得', {});
             // GROUP要素の構造に関するドキュメントを取得
             return groupElementStructure;
+        }
+        
+        case 'get_query_language_documentation': {
+            LoggingUtils.logDetailedOperation('get_query_language_documentation', 'クエリ言語ドキュメント取得', {});
+            // kintoneクエリ言語のドキュメントを取得
+            return getQueryLanguageDocumentation();
         }
         
         default:
