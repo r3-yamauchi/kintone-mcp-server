@@ -14,7 +14,37 @@ kintoneデータを参照・更新したり、kintoneアプリ自体を作成す
 
 このリポジトリの詳細は [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/r3-yamauchi/kintone-mcp-server) を参照してください。
 
-## [Claude Desktop](https://claude.ai/download) アプリ における使い方
+## dxtファイル による [Claude Desktop](https://claude.ai/download) アプリ へのインストール（推奨）
+
+[https://github.com/r3-yamauchi/kintone-mcp-server/packages](https://github.com/r3-yamauchi/kintone-mcp-server/packages) から kintone-mcp-server.dxt をダウンロードし、 
+[Claude Desktop](https://claude.ai/download) アプリ の [設定] - [エクステンション] 画面へドラッグ・アンド・ドロップしてください。
+
+<!-- markdownlint-disable MD033 -->
+<img height="400" src="docs/images/kintone-mcp-dxt1.png" alt="dxtファイルによるインストール" />
+<!-- markdownlint-enable MD033 -->
+
+<!-- markdownlint-disable MD033 -->
+<img height="400" src="docs/images/kintone-mcp-dxt2.png" alt="dxtファイルによるインストール" />
+<!-- markdownlint-enable MD033 -->
+
+<!-- markdownlint-disable MD033 -->
+<img height="400" src="docs/images/kintone-mcp-dxt3.png" alt="dxtファイルによるインストール" />
+<!-- markdownlint-enable MD033 -->
+
+<!-- markdownlint-disable MD033 -->
+<img height="400" src="docs/images/kintone-mcp-dxt4.png" alt="dxtファイルによるインストール" />
+<!-- markdownlint-enable MD033 -->
+
+<!-- markdownlint-disable MD033 -->
+<img height="400" src="docs/images/kintone-mcp-dxt5.png" alt="dxtファイルによるインストール" />
+<!-- markdownlint-enable MD033 -->
+
+<!-- markdownlint-disable MD033 -->
+<img height="400" src="docs/images/kintone-mcp-dxt6.png" alt="dxtファイルによるインストール" />
+<!-- markdownlint-enable MD033 -->
+
+
+## [Claude Desktop](https://claude.ai/download) アプリ における使い方 （ dxtファイルを使用しない手順 ）
 
 ### 1. ソースコードをダウンロードする
 

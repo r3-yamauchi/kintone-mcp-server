@@ -1,0 +1,65 @@
+{
+  "dxt_version": "0.1",
+  "name": "kintone-mcp-server",
+  "version": "7.1.0",
+  "description": "MCP server for kintone",
+  "author": {
+    "name": "r3-yamauchi",
+    "url": "https://www.r3it.com/blog/author/yamauchi"
+  },
+  "homepage": "https://github.com/r3-yamauchi/kintone-mcp-server",
+  "documentation": "https://github.com/r3-yamauchi/kintone-mcp-server",
+  "support": "https://github.com/r3-yamauchi/kintone-mcp-server",
+  "server": {
+    "type": "node",
+    "entry_point": "server.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server.js"
+      ],
+      "env": {
+        "KINTONE_DOMAIN": "${user_config.kintone_domain}",
+        "KINTONE_USERNAME": "${user_config.kintone_username}",
+        "KINTONE_PASSWORD": "${user_config.kintone_password}"
+      }
+    }
+  },
+  "user_config": {
+    "kintone_domain": {
+      "type": "string",
+      "title": "kintone domain",
+      "description": "Your domain. ex) dev-demo.cybozu.com",
+      "sensitive": false,
+      "required": true
+    },
+    "kintone_username": {
+      "type": "string",
+      "title": "Username",
+      "description": "Your username for kintone authentication",
+      "sensitive": false,
+      "required": true
+    },
+    "kintone_password": {
+      "type": "string",
+      "title": "Password",
+      "description": "Your password for kintone authentication",
+      "sensitive": true,
+      "required": true
+    }
+  },
+  "tools": [
+    {
+      "name": "get_apps_info",
+      "description": "Retrieve information from multiple relevant kintone apps by specifying search keywords"
+    }
+  ],
+  "keywords": [
+    "kintone"
+  ],
+  "license": "AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/r3-yamauchi/kintone-mcp-server.git"
+  }
+}
