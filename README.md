@@ -8,7 +8,7 @@
 この MCP server を使うと [Claude Desktop](https://claude.ai/download) アプリなどの MCPホストアプリから
 kintoneデータを参照・更新したり、kintoneアプリ自体を作成するなどのことができます。
 
-## dxtファイル による [Claude Desktop](https://claude.ai/download) アプリ へのインストール（推奨）
+## dxtファイル による [Claude Desktop](https://claude.ai/download) アプリ へのインストール手順（推奨）
 
 [https://github.com/r3-yamauchi/kintone-mcp-server/releases](https://github.com/r3-yamauchi/kintone-mcp-server/releases) から最新の [kintone-mcp-server.dxt](https://github.com/r3-yamauchi/kintone-mcp-server/releases/download/7.2.0/kintone-mcp-server.dxt) をダウンロードし、 
 [Claude Desktop](https://claude.ai/download) アプリ の [設定] - [エクステンション] 画面へドラッグ・アンド・ドロップしてください。
@@ -24,24 +24,24 @@ kintoneデータを参照・更新したり、kintoneアプリ自体を作成す
 接続先の kintone のドメイン名, ユーザー名, パスワード を入力して「保存」ボタンをクリックしてください。
 
 <!-- markdownlint-disable MD033 -->
-<img height="400" src="docs/images/kintone-mcp-dxt5.png" alt="kintoneへの接続情報の入力欄" />
+<img height="500" src="docs/images/kintone-mcp-dxt5.png" alt="kintoneへの接続情報の入力欄" />
 <!-- markdownlint-enable MD033 -->
 
 <!-- markdownlint-disable MD033 -->
-<img height="400" src="docs/images/kintone-mcp-dxt6.png" alt="kintoneへの接続情報を入力" />
+<img height="500" src="docs/images/kintone-mcp-dxt6.png" alt="kintoneへの接続情報を入力" />
 <!-- markdownlint-enable MD033 -->
 
 「有効」となっていることを確認します。
 
 <!-- markdownlint-disable MD033 -->
-<img height="400" src="docs/images/kintone-mcp-dxt3.png" alt="dxtファイルによるインストールの確認" />
+<img height="500" src="docs/images/kintone-mcp-dxt3.png" alt="dxtファイルによるインストールの確認" />
 <!-- markdownlint-enable MD033 -->
 
 <!-- markdownlint-disable MD033 -->
-<img height="400" src="docs/images/kintone-mcp-dxt4.png" alt="dxtファイルによるインストールの確認" />
+<img height="300" src="docs/images/kintone-mcp-dxt4.png" alt="dxtファイルによるインストール「有効」となっていることを確認する" />
 <!-- markdownlint-enable MD033 -->
 
-## [Claude Desktop](https://claude.ai/download) アプリ における使い方 （これは dxtファイルを使用しない場合の手順です。）
+## dxtファイルを使用しない場合の Claude Desktopアプリ へのインストール手順
 
 ### 1. ソースコードをダウンロードする
 
@@ -84,12 +84,14 @@ claude_desktop_config.json という設定ファイルを探して、以下を�
 claude_desktop_config.json への変更を保存したのち、Claude Desktopアプリを一度終了させて再起動してください。
 アプリを終了させたように見えても常駐したまま残っている場合があるため、常駐アイコンを右クリックしてQuitしてください。
 
-### 6. 動作確認
+## 使い方
+
+### 1. 動作確認
 
 まずは Claude に "kintoneアプリ「*設定したkintoneユーザーでアクセス出来るアプリ名の一例*」のアプリIDを調べて" と尋ねてみてください。
 ここで入力するkintoneアプリ名は一言一句正確に指定する必要があります。
 
-### 7. この MCP server が提供している機能の一覧
+### 2. この MCP server が提供している機能の一覧
 
 各ツールのアノテーション属性については [docs/tool-annotations.md](docs/tool-annotations.md) を参照してください。
 
@@ -173,7 +175,7 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 - `get_kintone_domain`: kintoneの接続先ドメインを取得
 - `get_kintone_username`: kintoneへの接続に使用されるユーザー名を取得
 
-### 8. その他
+## その他
 
 この MCP server を使用してどういったことが出来るかブログに書いたので読んでみてください。
 
