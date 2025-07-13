@@ -1,51 +1,47 @@
 # MCP server for kintone サンプル
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/r3-yamauchi/kintone-mcp-server)
+
 これは [kintone](https://kintone.cybozu.co.jp/) との連携目的で使用できる [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) サーバーのサンプルコードです。
 生成AIを用いて自動作成したものを現状有姿で提供します。
 
 この MCP server を使うと [Claude Desktop](https://claude.ai/download) アプリなどの MCPホストアプリから
-kintoneデータを参照・更新したり、kintoneアプリ自体を作成するなどできます。
-
-<a href="https://glama.ai/mcp/servers/dki958qnks">
-  <img width="380" height="200" src="https://glama.ai/mcp/servers/dki958qnks/badge" alt="kintone MCP Server" />
-</a>
-
-[MCP Review](https://mcpreview.com/mcp-servers/r3-yamauchi/kintone-mcp-server)
-
-このリポジトリの詳細は [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/r3-yamauchi/kintone-mcp-server) を参照してください。
+kintoneデータを参照・更新したり、kintoneアプリ自体を作成するなどのことができます。
 
 ## dxtファイル による [Claude Desktop](https://claude.ai/download) アプリ へのインストール（推奨）
 
-[https://github.com/r3-yamauchi/kintone-mcp-server/releases](https://github.com/r3-yamauchi/kintone-mcp-server/releases) から [kintone-mcp-server.dxt](https://github.com/r3-yamauchi/kintone-mcp-server/releases/download/7.1.0/kintone-mcp-server.dxt) をダウンロードし、 
+[https://github.com/r3-yamauchi/kintone-mcp-server/releases](https://github.com/r3-yamauchi/kintone-mcp-server/releases) から最新の [kintone-mcp-server.dxt](https://github.com/r3-yamauchi/kintone-mcp-server/releases/download/7.2.0/kintone-mcp-server.dxt) をダウンロードし、 
 [Claude Desktop](https://claude.ai/download) アプリ の [設定] - [エクステンション] 画面へドラッグ・アンド・ドロップしてください。
 
 <!-- markdownlint-disable MD033 -->
-<img height="400" src="docs/images/kintone-mcp-dxt1.png" alt="dxtファイルによるインストール" />
+<img height="500" src="docs/images/kintone-mcp-dxt1.png" alt="dxtファイルをエクステンション画面へドラッグ・アンド・ドロップ" />
 <!-- markdownlint-enable MD033 -->
 
 <!-- markdownlint-disable MD033 -->
-<img height="400" src="docs/images/kintone-mcp-dxt2.png" alt="dxtファイルによるインストール" />
+<img height="600" src="docs/images/kintone-mcp-dxt2.png" alt="dxtファイルによるインストール" />
 <!-- markdownlint-enable MD033 -->
 
-接続先の kintone のドメイン名, ユーザー名, パスワード を入力してください。
+接続先の kintone のドメイン名, ユーザー名, パスワード を入力して「保存」ボタンをクリックしてください。
 
 <!-- markdownlint-disable MD033 -->
-<img height="400" src="docs/images/kintone-mcp-dxt5.png" alt="kintone接続情報の指定" />
-<!-- markdownlint-enable MD033 -->
-
-<!-- markdownlint-disable MD033 -->
-<img height="400" src="docs/images/kintone-mcp-dxt6.png" alt="kintone接続情報の指定" />
+<img height="400" src="docs/images/kintone-mcp-dxt5.png" alt="kintoneへの接続情報の入力欄" />
 <!-- markdownlint-enable MD033 -->
 
 <!-- markdownlint-disable MD033 -->
-<img height="400" src="docs/images/kintone-mcp-dxt3.png" alt="dxtファイルによるインストール" />
+<img height="400" src="docs/images/kintone-mcp-dxt6.png" alt="kintoneへの接続情報を入力" />
+<!-- markdownlint-enable MD033 -->
+
+「有効」となっていることを確認します。
+
+<!-- markdownlint-disable MD033 -->
+<img height="400" src="docs/images/kintone-mcp-dxt3.png" alt="dxtファイルによるインストールの確認" />
 <!-- markdownlint-enable MD033 -->
 
 <!-- markdownlint-disable MD033 -->
-<img height="400" src="docs/images/kintone-mcp-dxt4.png" alt="dxtファイルによるインストール" />
+<img height="400" src="docs/images/kintone-mcp-dxt4.png" alt="dxtファイルによるインストールの確認" />
 <!-- markdownlint-enable MD033 -->
 
-## [Claude Desktop](https://claude.ai/download) アプリ における使い方 （ dxtファイルを使用しない手順 ）
+## [Claude Desktop](https://claude.ai/download) アプリ における使い方 （これは dxtファイルを使用しない場合の手順です。）
 
 ### 1. ソースコードをダウンロードする
 
@@ -53,7 +49,7 @@ kintoneデータを参照・更新したり、kintoneアプリ自体を作成す
 
 ### 2. Node.jsをインストールする
 
-Node.js 18 以降を使用してください。
+Node.js 20 以降を使用してください。
 
 ### 3. npm installする
 

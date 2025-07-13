@@ -20,6 +20,11 @@ export async function handleRecordTools(name, args, repository) {
         case 'search_records': {
             ValidationUtils.validateRequired(args, ['app_id']);
             
+            // クエリーが提供されている場合、kintoneクエリー構文を検証
+            if (args.query) {
+                ValidationUtils.validateKintoneQuery(args.query);
+            }
+            
             const records = await repository.searchRecords(
                 args.app_id,
                 args.query,

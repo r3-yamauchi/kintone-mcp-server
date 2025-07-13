@@ -1,0 +1,8 @@
+.env
+.claude/
+.clinerules/
+.github/
+docs/
+clinerules-bank/
+AGENTS.md
+CLAUDE.md

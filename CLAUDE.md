@@ -5,9 +5,16 @@
 ## 開発コマンド
 
 - **サーバー起動**: `npm start` (`node server.js`を実行)
-- **依存関係のインストール**: `npm i`
-- **Node.js要件**: バージョン18以上
+- **依存関係のインストール**: `npm install`
+- **Node.js要件**: バージョン20以上
 - **テスト**: 現在未実装 (`npm test`は失敗します)
+- **開発時のリアルタイム実行**: 依存関係更新後は`npm start`でサーバーを再起動
+
+## 最新の依存関係 (2025年7月更新)
+
+- **`@kintone/rest-api-client`**: ^5.7.4 (最新のkintone REST API対応)
+- **`@modelcontextprotocol/sdk`**: ^1.15.1 (MCP 2025-03-26仕様対応)
+- **`dotenv`**: ^17.2.0 (環境変数管理)
 
 ## ライセンス
 
@@ -65,6 +72,7 @@ upsert_record - 重複禁止フィールドを使用して既存レコードを�
 - **アプリ一覧**: `get_apps`
 - **フィールド確認**: `get_fields`（本番）または `get_preview_fields`（プレビュー）
 - **デプロイ状態**: `get_deploy_status`
+- **クエリ構文確認**: `get_query_language_documentation`
 
 ## アーキテクチャ概要
 
@@ -100,8 +108,8 @@ User Request → ToolRouter → CategoryTools → Repository → kintone API
 
 サーバーは9つのカテゴリーにわたる79のツールを提供します：
 
-- **レコード (Records)**: kintoneレコードのCRUD操作（安全のためdeleteは意図的に除外）、新しくupsert_recordを追加
-- **アプリ (Apps)**: アプリ作成、フィールド管理、デプロイ
+- **レコード (Records)**: kintoneレコードのCRUD操作（安全のためdeleteは意図的に除外）、upsert_recordを含む
+- **アプリ (Apps)**: アプリ作成、フィールド管理、デプロイ、アクション設定（filterCond対応）
 - **スペース (Spaces)**: スペースとスレッド管理
 - **フィールド (Fields)**: フィールド設定と検証
 - **ファイル (Files)**: アップロード/ダウンロード操作（1MB以上のダウンロードは未サポート）
@@ -185,7 +193,7 @@ throw new Error(`[${errorType}] ${message} - ${detail}`);
 
 ### ユーザーフレンドリーなエラー対応
 
-ErrorHandlers.jsのサジェスト機能を活用し、解決策を提示する
+ErrorHandlers.jsのサジェスト機能を活用し、解決策を提示する。特にクエリ構文エラーでは詳細なガイダンスを提供。
 
 ## 新しいツールの追加
 
@@ -262,16 +270,42 @@ async search(appId, query) {
    - 対応するリポジトリメソッドを呼び出す
    - これを忘れると "repository.methodName is not a function" エラーが発生
 
-## kintone固有の制約
+## kintone固有の制約と新機能
+
+### 基本制約
 
 - **ルックアップフィールド**: 基本フィールドタイプ + lookupアトリビュートとして実装（本番環境へのデプロイが必要）
 - **計算フィールド**: kintone標準関数のみサポート（カスタム関数は使用不可）
 - **ファイルサイズ制限**: ダウンロードは1MBまで（大きなファイルはタイムアウトする可能性）
 - **レート制限**: kintone APIのレート制限に注意
-- **フィールドタイプドキュメント**: 詳細は`src/server/tools/documentation/`を参照
 - **クエリ構文**: 並び替えのみの場合は `$id > 0` プレフィックスが必要
 - **サブテーブルフィールド**: テーブル名を含めない（例: `field_code`のみ、`table.field_code`は不可）
 - **デプロイライフサイクル**: create_app → add_fields → deploy_app → 完了待機
+
+### 7.2.0の新機能
+
+#### 文字列（複数行）フィールドでのis演算子対応
+```javascript
+// 新しく対応したクエリ例
+"Detail is empty"         // 文字列複数行フィールドが空欄
+"Detail is not empty"     // 文字列複数行フィールドが非空欄
+```
+
+#### アプリアクション設定のfilterCondプロパティ対応
+```javascript
+// 条件付きアクション実行の設定例
+{
+  "app_id": 123,
+  "actions": {
+    "承認アクション": {
+      "name": "承認アクション",
+      "index": "0",
+      "filterCond": "Status = \"レビュー中\" and 作成者 in (LOGINUSER())",
+      // ... その他の設定
+    }
+  }
+}
+```
 
 ### フィールド値フォーマットの例
 
@@ -295,6 +329,29 @@ async search(appId, query) {
     ] 
   }
 }
+```
+
+## クエリ構文の使いやすさ改善
+
+### search_recordsツールの強化
+- **即座に使える例**: ツール定義に11個の実用的クエリ例を記載
+- **段階的学習**: 基本例 → 詳細ドキュメント → エラー時ガイダンス
+- **エラー時サポート**: クエリエラー時に具体的な解決策を自動提示
+
+### よく使われるクエリパターン例
+```javascript
+// 基本的な検索パターン
+"Status = \"完了\""                                    // 完全一致
+"Customer like \"株式会社\""                           // 部分一致
+"Status in (\"対応中\",\"未対応\")"                   // 複数選択
+"LimitDay >= \"2022-09-29\" and LimitDay <= \"2022-10-29\"" // 範囲指定
+"Detail is empty"                                      // 空欄チェック（7.2.0新機能）
+"Status not in (\"完了\") order by 更新日時 desc"    // ソート付き
+
+// limit句の正しい使用例（kintone制約対応）
+"$id > 0 limit 10"                                     // 条件付きlimit
+"order by $id desc limit 10"                          // ソート付きlimit
+// 注意: "limit 10" のような単独使用は無効
 ```
 
 ## パフォーマンス最適化
@@ -344,7 +401,7 @@ if (existingFields[fieldCode]) {
 
 ## 重要な注意事項
 
-- **バージョン管理**: `package.json`と`MCPServer.js`の両方でバージョンを更新（現在7.1.0）
+- **バージョン管理**: `package.json`、`manifest.json`、`MCPServer.js`の3ファイルでバージョンを更新（現在7.2.0）
 - **削除操作なし**: データの安全性のため意図的に除外
 - **テストフレームワーク**: 未実装、将来的に追加予定
 - **バッチ操作**: JSON-RPCバッチング予定だが未実装
@@ -433,6 +490,10 @@ if (existingFields[fieldCode]) {
 - 原因: フィールド追加前にデプロイを実行
 - 解決: create_app → add_fields → deploy_app の順序を守る
 
+**クエリ構文エラー (7.2.0で改善)**
+- 原因: kintoneクエリ構文の誤用
+- 解決: `get_query_language_documentation`でクエリ構文を確認、エラーハンドラーが詳細なガイダンスを提供
+
 **User APIエラー (CB_IL02)**
 - 原因: cybozu.com共通管理者権限がない、またはUser APIが無効
 - 解決: `get_users`、`get_groups`、`get_group_users`を使用する場合は、以下を確認：
@@ -459,6 +520,7 @@ if (existingFields[fieldCode]) {
 - **ログ確認**: サーバーはstderr（console.error）にデバッグログを出力
 - **プレビュー確認**: `get_preview_*`ツールで未コミットの変更を確認
 - **エラー詳細**: ErrorHandlers.jsが詳細なエラー情報とサジェストを提供
+- **クエリテスト**: `search_records`でクエリ構文をテスト
 
 ## APIカバレッジ
 
@@ -475,6 +537,7 @@ if (existingFields[fieldCode]) {
 4. **包括的なエラーハンドリング**: 詳細なエラーメッセージと解決策の提示
 5. **型安全性**: 全ツールにJSON Schemaによる入力検証
 6. **アノテーション**: MCP 2025-03-26仕様準拠のメタデータ
+7. **クエリ構文サポート**: 詳細なドキュメントとエラー時ガイダンス
 
 ## リファクタリング（2025年改善）
 
@@ -537,15 +600,22 @@ if (existingFields[fieldCode]) {
 3. **設定の外部化**: ツール定義の自動生成機能
 4. **パフォーマンス最適化**: 並列処理可能な箇所の特定と実装
 
-## 最近の実装内容 (2025/6/7)
+## バージョン7.2.0の主な更新内容 (2025年7月)
 
-### 新規実装ツール
+### 新機能
 
-#### レコードアクセス権限関連
-- **get_record_acl**: 指定したレコードのアクセス権限を取得
-- **evaluate_records_acl**: 複数レコードのアクセス権限を評価
+1. **文字列（複数行）フィールドでのis演算子対応**
+   - `search_records`ツールで`is empty`、`is not empty`クエリが使用可能
+   - エラーハンドリングとドキュメントも更新
 
-これらのツールは当初レコードレベルのAPIとして実装を試みましたが、kintone REST APIの仕様により、実際にはアプリレベルのAPIであることが判明しました。そのため、`RecordTools`ではなく`AppTools`に実装されています。
+2. **アプリアクション設定APIのfilterCondプロパティ対応**
+   - `get_app_actions`、`update_app_actions`でアクション実行条件を設定可能
+   - kintoneクエリ構文による柔軟な条件指定
+
+3. **クエリ構文ガイダンスの大幅改善**
+   - `search_records`ツール定義に11個の実用的なクエリ例を追加
+   - `get_query_language_documentation`の包括的な更新
+   - エラー時の詳細ガイダンス強化
 
 ### 重要な発見事項
 
@@ -602,3 +672,5 @@ User API（`get_users`、`get_groups`、`get_group_users`）は、cybozu.com共�
 - [ ] ツール定義のアノテーション設定
 - [ ] KintoneRepositoryファサードへのメソッド追加
 - [ ] 既存のコーディング規約に準拠
+
+この包括的なドキュメントにより、開発者はkintone MCP Serverの全機能を理解し、効果的に活用できるようになります。

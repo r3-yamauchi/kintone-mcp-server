@@ -5,7 +5,7 @@
 - ホームディレクトリなどへのファイル作成は禁止。作業はこのリポジトリ内で完結させる。
 
 ## 実行環境
-- **Node.js 18** 以降を使用する。
+- **Node.js 20** 以降を使用する。
 - 初回は `npm i` で依存をインストールした後、`server.js` を起動して MCP Server を立ち上げる。
 - 環境変数 `KINTONE_DOMAIN`, `KINTONE_USERNAME`, `KINTONE_PASSWORD` が設定できない場合は `.env` を利用する（`src/index.js` 参照）。
 

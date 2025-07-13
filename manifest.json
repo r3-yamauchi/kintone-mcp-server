@@ -1,7 +1,7 @@
 {
   "dxt_version": "0.1",
   "name": "kintone-mcp-server",
-  "version": "7.1.0",
+  "version": "7.2.0",
   "description": "MCP server for kintone",
   "author": {
     "name": "r3-yamauchi",
@@ -51,7 +51,15 @@
   "tools": [
     {
       "name": "get_apps_info",
-      "description": "Retrieve information from multiple relevant kintone apps by specifying search keywords"
+      "description": "検索キーワードを指定して該当するkintoneアプリの情報を取得します"
+    },
+    {
+      "name": "search_records",
+      "description": "kintoneアプリのレコードを検索します"
+    },
+    {
+      "name": "create_record",
+      "description": "kintoneアプリに新しいレコードを作成します"
     }
   ],
   "keywords": [

@@ -595,7 +595,7 @@ export const appToolDefinitions = [
     },
     {
         name: 'get_app_actions',
-        description: 'kintoneアプリのアクション設定を取得します',
+        description: 'kintoneアプリのアクション設定を取得します。レスポンスには各アクションの実行条件（filterCond）も含まれます。filterCondは、アプリアクションを実行できる条件をkintoneクエリ構文で定義したものです。',
         inputSchema: {
             type: 'object',
             properties: {
@@ -1358,7 +1358,8 @@ export const appToolDefinitions = [
     },
     {
         name: 'update_app_actions',
-        description: 'kintoneアプリのアクション設定を更新します',
+        description: 'kintoneアプリのアクション設定を更新します。各アクションにはfilterCondプロパティを指定して実行条件を設定できます。' +
+            '例: {"actions": {"アクション名": {"name": "アクション名", "index": "0", "filterCond": "Status = \\"対応中\\"", ...}}}',
         inputSchema: {
             type: 'object',
             properties: {
@@ -1430,6 +1431,13 @@ export const appToolDefinitions = [
                                     required: ['type', 'code']
                                 },
                                 description: 'アクションを利用できるエンティティ'
+                            },
+                            filterCond: {
+                                type: 'string',
+                                description: 'アプリアクションを実行できる条件のクエリ文字列。' +
+                                    '空文字列の場合は「すべてのレコード」を指定した場合と同様。' +
+                                    'クエリ構文の詳細はget_query_language_documentationツールで確認可能。' +
+                                    '例: "ユーザー選択フィールド in (\\"user1\\")", "Status = \\"対応中\\"", "作成日時 = TODAY()"'
                             }
                         },
                         required: ['name', 'index']

@@ -32,7 +32,20 @@ export const recordToolDefinitions = [
     },
     {
         name: 'search_records',
-        description: 'kintoneアプリのレコードを検索します。クエリ構文の詳細はget_query_language_documentationツールで確認できます。',
+        description: 'kintoneアプリのレコードを検索します。\n\n' +
+            '【よく使用されるクエリ例】\n' +
+            '• 文字列検索: Customer = "サイボウズ株式会社" (完全一致)\n' +
+            '• 部分一致: Customer like "株式会社" (部分一致)\n' +
+            '• ドロップダウン: Status in ("対応中","未対応") (複数値の選択)\n' +
+            '• 日付範囲: LimitDay >= "2022-09-29" and LimitDay <= "2022-10-29"\n' +
+            '• 日付関数: LimitDay < TODAY() (今日より前)\n' +
+            '• 複数条件: Status in ("対応中") and LimitDay < TODAY()\n' +
+            '• ソート: Status = "対応中" order by 更新日時 desc\n' +
+            '• ページング: Status = "対応中" order by $id desc limit 20 offset 20\n' +
+            '• 空欄チェック: Detail is empty (文字列複数行の空欄)\n' +
+            '• 非空欄チェック: Detail is not empty (文字列複数行の非空欄)\n' +
+            '• ユーザー検索: 作成者 in (LOGINUSER()) (自分が作成したレコード)\n\n' +
+            '詳細な構文とすべての演算子・関数はget_query_language_documentationツールで確認できます。',
         inputSchema: {
             type: 'object',
             properties: {
@@ -42,14 +55,25 @@ export const recordToolDefinitions = [
                 },
                 query: {
                     type: 'string',
-                    description: '検索クエリ（例: status = "完了" and priority = "高" order by 更新日時 desc limit 10）。詳細な構文はget_query_language_documentationを参照してください。'
+                    description: 'kintoneクエリ構文での検索条件。\n' +
+                        '基本形式: "フィールドコード 演算子 値"\n' +
+                        '例:\n' +
+                        '• Status = "完了" (完全一致)\n' +
+                        '• Customer like "株式会社" (部分一致)\n' +
+                        '• Status in ("対応中","未対応") (複数選択)\n' +
+                        '• LimitDay >= "2022-09-29" and LimitDay <= "2022-10-29" (範囲指定)\n' +
+                        '• Detail is empty (文字列複数行の空欄チェック)\n' +
+                        '• Detail is not empty (文字列複数行の非空欄チェック)\n' +
+                        '• Status not in ("完了") order by 更新日時 desc limit 10 (ソート付き)\n' +
+                        'オプション順序: order by → limit → offset\n' +
+                        '詳細はget_query_language_documentationを参照'
                 },
                 fields: {
                     type: 'array',
                     items: {
                         type: 'string'
                     },
-                    description: '取得するフィールド名の配列'
+                    description: '取得するフィールド名の配列（省略時は全フィールド取得）'
                 }
             },
             required: ['app_id']

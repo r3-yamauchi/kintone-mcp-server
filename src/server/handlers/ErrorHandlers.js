@@ -117,6 +117,61 @@ function handleLayoutError(error) {
     );
 }
 
+function handleQueryError(error) {
+    if (!(error.message.includes("query") || error.message.includes("クエリ") || 
+          error.message.includes("Invalid operator") || error.message.includes("Invalid field") ||
+          error.message.includes("limit") || error.message.includes("クエリー構文"))) {
+        return null;
+    }
+    
+    let suggestions = [
+        "基本的なクエリ構文: フィールドコード 演算子 値",
+        "文字列は必ずダブルクオートで囲む: Customer = \"サイボウズ株式会社\"",
+        "複数値はin演算子で括弧内に記述: Status in (\"対応中\",\"未対応\")",
+        "テーブル内フィールドは=でなくinを使用: ResponseDate in (\"2022-09-29T05:00:00Z\")",
+        "オプションの順序を守る: order by → limit → offset",
+        "limit句のみの指定は使用できません: 検索条件またはorder by句と組み合わせてください"
+    ];
+    
+    if (error.message.includes("Invalid operator")) {
+        suggestions = [
+            "フィールドタイプに対応した演算子を使用してください:",
+            "• 文字列（1行）: = != in not_in like not_like",
+            "• 文字列（複数行）: like not_like is is_not",
+            "• 数値: = != > < >= <= in not_in",
+            "• ドロップダウン/チェックボックス: in not_in",
+            "• 日付: = != > < >= <= (TODAY()などの関数も使用可能)",
+            "• ユーザー選択: in not_in (LOGINUSER()関数も使用可能)",
+            ...suggestions
+        ];
+    }
+    
+    if (error.message.includes("Invalid field") || error.message.includes("Field not found")) {
+        suggestions = [
+            "フィールドコードのスペルを確認してください",
+            "フィールドが存在するか確認してください (get_fieldsツールで確認可能)",
+            "関連レコードの場合: 関連レコードフィールド.参照先フィールド",
+            "テーブル内フィールドの場合: フィールドコードのみ (テーブル名は不要)",
+            ...suggestions
+        ];
+    }
+    
+    return formatErrorMessage(
+        "クエリ構文エラー",
+        "検索クエリの構文に問題があります。",
+        suggestions.concat([
+            "詳細なクエリ構文はget_query_language_documentationツールで確認できます",
+            "よく使われるクエリ例:\n" +
+            "  • Status = \"完了\" (完全一致)\n" +
+            "  • Customer like \"株式会社\" (部分一致)\n" +
+            "  • LimitDay >= \"2022-09-29\" and LimitDay <= \"2022-10-29\" (範囲指定)\n" +
+            "  • Status in (\"対応中\",\"未対応\") order by 更新日時 desc (ソート付き)\n" +
+            "  • $id > 0 limit 10 (条件付きlimit)\n" +
+            "  • order by $id desc limit 10 (ソート付きlimit)"
+        ])
+    );
+}
+
 function handleKintoneApiError(error) {
     if (!(error instanceof KintoneRestAPIError)) {
         return null;
@@ -124,6 +179,12 @@ function handleKintoneApiError(error) {
     
     let errorMessage = error.message;
     let helpText = "";
+    
+    // クエリエラーのチェックを最初に行う
+    const queryErrorHelp = handleQueryError(error);
+    if (queryErrorHelp) {
+        return { errorMessage, helpText: queryErrorHelp };
+    }
     
     if (error.errors) {
         errorMessage += "\n\nエラーの詳細情報：";
@@ -212,6 +273,7 @@ export function handleToolError(error) {
         handleCalcFieldError(error) ||
         handleLookupFieldError(error) ||
         handleLayoutError(error) ||
+        handleQueryError(error) ||
         "";
 
     if (error instanceof McpError) {

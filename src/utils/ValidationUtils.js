@@ -127,4 +127,46 @@ export class ValidationUtils {
             throw new Error(`${fieldName} はブール値（true/false）で指定する必要があります。`);
         }
     }
+    
+    /**
+     * kintoneクエリー構文の検証
+     * @param {string} query - 検証対象のクエリー文字列
+     * @throws {Error} 検証エラーの場合
+     */
+    static validateKintoneQuery(query) {
+        if (typeof query !== 'string') {
+            throw new Error('クエリーは文字列で指定する必要があります。');
+        }
+        
+        // クエリーを正規化（前後の空白を除去）
+        const normalizedQuery = query.trim();
+        
+        // limit句のみの指定をチェック（条件やorder byがない場合）
+        const limitOnlyPattern = /^\s*limit\s+\d+\s*$/i;
+        if (limitOnlyPattern.test(normalizedQuery)) {
+            throw new Error('kintoneクエリー構文では "limit" のみの指定はサポートされていません。検索条件またはorder by句と組み合わせて使用してください。（例: "$id > 0 limit 10" または "order by $id limit 10"）');
+        }
+        
+        // その他の基本的なクエリー構文チェック
+        const invalidPatterns = [
+            {
+                pattern: /\blimit\s+0\b/i,
+                message: 'limit は1以上の値を指定してください。'
+            },
+            {
+                pattern: /\blimit\s+([5-9]\d{2,}|\d{4,})/i,
+                message: 'limit の最大値は500です。'
+            },
+            {
+                pattern: /\boffset\s+([1-9]\d{4,})/i,
+                message: 'offset の最大値は10,000です。'
+            }
+        ];
+        
+        for (const { pattern, message } of invalidPatterns) {
+            if (pattern.test(query)) {
+                throw new Error(message);
+            }
+        }
+    }
 }
