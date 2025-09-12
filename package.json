@@ -1,6 +1,6 @@
 {
-  "name": "kintone-mcp-server",
-  "version": "7.2.0",
+  "name": "unofficial-kintone-mcp-server",
+  "version": "7.3.0",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -17,11 +17,11 @@
     "url": "https://www.r3it.com/blog/author/yamauchi"
   },
   "license": "AGPL-3.0",
-  "description": "MCP server for kintone",
+  "description": "MCP server for kintone (Unofficial)",
   "dependencies": {
     "@kintone/rest-api-client": "^5.7.4",
-    "@modelcontextprotocol/sdk": "^1.15.1",
-    "dotenv": "^17.2.0"
+    "@modelcontextprotocol/sdk": "^1.18.0",
+    "dotenv": "^17.2.2"
   },
   "engines": {
     "node": ">=20"

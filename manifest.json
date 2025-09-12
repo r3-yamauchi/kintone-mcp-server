@@ -1,8 +1,8 @@
 {
   "dxt_version": "0.1",
-  "name": "kintone-mcp-server",
-  "version": "7.2.0",
-  "description": "MCP server for kintone",
+  "name": "unofficial-kintone-mcp-server",
+  "version": "7.3.0",
+  "description": "MCP server for kintone (Unofficial)",
   "author": {
     "name": "r3-yamauchi",
     "url": "https://www.r3it.com/blog/author/yamauchi"
@@ -51,15 +51,199 @@
   "tools": [
     {
       "name": "get_apps_info",
-      "description": "検索キーワードを指定して該当するkintoneアプリの情報を取得します"
+      "description": "検索キーワードを指定して該当する複数のkintoneアプリの情報を取得します"
+    },
+    {
+      "name": "get_record",
+      "description": "kintoneアプリから1レコードを取得します"
     },
     {
       "name": "search_records",
-      "description": "kintoneアプリのレコードを検索します"
+      "description": "kintoneアプリのレコードを検索して取得します"
     },
     {
       "name": "create_record",
       "description": "kintoneアプリに新しいレコードを作成します"
+    },
+    {
+      "name": "update_record",
+      "description": "kintoneアプリの既存レコードを更新します"
+    },
+    {
+      "name": "add_record_comment",
+      "description": "kintoneレコードにコメントを追加します"
+    },
+    {
+      "name": "update_record_status",
+      "description": "kintoneレコードのステータスを更新します（プロセス管理）"
+    },
+    {
+      "name": "update_record_assignees",
+      "description": "kintoneレコードの作業者を更新します（プロセス管理）"
+    },
+    {
+      "name": "get_record_comments",
+      "description": "kintoneレコードのコメントを取得します"
+    },
+    {
+      "name": "update_record_comment",
+      "description": "kintoneレコードの既存コメントを更新します"
+    },
+    {
+      "name": "create_records",
+      "description": "kintoneアプリに複数のレコードを一括作成します（最大100件）"
+    },
+    {
+      "name": "upsert_record",
+      "description": "kintoneアプリのレコードを作成または更新します（Upsert操作）。重複禁止フィールドを使用してレコードの存在を確認し、存在する場合は更新、存在しない場合は新規作成します"
+    },
+    {
+      "name": "get_process_management",
+      "description": "kintoneアプリのプロセス管理設定を取得します"
+    },
+    {
+      "name": "update_process_management",
+      "description": "kintoneアプリのプロセス管理設定を更新します"
+    },
+    {
+      "name": "create_app",
+      "description": "新しいkintoneアプリを作成します"
+    },
+    {
+      "name": "deploy_app",
+      "description": "kintoneアプリの設定をデプロイします"
+    },
+    {
+      "name": "get_deploy_status",
+      "description": "kintoneアプリのデプロイ状態を確認します"
+    },
+    {
+      "name": "update_app_settings",
+      "description": "kintoneアプリの一般設定を変更します"
+    },
+    {
+      "name": "get_form_layout",
+      "description": "kintoneアプリのフォームレイアウトを取得します"
+    },
+    {
+      "name": "update_form_layout",
+      "description": "kintoneアプリのフォームレイアウトを変更します"
+    },
+    {
+      "name": "move_app_to_space",
+      "description": "kintoneアプリを指定したスペースに移動します"
+    },
+    {
+      "name": "move_app_from_space",
+      "description": "kintoneアプリをスペースに所属させないようにします"
+    },
+    {
+      "name": "get_app_actions",
+      "description": "kintoneアプリのアクション設定を取得します"
+    },
+    {
+      "name": "get_views",
+      "description": "一覧の設定を取得します"
+    },
+    {
+      "name": "update_views",
+      "description": "一覧の設定を更新します"
+    },
+    {
+      "name": "get_app_acl",
+      "description": "kintoneアプリのアクセス権限を取得します"
+    },
+    {
+      "name": "get_field_acl",
+      "description": "kintoneアプリのフィールドのアクセス権限を取得します"
+    },
+    {
+      "name": "update_field_acl",
+      "description": "kintoneアプリのフィールドのアクセス権限を更新します"
+    },
+    {
+      "name": "get_reports",
+      "description": "kintoneアプリのグラフ設定を取得します"
+    },
+    {
+      "name": "update_reports",
+      "description": "kintoneアプリのグラフ設定を更新します"
+    },
+    {
+      "name": "get_notifications",
+      "description": "kintoneアプリの通知条件設定を取得します"
+    },
+    {
+      "name": "update_notifications",
+      "description": "kintoneアプリの通知条件設定を更新します"
+    },
+    {
+      "name": "get_per_record_notifications",
+      "description": "kintoneアプリのレコード単位の通知設定を取得します"
+    },
+    {
+      "name": "update_per_record_notifications",
+      "description": "kintoneアプリのレコード単位の通知設定を更新します"
+    },
+    {
+      "name": "get_reminder_notifications",
+      "description": "kintoneアプリのリマインダー通知設定を取得します"
+    },
+    {
+      "name": "update_reminder_notifications",
+      "description": "kintoneアプリのリマインダー通知設定を更新します"
+    },
+    {
+      "name": "update_app_actions",
+      "description": "kintoneアプリのアクション設定を更新します"
+    },
+    {
+      "name": "update_app_acl",
+      "description": "kintoneアプリのアクセス権限を更新します"
+    },
+    {
+      "name": "get_record_acl",
+      "description": "指定したレコードのアクセス権限を取得します"
+    },
+    {
+      "name": "evaluate_records_acl",
+      "description": "指定した条件でレコードのアクセス権限を評価します"
+    },
+    {
+      "name": "get_space",
+      "description": "スペースの一般情報を取得します"
+    },
+    {
+      "name": "update_space",
+      "description": "スペースの設定を更新します"
+    },
+    {
+      "name": "update_space_body",
+      "description": "スペースの本文を更新します"
+    },
+    {
+      "name": "get_space_members",
+      "description": "スペースメンバーのリストを取得します"
+    },
+    {
+      "name": "update_space_members",
+      "description": "スペースメンバーを更新します"
+    },
+    {
+      "name": "add_thread",
+      "description": "スペースにスレッドを追加します"
+    },
+    {
+      "name": "update_thread",
+      "description": "スレッドを更新します"
+    },
+    {
+      "name": "add_thread_comment",
+      "description": "スレッドにコメントを追加します"
+    },
+    {
+      "name": "update_space_guests",
+      "description": "スペースのゲストメンバーを更新します"
     }
   ],
   "keywords": [

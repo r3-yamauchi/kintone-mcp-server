@@ -20,7 +20,8 @@ export class KintoneRecordRepository extends BaseKintoneRepository {
         // クエリ文字列の処理
         if (query) {
             // クエリ文字列が order や limit のみで構成されているかチェック
-            const hasCondition = /[^\s]+([ ]*=|[ ]*!=|[ ]*>|[ ]*<|[ ]*>=|[ ]*<=|[ ]*like|[ ]*in |[ ]*not[ ]+in)/.test(query);
+            // 条件句の検出: 比較/文字列/集合/空判定（is empty / is not empty）をサポート
+            const hasCondition = /[^\s]+(?:\s*(?:=|!=|>|<|>=|<=|like|in|not\s+in)|\s+is\s+(?:not\s+)?empty)/i.test(query);
             const hasOrderOrLimit = /(order |limit )/i.test(query);
             
             // order や limit のみの場合、$id > 0 を先頭に挿入

@@ -1,4 +1,4 @@
-# MCP server for kintone サンプル
+# MCP server for kintone サンプル (Unofficial)
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/r3-yamauchi/kintone-mcp-server)
 
@@ -8,37 +8,59 @@
 この MCP server を使うと [Claude Desktop](https://claude.ai/download) アプリなどの MCPホストアプリから
 kintoneデータを参照・更新したり、kintoneアプリ自体を作成するなどのことができます。
 
+**サイボウズより 公式の MCP Server が提供開始されました。**
+特に理由がなければ公式MCP Serverを使用するのが良いと思います。 
+
 ## dxtファイル による [Claude Desktop](https://claude.ai/download) アプリ へのインストール手順（推奨）
 
-[https://github.com/r3-yamauchi/kintone-mcp-server/releases](https://github.com/r3-yamauchi/kintone-mcp-server/releases) から最新の [kintone-mcp-server.dxt](https://github.com/r3-yamauchi/kintone-mcp-server/releases/download/7.2.0/kintone-mcp-server.dxt) をダウンロードし、 
-[Claude Desktop](https://claude.ai/download) アプリ の [設定] - [エクステンション] 画面へドラッグ・アンド・ドロップしてください。
+[https://github.com/r3-yamauchi/kintone-mcp-server/releases](https://github.com/r3-yamauchi/kintone-mcp-server/releases) から最新の [unofficial-kintone-mcp-server-7.3.0.dxt](https://github.com/r3-yamauchi/kintone-mcp-server/releases/download/7.3.0/unofficial-kintone-mcp-server-7.3.0.dxt) をダウンロードし、 
+[Claude Desktop](https://claude.ai/download) アプリ の [設定] の [デスクトップアプリ] - [拡張機能] をクリックして、「詳細設定」をクリックしてください。
 
 <!-- markdownlint-disable MD033 -->
-<img height="500" src="docs/images/kintone-mcp-dxt1.png" alt="dxtファイルをエクステンション画面へドラッグ・アンド・ドロップ" />
+<img height="500" src="docs/images/dxt-install1.png" alt="デスクトップアプリの拡張機能設定" style="margin-bottom: 1.6rem;" />
+<!-- markdownlint-enable MD033 -->
+
+「拡張機能をインストール...」をクリックし、ダウンロードした unofficial-kintone-mcp-server-7.3.0.dxt を指定してください。
+
+<!-- markdownlint-disable MD033 -->
+<img height="600" src="docs/images/dxt-install2.png" alt="dxtファイルによるインストール" style="margin-bottom: 1.6rem;" />
+<!-- markdownlint-enable MD033 -->
+
+「インストール」をクリックしてください。
+
+<!-- markdownlint-disable MD033 -->
+<img height="500" src="docs/images/dxt-install3.png" alt="kintoneへの接続情報の入力欄" style="margin-bottom: 1.6rem;" />
+<!-- markdownlint-enable MD033 -->
+
+接続先の kintone のドメイン, ユーザー名, パスワード を入力して「保存」ボタンをクリックしてください。
+
+<!-- markdownlint-disable MD033 -->
+<img height="500" src="docs/images/dxt-install4.png" alt="kintoneへの接続情報の入力欄" style="margin-bottom: 1.6rem;" />
 <!-- markdownlint-enable MD033 -->
 
 <!-- markdownlint-disable MD033 -->
-<img height="600" src="docs/images/kintone-mcp-dxt2.png" alt="dxtファイルによるインストール" />
+<img height="500" src="docs/images/dxt-install5.png" alt="kintoneへの接続情報を入力して保存ボタンをクリック" style="margin-bottom: 1.6rem;" />
 <!-- markdownlint-enable MD033 -->
 
-接続先の kintone のドメイン名, ユーザー名, パスワード を入力して「保存」ボタンをクリックしてください。
+「無効」となっているトグルスイッチをクリックして「有効」にし、設定画面を閉じてください。
 
 <!-- markdownlint-disable MD033 -->
-<img height="500" src="docs/images/kintone-mcp-dxt5.png" alt="kintoneへの接続情報の入力欄" />
+<img height="300" src="docs/images/dxt-install6.png" alt="「有効」にする" style="margin-bottom: 1.6rem;" />
 <!-- markdownlint-enable MD033 -->
 
+新規チャット画面を開いてください。
+ツールアイコンをクリックすると読み込まれている拡張機能（MCPサーバー）が表示されます。
+「unofficial-kintone-mcp-server」が有効になっていれば利用することができます。
+
 <!-- markdownlint-disable MD033 -->
-<img height="500" src="docs/images/kintone-mcp-dxt6.png" alt="kintoneへの接続情報を入力" />
+<img height="300" src="docs/images/tool.png" alt="読み込まれている拡張機能（MCPサーバー）の一覧" style="margin-bottom: 1.6rem;" />
 <!-- markdownlint-enable MD033 -->
 
-「有効」となっていることを確認します。
+「unofficial-kintone-mcp-server」の右側の「>」をクリックすると、使用できるツールが表示されます。
+使用したくないツールがある場合は無効化してください。
 
 <!-- markdownlint-disable MD033 -->
-<img height="500" src="docs/images/kintone-mcp-dxt3.png" alt="dxtファイルによるインストールの確認" />
-<!-- markdownlint-enable MD033 -->
-
-<!-- markdownlint-disable MD033 -->
-<img height="300" src="docs/images/kintone-mcp-dxt4.png" alt="dxtファイルによるインストール「有効」となっていることを確認する" />
+<img height="300" src="docs/images/tools.png" alt="ツールの一覧" style="margin-bottom: 1.6rem;" />
 <!-- markdownlint-enable MD033 -->
 
 ## dxtファイルを使用しない場合の Claude Desktopアプリ へのインストール手順

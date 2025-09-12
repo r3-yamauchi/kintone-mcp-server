@@ -6,3 +6,5 @@ docs/
 clinerules-bank/
 AGENTS.md
 CLAUDE.md
+llms-install.md
+renovate.json

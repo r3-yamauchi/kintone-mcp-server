@@ -44,8 +44,10 @@ export const recordToolDefinitions = [
             '• ページング: Status = "対応中" order by $id desc limit 20 offset 20\n' +
             '• 空欄チェック: Detail is empty (文字列複数行の空欄)\n' +
             '• 非空欄チェック: Detail is not empty (文字列複数行の非空欄)\n' +
+            '• 添付ファイル有無: Attachments is empty / is not empty\n' +
             '• ユーザー検索: 作成者 in (LOGINUSER()) (自分が作成したレコード)\n\n' +
-            '詳細な構文とすべての演算子・関数はget_query_language_documentationツールで確認できます。',
+            '注意: is empty / is not empty は「文字列（複数行）」と「添付ファイル（FILE）」に対してのみ使用でき、「文字列（1行）」などの他のフィールドタイプに対しては使用できません。\n' +
+            'クエリ式の詳細仕様や構文とすべての演算子や関数、フィールド別の使用可否といったkintoneの仕様については get_query_language_documentation ツールを実行して確認してください。',
         inputSchema: {
             type: 'object',
             properties: {
@@ -64,7 +66,10 @@ export const recordToolDefinitions = [
                         '• LimitDay >= "2022-09-29" and LimitDay <= "2022-10-29" (範囲指定)\n' +
                         '• Detail is empty (文字列複数行の空欄チェック)\n' +
                         '• Detail is not empty (文字列複数行の非空欄チェック)\n' +
+                        '• Attachments is empty / is not empty (添付ファイルの有無)\n' +
                         '• Status not in ("完了") order by 更新日時 desc limit 10 (ソート付き)\n' +
+                        '注意: is empty / is not empty は「文字列（1行）」では使用できません（文字列（複数行）と添付ファイル（FILE）は可）。\n' +
+                        '不明点は get_query_language_documentation ツールで仕様を確認してください。\n' +
                         'オプション順序: order by → limit → offset\n' +
                         '詳細はget_query_language_documentationを参照'
                 },
