@@ -6,10 +6,10 @@
 生成AIを用いて自動作成したものを現状有姿で提供します。
 
 この MCP server を使うと [Claude Desktop](https://claude.ai/download) アプリなどの MCPホストアプリから
-kintoneデータを参照・更新したり、kintoneアプリ自体を作成するなどのことができます。
+kintoneデータを参照・更新したり、kintoneアプリ自体を作成したりなどすることができます。
 
 **サイボウズより 公式の MCP Server が提供開始されました。**
-特に理由がなければ公式MCP Serverを使用するのが良いと思います。 
+特に理由がなければ公式MCP Serverを使用するのが良いと思います。
 
 ## dxtファイル による [Claude Desktop](https://claude.ai/download) アプリ へのインストール手順（推奨）
 
@@ -204,7 +204,7 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 - [kintoneと生成AI(Claude)のちょっとイイ関係](https://www.r3it.com/blog/kintone-mcp-server-20250115-yamauchi)
 - [kintone AIラボ と kintone用 MCP Server の現在地](https://www.r3it.com/blog/kintone-ai-lab-20250501-yamauchi)
 
-Webブラウザー版の Claude からも利用できる OAuth をサポートした リモートMCPサーバー のコードを 別途 [こちら](https://github.com/r3-yamauchi/kintone-oauth-mcp-server-cfw) で公開しています。
+また、 Webブラウザー版の Claude や ChatGPT から利用できる OAuth をサポートした リモートMCPサーバー のサンプルコードを 別途 [こちら](https://github.com/r3-yamauchi/kintone-oauth-mcp-server-cfw) で公開しています。
 
 **「kintone」はサイボウズ株式会社の登録商標です。**
 
