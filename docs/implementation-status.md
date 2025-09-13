@@ -87,7 +87,7 @@ MCP仕様の更新（2025-03-26）に対応するための実装計画を整理�
   - `message`フィールドの追加
   - 進捗状況の詳細表示機能の実装
 - **実装の課題**:
-  - 現在のkintone-mcp-serverでは、`search_records`ツールが`@kintone/rest-api-client`の`getAllRecords`メソッドを使用しており、内部でページネーションが自動的に処理されている
+  - `search_records`ツールで`@kintone/rest-api-client`の`getAllRecords`メソッド（内部で自動的にページネーション処理される）を使用していたが、`getRecords`を使用するように変更した。ページネーションしていないため501件以上のレコードを取得できない
   - ProgressNotificationを実装するには、`getAllRecords`の使用をやめて、`getRecords`と`getRecordsCount`を使用した手動ページネーションに変更する必要がある
   - この変更は既存コードの大幅な改修を伴うため、リスクが高い
 - **適用可能なツール**:

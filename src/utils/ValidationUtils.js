@@ -144,7 +144,7 @@ export class ValidationUtils {
         // limit句のみの指定をチェック（条件やorder byがない場合）
         const limitOnlyPattern = /^\s*limit\s+\d+\s*$/i;
         if (limitOnlyPattern.test(normalizedQuery)) {
-            throw new Error('kintoneクエリー構文では "limit" のみの指定はサポートされていません。検索条件またはorder by句と組み合わせて使用してください。（例: "$id > 0 limit 10" または "order by $id limit 10"）');
+            throw new Error('kintoneクエリー構文では "limit" のみの指定はサポートされていません。検索条件またはorder by句と組み合わせて使用してください。（例: "$id > 0 limit 10" または "order by $id desc limit 10"）');
         }
         
         // その他の基本的なクエリー構文チェック

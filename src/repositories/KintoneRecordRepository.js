@@ -16,36 +16,38 @@ export class KintoneRecordRepository extends BaseKintoneRepository {
 
     async searchRecords(appId, query, fields = []) {
         const params = { app: appId };
-        
+
         // クエリ文字列の処理
         if (query) {
             // クエリ文字列が order や limit のみで構成されているかチェック
             // 条件句の検出: 比較/文字列/集合/空判定（is empty / is not empty）をサポート
             const hasCondition = /[^\s]+(?:\s*(?:=|!=|>|<|>=|<=|like|in|not\s+in)|\s+is\s+(?:not\s+)?empty)/i.test(query);
             const hasOrderOrLimit = /(order |limit )/i.test(query);
-            
+
             // order や limit のみの場合、$id > 0 を先頭に挿入
             if (!hasCondition && hasOrderOrLimit) {
-                params.condition = `$id > 0 ${query}`;
-                LoggingUtils.logOperation('Modified query', params.condition);
+                params.query = `$id > 0 ${query}`;
+                LoggingUtils.logOperation('Modified query', params.query);
             } else {
-                params.condition = query;
+                params.query = query;
             }
         }
-        
+
         if (fields.length > 0) {
             params.fields = fields;
         }
 
+        // getAllRecords ではなく getRecords を使用
         return this.executeWithDetailedLogging(
             'searchRecords',
             params,
-            () => this.client.record.getAllRecords(params),
+            () => this.client.record.getRecords(params),
             `search records ${appId}`
-        ).then(records => {
+        ).then(response => {
+            const records = response.records || [];
             LoggingUtils.logOperation(`Found records`, `${records.length} records`);
             return records.map((record) => {
-                const recordId = record.$id.value || 'unknown';
+                const recordId = record.$id?.value || 'unknown';
                 return new KintoneRecord(appId, recordId, record);
             });
         });
