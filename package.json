@@ -21,7 +21,9 @@
   "dependencies": {
     "@kintone/rest-api-client": "^5.7.4",
     "@modelcontextprotocol/sdk": "^1.18.0",
-    "dotenv": "^17.2.2"
+    "axios": "^1.12.2",
+    "dotenv": "^17.2.2",
+    "form-data": "^4.0.4"
   },
   "engines": {
     "node": ">=20"
