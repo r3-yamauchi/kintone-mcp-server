@@ -7,13 +7,6 @@ function removePreview(params = {}) {
     return { preview: preview === true, params: rest };
 }
 
-function escapeQueryValue(value) {
-    if (value === null || value === undefined) {
-        return '';
-    }
-    return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-}
-
 export function createKintoneClient(credentials) {
     const http = new KintoneHttpClient(credentials);
 
@@ -141,29 +134,54 @@ export function createKintoneClient(credentials) {
         updateRecords: (params) => http.put('records', params),
         upsertRecord: async (params) => {
             const { app: appId, updateKey, record: recordData } = params;
-            const escapedValue = escapeQueryValue(updateKey.value);
-            const query = `${updateKey.field} = "${escapedValue}"`;
-            const response = await record.getRecords({ app: appId, query });
-            const existing = response.records || [];
-            if (existing.length > 0) {
-                if (!existing[0].$id || !existing[0].$id.value) {
-                    throw new Error('Missing `$id` in `getRecords` response. This is unexpected and indicates a response format change.');
-                }
-                const updateResult = await record.updateRecord({
-                    app: appId,
-                    id: existing[0].$id.value,
-                    record: recordData
-                });
-                return {
-                    id: existing[0].$id.value,
-                    revision: updateResult.revision
-                };
+            const response = await http.put('records', {
+                app: appId,
+                upsert: true,
+                records: [
+                    {
+                        updateKey,
+                        record: recordData
+                    }
+                ]
+            });
+
+            if (!response || !Array.isArray(response.records) || response.records.length === 0) {
+                throw new Error('Unexpected response format from records upsert operation.');
             }
-            const payload = {
-                ...recordData,
-                [updateKey.field]: { value: updateKey.value }
+
+            const result = response.records[0];
+            return {
+                id: result.id,
+                revision: result.revision,
+                operation: result.operation
             };
-            return record.addRecord({ app: appId, record: payload });
+        },
+        upsertRecords: async (params) => {
+            const { app: appId, records } = params;
+            if (!Array.isArray(records) || records.length === 0) {
+                throw new Error('records must be a non-empty array when calling upsertRecords.');
+            }
+
+            const formattedRecords = records.map((entry) => ({
+                updateKey: entry.updateKey,
+                record: entry.record
+            }));
+
+            const response = await http.put('records', {
+                app: appId,
+                upsert: true,
+                records: formattedRecords
+            });
+
+            if (!response || !Array.isArray(response.records) || response.records.length === 0) {
+                throw new Error('Unexpected response format from records upsert operation.');
+            }
+
+            return response.records.map((recordResult) => ({
+                id: recordResult.id,
+                revision: recordResult.revision,
+                operation: recordResult.operation
+            }));
         },
         addRecordComment: (params) => http.post('record/comment', params),
         getRecordComments: (params) => http.get('record/comments', params),

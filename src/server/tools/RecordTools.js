@@ -180,7 +180,38 @@ export async function handleRecordTools(name, args, repository) {
                 message: `レコードをupsertしました (ID: ${result.id})`
             };
         }
-        
+
+        case 'upsert_records': {
+            ValidationUtils.validateRequired(args, ['app_id', 'records']);
+            ValidationUtils.validateArray(args.records, 'records', {
+                minLength: 1,
+                maxLength: 100
+            });
+
+            const normalizedRecords = args.records.map((entry, index) => {
+                ValidationUtils.validateObject(entry, `records[${index}]`);
+                ValidationUtils.validateObject(entry.updateKey, `records[${index}].updateKey`);
+                ValidationUtils.validateString(entry.updateKey.field, `records[${index}].updateKey.field`);
+                if (entry.updateKey.value === undefined || entry.updateKey.value === null) {
+                    throw new Error(`records[${index}].updateKey.value は必須です。`);
+                }
+                ValidationUtils.validateObject(entry.fields, `records[${index}].fields`);
+
+                return {
+                    updateKey: {
+                        field: entry.updateKey.field,
+                        value: entry.updateKey.value
+                    },
+                    fields: entry.fields
+                };
+            });
+
+            const result = await repository.upsertRecords(args.app_id, normalizedRecords);
+            return ResponseBuilder.recordsUpserted(result, {
+                message: `${result.length}件のレコードをupsertしました`
+            });
+        }
+
         default:
             throw new Error(`Unknown record tool: ${name}`);
     }

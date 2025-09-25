@@ -229,4 +229,21 @@ export class KintoneRecordRepository extends BaseKintoneRepository {
             `upsert record in app ${appId} with key ${updateKey.field}=${updateKey.value}`
         );
     }
+
+    async upsertRecords(appId, records) {
+        const params = {
+            app: appId,
+            records: records.map((entry) => ({
+                updateKey: entry.updateKey,
+                record: entry.fields
+            }))
+        };
+
+        return this.executeWithDetailedLogging(
+            'upsertRecords',
+            params,
+            () => this.client.record.upsertRecords(params),
+            `upsert multiple records in app ${appId}`
+        );
+    }
 }

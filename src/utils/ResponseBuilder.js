@@ -90,7 +90,24 @@ export class ResponseBuilder {
     static recordsUpdated(records) {
         return { records };
     }
-    
+
+    /**
+     * 複数レコードUpsertレスポンスを生成
+     * @param {Array} records - Upsert結果配列（id, revision, operation を含む）
+     * @param {Object} additionalData - 追加データ
+     * @returns {Object} レスポンスオブジェクト
+     */
+    static recordsUpserted(records, additionalData = {}) {
+        return {
+            results: records.map((record) => ({
+                record_id: record.id,
+                revision: record.revision,
+                operation: record.operation
+            })),
+            ...additionalData
+        };
+    }
+
     /**
      * アプリ作成レスポンスを生成
      * @param {string|number} appId - アプリID

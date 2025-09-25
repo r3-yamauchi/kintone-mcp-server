@@ -492,5 +492,57 @@ export const recordToolDefinitions = [
             longRunning: false,
             impact: 'medium'
         }
+    },
+    {
+        name: 'upsert_records',
+        description: 'kintoneアプリで複数レコードを一括Upsertします。各要素に重複禁止フィールド（updateKey）と更新内容を指定すると、存在するレコードは更新、存在しないレコードは新規作成されます。',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                app_id: {
+                    type: 'number',
+                    description: 'kintoneアプリのID'
+                },
+                records: {
+                    type: 'array',
+                    description: 'Upsert対象レコードの配列（最大100件）',
+                    maxItems: 100,
+                    items: {
+                        type: 'object',
+                        properties: {
+                            updateKey: {
+                                type: 'object',
+                                properties: {
+                                    field: {
+                                        type: 'string',
+                                        description: '重複禁止に設定されたフィールドコード'
+                                    },
+                                    value: {
+                                        type: 'string',
+                                        description: 'フィールドの値'
+                                    }
+                                },
+                                required: ['field', 'value'],
+                                description: '重複禁止フィールドを使用してレコードを特定'
+                            },
+                            fields: {
+                                type: 'object',
+                                description: 'レコードのフィールド値（各フィールドは { "value": ... } の形式で指定）'
+                            }
+                        },
+                        required: ['updateKey', 'fields']
+                    }
+                }
+            },
+            required: ['app_id', 'records']
+        },
+        annotations: {
+            readOnly: false,
+            safe: false,
+            category: 'record',
+            requiresConfirmation: true,
+            longRunning: true,
+            impact: 'high'
+        }
     }
 ];

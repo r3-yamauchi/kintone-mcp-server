@@ -89,6 +89,10 @@ export class KintoneRepository {
         return this.recordRepo.upsertRecord(appId, updateKey, fields);
     }
 
+    async upsertRecords(appId, records) {
+        return this.recordRepo.upsertRecords(appId, records);
+    }
+
     async updateRecordByKey(appId, keyField, keyValue, fields) {
         return this.recordRepo.updateRecordByKey(appId, keyField, keyValue, fields);
     }

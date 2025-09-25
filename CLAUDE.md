@@ -10,12 +10,12 @@
 - **テスト**: 現在未実装 (`npm test`は失敗します)
 - **開発時のリアルタイム実行**: 依存関係更新後は`npm start`でサーバーを再起動
 
-## 最新の依存関係 (2025年7月更新)
+## 最新の依存関係 (2025年9月更新)
 
 - **`axios`**: ^1.12.2 (kintone REST APIとのHTTP通信を直接実装)
 - **`form-data`**: ^4.0.4 (ファイルアップロード用のマルチパート処理)
-- **`@modelcontextprotocol/sdk`**: ^1.15.1 (MCP 2025-03-26仕様対応)
-- **`dotenv`**: ^17.2.0 (環境変数管理)
+- **`@modelcontextprotocol/sdk`**: ^1.18.1
+- **`dotenv`**: ^17.2.2 (環境変数管理)
 
 ## ライセンス
 
@@ -59,14 +59,15 @@ create_record → get_record → update_record (deleteは意図的に未実装)
 #### 4. Upsert操作
 
 ```
-upsert_record - 重複禁止フィールドを使用して既存レコードを更新または新規作成
+upsert_record  - 重複禁止フィールドを使用した単一レコードのUpsert
+upsert_records - 同じ仕様で最大100件までの複数レコードUpsert
 ```
 
-`upsert_record`はaxiosベースの独自実装で動作します：
-- 指定された重複禁止フィールドの値でレコードを検索
-- レコードが見つかった場合は `$id` を用いて更新
-- レコードが存在しない場合は同じフィールド値を設定して新規作成
-- kintone標準のREST APIのみで完結するように制御
+`upsert_record`と`upsert_records`はいずれもaxiosベースで `/k/v1/records.json` のUPSERTモード（`upsert: true` + `records` 配列）を直接呼び出します：
+- 指定された重複禁止フィールド（updateKey）と値をそのままAPIに渡し、kintone側のUPSERT処理に委譲
+- 単一レコードの場合は配列1件、複数レコードの場合は最大100件までまとめて送信
+- 応答は `{ id, revision, operation }` を含む配列を受け取り、ツール側でメッセージや結果オブジェクトに整形
+- レコード検索や手動比較は行わず、kintone標準REST APIのみで処理を完結
 
 ### 開発時の確認コマンド
 
@@ -110,7 +111,7 @@ User Request → ToolRouter → CategoryTools → Repository → kintone API
 
 サーバーは9つのカテゴリーにわたる79のツールを提供します：
 
-- **レコード (Records)**: kintoneレコードのCRUD操作（安全のためdeleteは意図的に除外）、upsert_recordを含む
+- **レコード (Records)**: kintoneレコードのCRUD操作（安全のためdeleteは意図的に除外）、upsertモードもサポート
 - **アプリ (Apps)**: アプリ作成、フィールド管理、デプロイ、アクション設定（filterCond対応）
 - **スペース (Spaces)**: スペースとスレッド管理
 - **フィールド (Fields)**: フィールド設定と検証
@@ -529,7 +530,7 @@ if (existingFields[fieldCode]) {
 - **実装率**: 約95%（削除系APIを除く）
 - **総ツール数**: 79ツール
 - **カテゴリー数**: 9カテゴリー
-- **対応kintone APIバージョン**: 最新（2025年時点）
+- **対応kintone APIバージョン**: 最新（2025年9月アップデート時点）
 
 ### 主な実装の特徴
 
