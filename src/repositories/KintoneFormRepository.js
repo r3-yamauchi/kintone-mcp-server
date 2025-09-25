@@ -1,6 +1,6 @@
 // src/repositories/KintoneFormRepository.js
 import { BaseKintoneRepository } from './base/BaseKintoneRepository.js';
-import { KintoneRestAPIError } from '@kintone/rest-api-client';
+import { KintoneApiError } from './base/http/KintoneApiError.js';
 import { validateFieldCode, validateOptions, validateField } from './validators/FieldValidator.js';
 import { validateFormLayout, validateFieldSize } from './validators/LayoutValidator.js';
 import { autoCorrectOptions } from './validators/OptionValidator.js';
@@ -43,7 +43,7 @@ export class KintoneFormRepository extends BaseKintoneRepository {
                 return response;
             } catch (error) {
                 // 404エラー（アプリが見つからない）の場合、プレビュー環境のAPIを試す
-                if (error instanceof KintoneRestAPIError && 
+                if (error instanceof KintoneApiError && 
                     (error.code === 'GAIA_AP01' || error.status === 404)) {
                     console.error(`App ${appId} not found in production environment, trying preview environment...`);
                     
@@ -98,7 +98,7 @@ export class KintoneFormRepository extends BaseKintoneRepository {
                 return response;
             } catch (error) {
                 // 404エラー（アプリが見つからない）の場合、プレビュー環境のAPIを試す
-                if (error instanceof KintoneRestAPIError && 
+                if (error instanceof KintoneApiError && 
                     (error.code === 'GAIA_AP01' || error.status === 404)) {
                     console.error(`App ${appId} not found in production environment, trying preview environment...`);
                     

@@ -1,22 +1,17 @@
 // src/repositories/base/BaseKintoneRepository.js
-import { KintoneRestAPIClient, KintoneRestAPIError } from '@kintone/rest-api-client';
+import { createKintoneClient } from './http/createKintoneClient.js';
+import { KintoneApiError } from './http/KintoneApiError.js';
 import { LoggingUtils } from '../../utils/LoggingUtils.js';
 
 export class BaseKintoneRepository {
     constructor(credentials) {
         this.credentials = credentials;
-        this.client = new KintoneRestAPIClient({
-            baseUrl: `https://${credentials.domain}`,
-            auth: {
-                username: credentials.username,
-                password: credentials.password,
-            },
-        });
+        this.client = createKintoneClient(credentials);
     }
 
     // エラーハンドリングを共通化
     handleKintoneError(error, operation) {
-        if (error instanceof KintoneRestAPIError) {
+        if (error instanceof KintoneApiError) {
             console.error('kintone API Error:', {
                 status: error.status,
                 code: error.code,

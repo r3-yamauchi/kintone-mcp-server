@@ -1,6 +1,5 @@
 // src/repositories/KintonePreviewRepository.js
 import { BaseKintoneRepository } from './base/BaseKintoneRepository.js';
-import { KintoneRestAPIError } from '@kintone/rest-api-client';
 
 /**
  * kintoneアプリのプレビュー環境関連操作を担当するリポジトリクラス

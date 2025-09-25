@@ -12,7 +12,8 @@
 
 ## 最新の依存関係 (2025年7月更新)
 
-- **`@kintone/rest-api-client`**: ^5.7.4 (最新のkintone REST API対応)
+- **`axios`**: ^1.12.2 (kintone REST APIとのHTTP通信を直接実装)
+- **`form-data`**: ^4.0.4 (ファイルアップロード用のマルチパート処理)
 - **`@modelcontextprotocol/sdk`**: ^1.15.1 (MCP 2025-03-26仕様対応)
 - **`dotenv`**: ^17.2.0 (環境変数管理)
 
@@ -61,10 +62,11 @@ create_record → get_record → update_record (deleteは意図的に未実装)
 upsert_record - 重複禁止フィールドを使用して既存レコードを更新または新規作成
 ```
 
-`upsert_record`は`@kintone/rest-api-client`の`upsertRecord`メソッドを使用しています。このメソッドは：
+`upsert_record`はaxiosベースの独自実装で動作します：
 - 指定された重複禁止フィールドの値でレコードを検索
-- 存在する場合は更新、存在しない場合は新規作成
-- 一つのAPIコールで処理が完了するため効率的
+- レコードが見つかった場合は `$id` を用いて更新
+- レコードが存在しない場合は同じフィールド値を設定して新規作成
+- kintone標準のREST APIのみで完結するように制御
 
 ### 開発時の確認コマンド
 
@@ -124,7 +126,7 @@ User Request → ToolRouter → CategoryTools → Repository → kintone API
 
 - `KintoneRepository.js` - メインリポジトリオーケストレーター
 - カテゴリー別リポジトリは`BaseKintoneRepository.js`を継承
-- API通信には`@kintone/rest-api-client`を使用
+- API通信はaxiosとform-dataを直接利用
 - フィールドとレイアウトの検証用バリデーターは`src/repositories/validators/`に配置
 
 ### 設定
@@ -649,7 +651,7 @@ User API（`get_users`、`get_groups`、`get_group_users`）は、cybozu.com共�
    - kintone内でのユーザー情報取得は、レコードのCREATOR/MODIFIERフィールドやUSER_SELECTフィールドから間接的に取得
 
 4. **実装詳細**
-   - `@kintone/rest-api-client`はUser APIをサポートしていないため、直接HTTPリクエストで実装
+   - axiosとform-dataのみで直接HTTPリクエストを実装
    - 認証は`X-Cybozu-Authorization`ヘッダーを使用（Base64エンコードされたusername:password）
    - POSTメソッドで`X-HTTP-Method-Override: GET`ヘッダーを使用（User APIの仕様に準拠）
    - パラメータはリクエストボディにJSON形式で送信

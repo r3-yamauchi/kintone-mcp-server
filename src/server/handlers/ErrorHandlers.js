@@ -1,6 +1,6 @@
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
-import { KintoneRestAPIError } from '@kintone/rest-api-client';
 import { LoggingUtils } from '../../utils/LoggingUtils.js';
+import { KintoneApiError } from '../../repositories/base/http/KintoneApiError.js';
 
 function formatErrorMessage(errorType, errorDetail, suggestions) {
     return `
@@ -173,7 +173,7 @@ function handleQueryError(error) {
 }
 
 function handleKintoneApiError(error) {
-    if (!(error instanceof KintoneRestAPIError)) {
+    if (!(error instanceof KintoneApiError)) {
         return null;
     }
     
@@ -288,7 +288,7 @@ export function handleToolError(error) {
         };
     }
     
-    if (error instanceof KintoneRestAPIError) {
+    if (error instanceof KintoneApiError) {
         errorCode = error.status >= 500 ? 
             ErrorCode.InternalError : 
             ErrorCode.InvalidRequest;

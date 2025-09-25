@@ -20,7 +20,7 @@
 
 - このプロジェクトはkintoneとの連携を目的としたModel Context Protocol (MCP) サーバー
 - Claude等のAIアシスタントからkintoneのデータにアクセス・操作するための橋渡し役
-- kintoneとのやりとりは "@kintone/rest-api-client" を使用
+- kintoneとのやりとりは axios と form-data を直接使用
 
 ### 1.2 システム構成図
 
@@ -174,7 +174,7 @@ async function getRecord(appId, recordId) {
 
 ### 4.6 kintone API連携
 
-- @kintone/rest-api-clientを使用
+- axios と form-data を直接使用
 - 認証情報は環境変数から取得し、ハードコードしない
 
 ## 5. 機能仕様と制限事項
@@ -288,7 +288,7 @@ async function getRecord(appId, recordId) {
 - 頻繁に使用される情報のキャッシュ
 - メモリ使用量の最適化
 
-### 7.4 バージョン管理
+### 7.5 バージョン管理
 
 - バージョン番号は以下の2箇所で管理されています:
   1. package.json の "version" フィールド

@@ -1,6 +1,5 @@
 // src/repositories/KintoneAppRepository.js
 import { BaseKintoneRepository } from './base/BaseKintoneRepository.js';
-import { KintoneRestAPIError } from '@kintone/rest-api-client';
 import { KintoneFormRepository } from './KintoneFormRepository.js';
 import { KintonePreviewRepository } from './KintonePreviewRepository.js';
 import { LoggingUtils } from '../utils/LoggingUtils.js';

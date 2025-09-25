@@ -87,7 +87,7 @@ MCP仕様の更新（2025-03-26）に対応するための実装計画を整理�
   - `message`フィールドの追加
   - 進捗状況の詳細表示機能の実装
 - **実装の課題**:
-  - `search_records`ツールで`@kintone/rest-api-client`の`getAllRecords`メソッド（内部で自動的にページネーション処理される）を使用していたが、`getRecords`を使用するように変更した。ページネーションしていないため501件以上のレコードを取得できない
+  - `search_records`ツールはaxiosで`GET /k/v1/records.json`を直接呼び出す実装に変更した。ページネーションしていないため501件以上のレコードを取得できない
   - ProgressNotificationを実装するには、`getAllRecords`の使用をやめて、`getRecords`と`getRecordsCount`を使用した手動ページネーションに変更する必要がある
   - この変更は既存コードの大幅な改修を伴うため、リスクが高い
 - **適用可能なツール**:
