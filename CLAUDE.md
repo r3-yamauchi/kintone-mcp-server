@@ -12,10 +12,9 @@
 
 ## 最新の依存関係 (2025年9月更新)
 
-- **`axios`**: ^1.12.2 (kintone REST APIとのHTTP通信を直接実装)
-- **`form-data`**: ^4.0.4 (ファイルアップロード用のマルチパート処理)
-- **`@modelcontextprotocol/sdk`**: ^1.18.1
+- **`@modelcontextprotocol/sdk`**: ^1.18.2 (MCP 2025-03-26仕様対応)
 - **`dotenv`**: ^17.2.2 (環境変数管理)
+- **HTTPクライアント**: Node.js 20標準の `fetch` / `FormData`
 
 ## ライセンス
 
@@ -63,7 +62,7 @@ upsert_record  - 重複禁止フィールドを使用した単一レコードの
 upsert_records - 同じ仕様で最大100件までの複数レコードUpsert
 ```
 
-`upsert_record`と`upsert_records`はいずれもaxiosベースで `/k/v1/records.json` のUPSERTモード（`upsert: true` + `records` 配列）を直接呼び出します：
+`upsert_record`と`upsert_records`はいずれもNode.js標準の `fetch` を使って `/k/v1/records.json` のUPSERTモード（`upsert: true` + `records` 配列）を直接呼び出します：
 - 指定された重複禁止フィールド（updateKey）と値をそのままAPIに渡し、kintone側のUPSERT処理に委譲
 - 単一レコードの場合は配列1件、複数レコードの場合は最大100件までまとめて送信
 - 応答は `{ id, revision, operation }` を含む配列を受け取り、ツール側でメッセージや結果オブジェクトに整形
@@ -127,7 +126,7 @@ User Request → ToolRouter → CategoryTools → Repository → kintone API
 
 - `KintoneRepository.js` - メインリポジトリオーケストレーター
 - カテゴリー別リポジトリは`BaseKintoneRepository.js`を継承
-- API通信はaxiosとform-dataを直接利用
+- API通信はNode.js標準のfetchとFormDataを直接利用
 - フィールドとレイアウトの検証用バリデーターは`src/repositories/validators/`に配置
 
 ### 設定
@@ -652,7 +651,7 @@ User API（`get_users`、`get_groups`、`get_group_users`）は、cybozu.com共�
    - kintone内でのユーザー情報取得は、レコードのCREATOR/MODIFIERフィールドやUSER_SELECTフィールドから間接的に取得
 
 4. **実装詳細**
-   - axiosとform-dataのみで直接HTTPリクエストを実装
+  - Node.js標準のfetchとFormDataのみで直接HTTPリクエストを実装
    - 認証は`X-Cybozu-Authorization`ヘッダーを使用（Base64エンコードされたusername:password）
    - POSTメソッドで`X-HTTP-Method-Override: GET`ヘッダーを使用（User APIの仕様に準拠）
    - パラメータはリクエストボディにJSON形式で送信

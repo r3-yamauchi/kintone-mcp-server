@@ -154,18 +154,22 @@ export class ValidationUtils {
                 message: 'limit は1以上の値を指定してください。'
             },
             {
-                pattern: /\blimit\s+([5-9]\d{2,}|\d{4,})/i,
-                message: 'limit の最大値は500です。'
-            },
-            {
                 pattern: /\boffset\s+([1-9]\d{4,})/i,
                 message: 'offset の最大値は10,000です。'
             }
         ];
-        
+
         for (const { pattern, message } of invalidPatterns) {
             if (pattern.test(query)) {
                 throw new Error(message);
+            }
+        }
+
+        const limitPattern = /\blimit\s+(\d+)/ig;
+        for (const match of query.matchAll(limitPattern)) {
+            const value = Number(match[1]);
+            if (!Number.isNaN(value) && value > 500) {
+                throw new Error('limit の最大値は500です。');
             }
         }
     }

@@ -1,6 +1,4 @@
 // src/repositories/base/http/KintoneHttpClient.js
-import axios from 'axios';
-import FormData from 'form-data';
 import { KintoneApiError } from './KintoneApiError.js';
 
 const DEFAULT_TIMEOUT_MS = 60000;
@@ -13,8 +11,10 @@ function buildPath({ endpointName, guestSpaceId, preview = false }) {
     return `/k${guestPath}/v1${previewPath}/${endpointName}.json`;
 }
 
+const FORM_DATA_SUPPORTED = typeof FormData !== 'undefined';
+
 function isFormData(value) {
-    return value instanceof FormData;
+    return FORM_DATA_SUPPORTED && value instanceof FormData;
 }
 
 function stripUndefined(value) {
@@ -44,10 +44,6 @@ export class KintoneHttpClient {
         this.credentials = credentials;
         this.baseUrl = `https://${credentials.domain}`;
         this.authHeader = Buffer.from(`${credentials.username}:${credentials.password}`).toString('base64');
-        this.axios = axios.create({
-            baseURL: this.baseUrl,
-            timeout: DEFAULT_TIMEOUT_MS
-        });
     }
 
     getDefaultHeaders() {
@@ -59,63 +55,142 @@ export class KintoneHttpClient {
     }
 
     async request(method, endpointName, { params, data, preview = false, headers = {}, responseType, rawResponse = false } = {}) {
-        const url = buildPath({
+        const path = buildPath({
             endpointName,
             guestSpaceId: this.credentials.guestSpaceId,
             preview
         });
+        const url = new URL(path, this.baseUrl);
 
-        const config = {
-            method,
-            url,
-            params: params ? stripUndefined(params) : undefined,
-            data: undefined,
-            responseType: responseType || 'json',
-            headers: {
-                ...this.getDefaultHeaders(),
-                ...headers
-            }
-        };
-
-        if (data !== undefined) {
-            if (isFormData(data)) {
-                config.data = data;
-                config.headers = {
-                    ...config.headers,
-                    ...data.getHeaders()
-                };
-            } else {
-                config.data = stripUndefined(data);
-                if (!config.headers['Content-Type']) {
-                    config.headers['Content-Type'] = 'application/json';
+        const cleanedParams = params ? stripUndefined(params) : undefined;
+        if (cleanedParams) {
+            for (const [key, value] of Object.entries(cleanedParams)) {
+                if (value === undefined || value === null) {
+                    continue;
+                }
+                if (Array.isArray(value)) {
+                    for (const item of value) {
+                        if (item !== undefined && item !== null) {
+                            url.searchParams.append(key, String(item));
+                        }
+                    }
+                } else {
+                    url.searchParams.append(key, String(value));
                 }
             }
         }
 
+        const requestHeaders = new Headers(this.getDefaultHeaders());
+        for (const [key, value] of Object.entries(headers)) {
+            if (value !== undefined && value !== null) {
+                requestHeaders.set(key, String(value));
+            }
+        }
+
+        const init = {
+            method: method.toUpperCase(),
+            headers: requestHeaders,
+            signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS)
+        };
+
+        const expectedResponseType = responseType || 'json';
+
+        if (data !== undefined) {
+            if (isFormData(data)) {
+                // fetchがboundary付きヘッダーを自動付与するため、Content-Typeは削除
+                requestHeaders.delete('Content-Type');
+                init.body = data;
+            } else {
+                const payload = stripUndefined(data);
+                init.body = JSON.stringify(payload);
+                if (!requestHeaders.has('Content-Type')) {
+                    requestHeaders.set('Content-Type', 'application/json');
+                }
+            }
+        }
+
+        let response;
         try {
-            const response = await this.axios.request(config);
-            return rawResponse ? response : response.data;
+            response = await fetch(url, init);
         } catch (error) {
-            if (error.response) {
-                const { status, data: body } = error.response;
-                const message = body?.message || `kintone API request failed with status ${status}`;
-                throw new KintoneApiError(message, {
-                    status,
-                    code: body?.code,
-                    errors: body?.errors,
-                    responseBody: body
-                });
-            }
-            if (error.request) {
-                throw new KintoneApiError('kintone API request failed without response', {
-                    status: null,
-                    responseBody: null
-                });
-            }
             if (error instanceof KintoneApiError) {
                 throw error;
             }
-            throw new KintoneApiError(error.message);
+            const isAbortError = error?.name === 'AbortError';
+            throw new KintoneApiError(
+                isAbortError ? 'kintone API request timed out' : 'kintone API request failed without response',
+                {
+                    status: null,
+                    responseBody: null
+                }
+            );
+        }
+
+        const parseErrorBody = async () => {
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                try {
+                    return await response.json();
+                } catch (parseError) {
+                    return null;
+                }
+            }
+            try {
+                return await response.text();
+            } catch (parseError) {
+                return null;
+            }
+        };
+
+        if (!response.ok) {
+            const body = await parseErrorBody();
+            const message = typeof body === 'object' && body?.message
+                ? body.message
+                : `kintone API request failed with status ${response.status}`;
+
+            throw new KintoneApiError(message, {
+                status: response.status,
+                code: typeof body === 'object' ? body?.code : undefined,
+                errors: typeof body === 'object' ? body?.errors : undefined,
+                responseBody: body
+            });
+        }
+
+        if (rawResponse) {
+            const dataBuffer = expectedResponseType === 'arraybuffer'
+                ? Buffer.from(await response.arrayBuffer())
+                : await response.text();
+            return {
+                data: dataBuffer,
+                headers: Object.fromEntries(response.headers.entries()),
+                status: response.status
+            };
+        }
+
+        if (expectedResponseType === 'arraybuffer') {
+            return Buffer.from(await response.arrayBuffer());
+        }
+
+        if (expectedResponseType === 'text') {
+            return await response.text();
+        }
+
+        if (response.status === 204) {
+            return null;
+        }
+
+        const text = await response.text();
+        if (!text) {
+            return {};
+        }
+
+        try {
+            return JSON.parse(text);
+        } catch (error) {
+            throw new KintoneApiError('kintone API returned invalid JSON response', {
+                status: response.status,
+                responseBody: text
+            });
         }
     }
 

@@ -1,5 +1,4 @@
 // src/repositories/base/http/createKintoneClient.js
-import FormData from 'form-data';
 import { KintoneHttpClient } from './KintoneHttpClient.js';
 
 function removePreview(params = {}) {
@@ -193,9 +192,15 @@ export function createKintoneClient(credentials) {
     const file = {
         uploadFile: async (params) => {
             const form = new FormData();
-            form.append('file', params.file.data, {
-                filename: params.file.name
-            });
+            const fileData = params.file?.data;
+            const fileName = params.file?.name;
+
+            if (fileData === undefined || fileData === null) {
+                throw new Error('Missing file data for upload.');
+            }
+
+            const blob = fileData instanceof Blob ? fileData : new Blob([fileData]);
+            form.append('file', blob, fileName ?? 'upload.bin');
             return http.post('file', form);
         },
         downloadFile: async (params) => {

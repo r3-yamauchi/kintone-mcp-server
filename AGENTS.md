@@ -20,7 +20,7 @@
 
 - このプロジェクトはkintoneとの連携を目的としたModel Context Protocol (MCP) サーバー
 - Claude等のAIアシスタントからkintoneのデータにアクセス・操作するための橋渡し役
-- kintoneとのやりとりは axios と form-data を直接使用
+- kintoneとのやりとりは Node.js の標準 `fetch`/`FormData` API を直接使用
 
 ### 1.2 システム構成図
 
@@ -174,7 +174,7 @@ async function getRecord(appId, recordId) {
 
 ### 4.6 kintone API連携
 
-- axios と form-data を直接使用
+- Node.js 標準の fetch と FormData を直接使用
 - 認証情報は環境変数から取得し、ハードコードしない
 
 ## 5. 機能仕様と制限事項
