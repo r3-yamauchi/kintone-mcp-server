@@ -1,3 +1,5 @@
+import { LoggingUtils } from './LoggingUtils.js';
+
 export function convertDropdownFieldType(obj) {
     if (!obj || typeof obj !== 'object') return;
     
@@ -7,11 +9,11 @@ export function convertDropdownFieldType(obj) {
             
             if (key === 'type' && value === 'DROPDOWN') {
                 obj[key] = 'DROP_DOWN';
-                console.error('フィールドタイプ "DROPDOWN" を "DROP_DOWN" に自動変換しました。');
+                LoggingUtils.debug('field', 'dropdown_type_normalized', { property: key });
             }
             else if (key === 'field_type' && value === 'DROPDOWN') {
                 obj[key] = 'DROP_DOWN';
-                console.error('フィールドタイプ "DROPDOWN" を "DROP_DOWN" に自動変換しました。');
+                LoggingUtils.debug('field', 'dropdown_type_normalized', { property: key });
             }
             else if (value && typeof value === 'object') {
                 convertDropdownFieldType(value);

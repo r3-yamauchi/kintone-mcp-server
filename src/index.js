@@ -2,6 +2,7 @@
 // src/index.js
 import { MCPServer } from './server/MCPServer.js';
 import dotenv from 'dotenv';
+import { LoggingUtils } from './utils/LoggingUtils.js';
 
 // 環境変数からkintoneの認証情報を取得
 let domain = process.env.KINTONE_DOMAIN;
@@ -10,7 +11,7 @@ let password = process.env.KINTONE_PASSWORD;
 
 // 環境変数から認証情報が取得できなかった場合、.envファイルを読み込む
 if (!domain || !username || !password) {
-    console.error('環境変数からkintone認証情報を取得できませんでした。.envファイルを読み込みます。');
+    LoggingUtils.warn('startup', 'missing_environment_credentials');
     dotenv.config();
     
     // .envファイルから読み込まれた値を確認
@@ -20,14 +21,12 @@ if (!domain || !username || !password) {
     
     // .envファイルからも取得できなかった場合
     if (!domain || !username || !password) {
-        console.error('Error: kintone credentials not provided.');
-        console.error('Please set the following environment variables:');
-        console.error('  - KINTONE_DOMAIN: Your kintone domain (e.g. example.cybozu.com)');
-        console.error('  - KINTONE_USERNAME: Your kintone username');
-        console.error('  - KINTONE_PASSWORD: Your kintone password');
+        LoggingUtils.error('startup', 'missing_kintone_credentials', new Error('Credentials not provided'), {
+            requiredVariables: ['KINTONE_DOMAIN', 'KINTONE_USERNAME', 'KINTONE_PASSWORD']
+        });
         process.exit(1);
     } else {
-        console.error('.envファイルから認証情報を読み込みました。');
+        LoggingUtils.info('startup', 'credentials_loaded_from_env');
     }
 }
 
@@ -35,10 +34,10 @@ if (!domain || !username || !password) {
 try {
     const server = new MCPServer(domain, username, password);
     server.run().catch(error => {
-        console.error('Failed to start MCP server:', error);
+        LoggingUtils.error('startup', 'mcp_server_run_failed', error);
         process.exit(1);
     });
 } catch (error) {
-    console.error('Error initializing MCP server:', error);
+    LoggingUtils.error('startup', 'mcp_server_initialization_failed', error);
     process.exit(1);
 }

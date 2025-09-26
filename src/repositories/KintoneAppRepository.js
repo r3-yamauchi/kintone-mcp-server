@@ -172,7 +172,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
     // アプリを指定したスペースに移動させるメソッド
     async moveAppToSpace(appId, spaceId) {
         try {
-            console.error(`Moving app ${appId} to space ${spaceId}`);
+            LoggingUtils.info('app', 'move_app_to_space', { appId, spaceId });
             await this.client.app.move({
                 app: appId,
                 space: spaceId
@@ -186,7 +186,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
     // アプリをスペースに所属させないようにするメソッド
     async moveAppFromSpace(appId) {
         try {
-            console.error(`Moving app ${appId} from space`);
+            LoggingUtils.info('app', 'move_app_from_space', { appId });
             await this.client.app.move({
                 app: appId,
                 space: null
@@ -217,12 +217,12 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async getAppActions(appId, lang) {
         try {
-            console.error(`Fetching app actions for app: ${appId}`);
             const params = { app: appId };
             if (lang) params.lang = lang;
             
             const response = await this.client.app.getAppActions(params);
-            console.error('App actions response:', response);
+            LoggingUtils.info('app', 'get_app_actions', { appId, lang });
+            LoggingUtils.debug('app', 'get_app_actions_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `get app actions for app ${appId}`);
@@ -236,11 +236,11 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async getAppPlugins(appId) {
         try {
-            console.error(`Fetching plugins for app: ${appId}`);
+            LoggingUtils.info('app', 'get_app_plugins', { appId });
             const response = await this.client.app.getPlugins({
                 app: appId
             });
-            console.error('Plugins response:', response);
+            LoggingUtils.debug('app', 'get_app_plugins_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `get app plugins for app ${appId}`);
@@ -254,13 +254,13 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async getProcessManagement(appId) {
         try {
-            console.error(`Fetching process management for app: ${appId}`);
+            LoggingUtils.info('app', 'get_process_management', { appId });
             
             const response = await this.client.app.getProcessManagement({
                 app: appId
             });
             
-            console.error('Process management response:', response);
+            LoggingUtils.debug('app', 'get_process_management_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `get process management for app ${appId}`);
@@ -278,10 +278,8 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async updateProcessManagement(appId, enable, states, actions, revision = -1) {
         try {
-            console.error(`Updating process management for app: ${appId}`);
-            console.error('Enable:', enable);
-            console.error('States:', states);
-            console.error('Actions:', actions);
+            LoggingUtils.info('app', 'update_process_management', { appId, enable, hasStates: Boolean(states), hasActions: Boolean(actions) });
+            LoggingUtils.debug('app', 'update_process_management_payload', { states, actions, revision });
             
             const params = {
                 app: appId,
@@ -301,7 +299,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.updateProcessManagement(params);
-            console.error('Update process management response:', response);
+            LoggingUtils.debug('app', 'update_process_management_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `update process management for app ${appId}`);
@@ -316,7 +314,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async getViews(appId, preview = false) {
         try {
-            console.error(`Fetching views for app: ${appId}, preview: ${preview}`);
+            LoggingUtils.info('app', 'get_views', { appId, preview: Boolean(preview) });
             
             const params = { app: appId };
             if (preview) {
@@ -324,7 +322,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.getViews(params);
-            console.error('Views response:', response);
+            LoggingUtils.debug('app', 'get_views_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `get views for app ${appId}`);
@@ -340,8 +338,8 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async updateViews(appId, views, revision = -1) {
         try {
-            console.error(`Updating views for app: ${appId}`);
-            console.error('Views:', views);
+            LoggingUtils.info('app', 'update_views', { appId, revision });
+            LoggingUtils.debug('app', 'update_views_payload', views);
             
             const params = {
                 app: appId,
@@ -353,7 +351,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.updateViews(params);
-            console.error('Update views response:', response);
+            LoggingUtils.debug('app', 'update_views_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `update views for app ${appId}`);
@@ -368,7 +366,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async getAppAcl(appId, preview = false) {
         try {
-            console.error(`Fetching app ACL for app: ${appId}, preview: ${preview}`);
+            LoggingUtils.info('app', 'get_app_acl', { appId, preview: Boolean(preview) });
             
             const params = { app: appId };
             if (preview) {
@@ -376,7 +374,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.getAppAcl(params);
-            console.error('App ACL response:', response);
+            LoggingUtils.debug('app', 'get_app_acl_response', response);
             return {
                 acl: response.rights,
                 revision: response.revision
@@ -394,7 +392,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async getFieldAcl(appId, preview = false) {
         try {
-            console.error(`Fetching field ACL for app: ${appId}, preview: ${preview}`);
+            LoggingUtils.info('app', 'get_field_acl', { appId, preview: Boolean(preview) });
             
             const params = { app: appId };
             if (preview) {
@@ -402,7 +400,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.getFieldAcl(params);
-            console.error('Field ACL response:', response);
+            LoggingUtils.debug('app', 'get_field_acl_response', response);
             return {
                 rights: response.rights,
                 revision: response.revision
@@ -421,8 +419,8 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async updateFieldAcl(appId, rights, revision = -1) {
         try {
-            console.error(`Updating field ACL for app: ${appId}`);
-            console.error('Rights:', rights);
+            LoggingUtils.info('app', 'update_field_acl', { appId, revision });
+            LoggingUtils.debug('app', 'update_field_acl_payload', rights);
             
             const params = {
                 app: appId,
@@ -434,7 +432,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.updateFieldAcl(params);
-            console.error('Update field ACL response:', response);
+            LoggingUtils.debug('app', 'update_field_acl_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `update field ACL for app ${appId}`);
@@ -449,7 +447,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async getReports(appId, preview = false) {
         try {
-            console.error(`Fetching reports for app: ${appId}, preview: ${preview}`);
+            LoggingUtils.info('app', 'get_reports', { appId, preview: Boolean(preview) });
             
             const params = { app: appId };
             if (preview) {
@@ -457,7 +455,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.getReports(params);
-            console.error('Reports response:', response);
+            LoggingUtils.debug('app', 'get_reports_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `get reports for app ${appId}`);
@@ -473,8 +471,8 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async updateReports(appId, reports, revision = -1) {
         try {
-            console.error(`Updating reports for app: ${appId}`);
-            console.error('Reports:', reports);
+            LoggingUtils.info('app', 'update_reports', { appId, revision });
+            LoggingUtils.debug('app', 'update_reports_payload', reports);
             
             const params = {
                 app: appId,
@@ -486,7 +484,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.updateReports(params);
-            console.error('Update reports response:', response);
+            LoggingUtils.debug('app', 'update_reports_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `update reports for app ${appId}`);
@@ -501,7 +499,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async getNotifications(appId, preview = false) {
         try {
-            console.error(`Fetching notifications for app: ${appId}, preview: ${preview}`);
+            LoggingUtils.info('app', 'get_notifications', { appId, preview: Boolean(preview) });
             
             const params = { app: appId };
             if (preview) {
@@ -509,7 +507,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.getGeneralNotifications(params);
-            console.error('Notifications response:', response);
+            LoggingUtils.debug('app', 'get_notifications_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `get notifications for app ${appId}`);
@@ -525,8 +523,8 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async updateNotifications(appId, notifications, revision = -1) {
         try {
-            console.error(`Updating notifications for app: ${appId}`);
-            console.error('Notifications:', notifications);
+            LoggingUtils.info('app', 'update_notifications', { appId, revision });
+            LoggingUtils.debug('app', 'update_notifications_payload', notifications);
             
             const params = {
                 app: appId,
@@ -538,7 +536,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.updateGeneralNotifications(params);
-            console.error('Update notifications response:', response);
+            LoggingUtils.debug('app', 'update_notifications_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `update notifications for app ${appId}`);
@@ -553,7 +551,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async getPerRecordNotifications(appId, preview = false) {
         try {
-            console.error(`Fetching per-record notifications for app: ${appId}, preview: ${preview}`);
+            LoggingUtils.info('app', 'get_per_record_notifications', { appId, preview: Boolean(preview) });
             
             const params = { app: appId };
             if (preview) {
@@ -561,7 +559,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.getPerRecordNotifications(params);
-            console.error('Per-record notifications response:', response);
+            LoggingUtils.debug('app', 'get_per_record_notifications_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `get per-record notifications for app ${appId}`);
@@ -577,8 +575,8 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async updatePerRecordNotifications(appId, notifications, revision = -1) {
         try {
-            console.error(`Updating per-record notifications for app: ${appId}`);
-            console.error('Notifications:', notifications);
+            LoggingUtils.info('app', 'update_per_record_notifications', { appId, revision });
+            LoggingUtils.debug('app', 'update_per_record_notifications_payload', notifications);
             
             const params = {
                 app: appId,
@@ -590,7 +588,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.updatePerRecordNotifications(params);
-            console.error('Update per-record notifications response:', response);
+            LoggingUtils.debug('app', 'update_per_record_notifications_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `update per-record notifications for app ${appId}`);
@@ -605,7 +603,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async getReminderNotifications(appId, preview = false) {
         try {
-            console.error(`Fetching reminder notifications for app: ${appId}, preview: ${preview}`);
+            LoggingUtils.info('app', 'get_reminder_notifications', { appId, preview: Boolean(preview) });
             
             const params = { app: appId };
             if (preview) {
@@ -613,7 +611,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.getReminderNotifications(params);
-            console.error('Reminder notifications response:', response);
+            LoggingUtils.debug('app', 'get_reminder_notifications_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `get reminder notifications for app ${appId}`);
@@ -629,8 +627,8 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async updateReminderNotifications(appId, notifications, revision = -1) {
         try {
-            console.error(`Updating reminder notifications for app: ${appId}`);
-            console.error('Notifications:', notifications);
+            LoggingUtils.info('app', 'update_reminder_notifications', { appId, revision });
+            LoggingUtils.debug('app', 'update_reminder_notifications_payload', notifications);
             
             const params = {
                 app: appId,
@@ -642,7 +640,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.updateReminderNotifications(params);
-            console.error('Update reminder notifications response:', response);
+            LoggingUtils.debug('app', 'update_reminder_notifications_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `update reminder notifications for app ${appId}`);
@@ -658,8 +656,8 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async updateAppActions(appId, actions, revision = -1) {
         try {
-            console.error(`Updating app actions for app: ${appId}`);
-            console.error('Actions:', actions);
+            LoggingUtils.info('app', 'update_app_actions', { appId, revision });
+            LoggingUtils.debug('app', 'update_app_actions_payload', actions);
             
             const params = {
                 app: appId,
@@ -671,7 +669,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.updateAppActions(params);
-            console.error('Update app actions response:', response);
+            LoggingUtils.debug('app', 'update_app_actions_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `update app actions for app ${appId}`);
@@ -687,8 +685,8 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async updatePlugins(appId, plugins, revision = -1) {
         try {
-            console.error(`Updating plugins for app: ${appId}`);
-            console.error('Plugins:', plugins);
+            LoggingUtils.info('app', 'update_plugins', { appId, revision });
+            LoggingUtils.debug('app', 'update_plugins_payload', plugins);
             
             const params = {
                 app: appId,
@@ -700,7 +698,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.updatePlugins(params);
-            console.error('Update plugins response:', response);
+            LoggingUtils.debug('app', 'update_plugins_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `update plugins for app ${appId}`);
@@ -715,7 +713,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async getAppCustomize(appId, preview = false) {
         try {
-            console.error(`Fetching app customize for app: ${appId}, preview: ${preview}`);
+            LoggingUtils.info('app', 'get_app_customize', { appId, preview: Boolean(preview) });
             
             const params = { app: appId };
             if (preview) {
@@ -723,7 +721,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.getAppCustomize(params);
-            console.error('App customize response:', response);
+            LoggingUtils.debug('app', 'get_app_customize_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `get app customize for app ${appId}`);
@@ -741,10 +739,8 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async updateAppCustomize(appId, scope, desktop, mobile, revision = -1) {
         try {
-            console.error(`Updating app customize for app: ${appId}`);
-            console.error('Scope:', scope);
-            console.error('Desktop:', desktop);
-            console.error('Mobile:', mobile);
+            LoggingUtils.info('app', 'update_app_customize', { appId, scope, revision });
+            LoggingUtils.debug('app', 'update_app_customize_payload', { desktop, mobile });
             
             const params = {
                 app: appId,
@@ -764,7 +760,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.updateAppCustomize(params);
-            console.error('Update app customize response:', response);
+            LoggingUtils.debug('app', 'update_app_customize_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `update app customize for app ${appId}`);
@@ -780,8 +776,8 @@ export class KintoneAppRepository extends BaseKintoneRepository {
      */
     async updateAppAcl(appId, rights, revision = -1) {
         try {
-            console.error(`Updating app ACL for app: ${appId}`);
-            console.error('Rights:', rights);
+            LoggingUtils.info('app', 'update_app_acl', { appId, revision });
+            LoggingUtils.debug('app', 'update_app_acl_payload', rights);
             
             const params = {
                 app: appId,
@@ -793,7 +789,7 @@ export class KintoneAppRepository extends BaseKintoneRepository {
             }
             
             const response = await this.client.app.updateAppAcl(params);
-            console.error('Update app ACL response:', response);
+            LoggingUtils.debug('app', 'update_app_acl_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `update app ACL for app ${appId}`);

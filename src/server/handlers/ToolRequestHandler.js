@@ -2,11 +2,12 @@ import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import { ToolRouter } from './ToolRouter.js';
 import { convertDropdownFieldType } from '../../utils/DataTransformers.js';
 import { handleToolError } from './ErrorHandlers.js';
+import { LoggingUtils } from '../../utils/LoggingUtils.js';
 
 export async function executeToolRequest(request, repository) {
-    console.error(`Request params:`, JSON.stringify(request.params, null, 2));
-    
     const { name, arguments: args } = request.params;
+    LoggingUtils.info('tool', 'tool_request_received', { name });
+    LoggingUtils.debug('tool', 'tool_request_payload', request.params);
     
     if (!name) {
         throw new McpError(
@@ -24,8 +25,8 @@ export async function executeToolRequest(request, repository) {
     
     convertDropdownFieldType(args);
     
-    console.error(`Executing tool: ${name}`);
-    console.error(`Arguments:`, JSON.stringify(args, null, 2));
+    LoggingUtils.info('tool', 'tool_execution_start', { name });
+    LoggingUtils.debug('tool', 'tool_arguments', args);
 
     try {
         const router = new ToolRouter();
@@ -49,4 +50,3 @@ export async function executeToolRequest(request, repository) {
         return handleToolError(error);
     }
 }
-

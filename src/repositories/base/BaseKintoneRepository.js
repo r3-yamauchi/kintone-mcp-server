@@ -12,15 +12,14 @@ export class BaseKintoneRepository {
     // エラーハンドリングを共通化
     handleKintoneError(error, operation) {
         if (error instanceof KintoneApiError) {
-            console.error('kintone API Error:', {
+            LoggingUtils.error('repository', 'kintone_api_error', error, {
                 status: error.status,
                 code: error.code,
-                message: error.message,
                 errors: error.errors,
             });
             throw new Error(`kintone API Error: ${error.code} - ${error.message}`);
         }
-        console.error('Unexpected Error:', error);
+        LoggingUtils.error('repository', 'unexpected_error', error);
         throw new Error(`Failed to ${operation}: ${error.message}`);
     }
     

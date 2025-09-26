@@ -8,6 +8,7 @@ import { handleLayoutTools } from '../tools/LayoutTools.js';
 import { handleUserTools } from '../tools/UserTools.js';
 import { handleSystemTools } from '../tools/SystemTools.js';
 import { handleFileTools } from '../tools/FileTools.js';
+import { LoggingUtils } from '../../utils/LoggingUtils.js';
 
 export class ToolRouter {
     constructor() {
@@ -113,10 +114,8 @@ export class ToolRouter {
 
     async createLookupFieldResponse(args, repository) {
         const fieldConfig = await handleFieldTools('create_lookup_field', args, repository);
-        
+
         const note = `注意: create_lookup_field ツールは設定オブジェクトを生成するだけのヘルパーツールです。実際にフィールドを追加するには、この結果を add_fields ツールに渡してください。`;
-        console.error(note);
-        
         const lookupNote = `
 【重要】ルックアップフィールドについて
 - ルックアップフィールドは基本的なフィールドタイプ（SINGLE_LINE_TEXT、NUMBERなど）に、lookup属性を追加したものです
@@ -125,8 +124,6 @@ export class ToolRouter {
 - ルックアップのキーフィールド自体はフィールドマッピングに含めないでください
 - lookupPickerFieldsとsortは省略可能ですが、指定することを強く推奨します
 `;
-        console.error(lookupNote);
-        
         const example = `使用例:
 add_fields({
   app_id: アプリID,
@@ -134,7 +131,7 @@ add_fields({
     "${fieldConfig.code}": ${JSON.stringify(fieldConfig, null, 2)}
   }
 });`;
-        console.error(example);
+        LoggingUtils.info('field', 'lookup_field_guidance_generated', { fieldCode: fieldConfig.code });
         
         const result = {
             ...fieldConfig,

@@ -6,6 +6,24 @@ import { validateFormLayout, validateFieldSize } from './validators/LayoutValida
 import { autoCorrectOptions } from './validators/OptionValidator.js';
 import { FIELD_TYPES_REQUIRING_OPTIONS, SUBTABLE_FIELD_TYPE } from '../constants.js';
 import { autoCorrectLayoutWidths, validateFieldsInLayout, addMissingFieldsToLayout } from '../utils/LayoutUtils.js';
+import { LoggingUtils } from '../utils/LoggingUtils.js';
+
+function logLookupFieldSummary(appId, properties, source) {
+    if (!properties) {
+        return;
+    }
+    const lookupCodes = Object.entries(properties)
+        .filter(([, field]) => field && field.lookup !== undefined)
+        .map(([code]) => code);
+    if (lookupCodes.length > 0) {
+        LoggingUtils.debug('form', 'lookup_fields_detected', {
+            appId,
+            source,
+            count: lookupCodes.length,
+            codes: lookupCodes
+        });
+    }
+}
 
 /**
  * kintoneアプリのフォーム関連操作を担当するリポジトリクラス
@@ -18,55 +36,19 @@ export class KintoneFormRepository extends BaseKintoneRepository {
      */
     async getFormFields(appId) {
         try {
-            console.error(`Fetching form fields for app: ${appId}`);
+            LoggingUtils.info('form', 'get_form_fields', { appId });
             try {
-                // まず運用環境のAPIを試す
-                console.error(`Trying to get form fields from production environment for app: ${appId}`);
                 const response = await this.client.app.getFormFields({ app: appId });
-                console.error(`Successfully got form fields from production environment for app: ${appId}`);
-                
-                // ルックアップフィールドの情報をログに出力（デバッグ用）
-                const lookupFields = Object.entries(response.properties || {}).filter(([_, field]) => field.lookup !== undefined);
-                if (lookupFields.length > 0) {
-                    console.error(`Found ${lookupFields.length} lookup fields in production environment:`);
-                    lookupFields.forEach(([code, field]) => {
-                        console.error(`Lookup field "${code}": ${JSON.stringify({
-                            type: field.type,
-                            relatedApp: field.lookup.relatedApp?.app,
-                            relatedKeyField: field.lookup.relatedKeyField
-                        })}`);
-                    });
-                } else {
-                    console.error('No lookup fields found in production environment');
-                }
-                
+                logLookupFieldSummary(appId, response.properties, 'production');
                 return response;
             } catch (error) {
                 // 404エラー（アプリが見つからない）の場合、プレビュー環境のAPIを試す
                 if (error instanceof KintoneApiError && 
                     (error.code === 'GAIA_AP01' || error.status === 404)) {
-                    console.error(`App ${appId} not found in production environment, trying preview environment...`);
-                    
                     // プレビュー環境のフィールド情報を取得
                     const params = { app: appId, preview: true };
-                    console.error(`Trying to get form fields from preview environment for app: ${appId}`);
                     const previewResponse = await this.client.app.getFormFields(params);
-                    console.error(`Successfully got form fields from preview environment for app: ${appId}`);
-                    
-                    // ルックアップフィールドの情報をログに出力（デバッグ用）
-                    const lookupFields = Object.entries(previewResponse.properties || {}).filter(([_, field]) => field.lookup !== undefined);
-                    if (lookupFields.length > 0) {
-                        console.error(`Found ${lookupFields.length} lookup fields in preview environment:`);
-                        lookupFields.forEach(([code, field]) => {
-                            console.error(`Lookup field "${code}": ${JSON.stringify({
-                                type: field.type,
-                                relatedApp: field.lookup.relatedApp?.app,
-                                relatedKeyField: field.lookup.relatedKeyField
-                            })}`);
-                        });
-                    } else {
-                        console.error('No lookup fields found in preview environment');
-                    }
+                    logLookupFieldSummary(appId, previewResponse.properties, 'preview');
                     
                     // プレビュー環境から取得したことを示す情報を追加
                     return {
@@ -90,23 +72,21 @@ export class KintoneFormRepository extends BaseKintoneRepository {
      */
     async getFormLayout(appId) {
         try {
-            console.error(`Fetching form layout for app: ${appId}`);
+            LoggingUtils.info('form', 'get_form_layout', { appId });
             try {
-                // まず運用環境のAPIを試す
                 const response = await this.client.app.getFormLayout({ app: appId });
-                console.error('Form layout response:', response);
+                LoggingUtils.debug('form', 'get_form_layout_response', response);
                 return response;
             } catch (error) {
                 // 404エラー（アプリが見つからない）の場合、プレビュー環境のAPIを試す
                 if (error instanceof KintoneApiError && 
                     (error.code === 'GAIA_AP01' || error.status === 404)) {
-                    console.error(`App ${appId} not found in production environment, trying preview environment...`);
-                    
                     // プレビュー環境のレイアウト情報を取得
                     const previewResponse = await this.client.app.getFormLayout({
                         app: appId,
                         preview: true // プレビュー環境を指定
                     });
+                    LoggingUtils.debug('form', 'get_form_layout_preview_response', previewResponse);
                     
                     // プレビュー環境から取得したことを示す情報を追加
                     return {
@@ -131,24 +111,33 @@ export class KintoneFormRepository extends BaseKintoneRepository {
      */
     async addFields(appId, properties) {
         try {
-            console.error(`Adding fields to app ${appId}`);
-            console.error('Field properties:', properties);
+            LoggingUtils.info('form', 'add_fields', {
+                appId,
+                propertyCount: Object.keys(properties || {}).length
+            });
 
             // 既存のフィールド情報を取得
-            console.error(`Fetching existing fields for app ${appId} to check for duplicates`);
             let existingFields;
             try {
                 existingFields = await this.getFormFields(appId);
-                console.error(`Found ${Object.keys(existingFields.properties || {}).length} existing fields`);
+                LoggingUtils.debug('form', 'existing_field_count', {
+                    appId,
+                    count: Object.keys(existingFields.properties || {}).length
+                });
             } catch (error) {
-                console.error(`Failed to get existing fields: ${error.message}`);
-                console.error('Continuing without duplicate check');
+                LoggingUtils.warn('form', 'existing_field_fetch_failed', {
+                    appId,
+                    message: error.message
+                });
                 existingFields = { properties: {} };
             }
             
             // 既存のフィールドコードのリストを作成
             const existingFieldCodes = Object.keys(existingFields.properties || {});
-            console.error(`Existing field codes: ${existingFieldCodes.join(', ')}`);
+            LoggingUtils.debug('form', 'existing_field_codes', {
+                appId,
+                codes: existingFieldCodes
+            });
 
             // 変換済みのプロパティを格納する新しいオブジェクト
             const convertedProperties = {};
@@ -425,8 +414,9 @@ export class KintoneFormRepository extends BaseKintoneRepository {
 
             // 警告メッセージを表示
             if (warnings.length > 0) {
-                console.error('自動修正の警告:');
-                warnings.forEach(warning => console.error(warning));
+                warnings.forEach((warning) => {
+                    LoggingUtils.warn('form', 'field_addition_warning', { appId, warning });
+                });
             }
 
             const response = await this.client.app.addFormFields({
@@ -434,7 +424,7 @@ export class KintoneFormRepository extends BaseKintoneRepository {
                 properties: convertedProperties,
                 revision: -1 // 最新のリビジョンを使用
             });
-            console.error('Field addition response:', response);
+            LoggingUtils.debug('form', 'add_fields_response', response);
             
             // 警告メッセージを含めた拡張レスポンスを返す
             return {
@@ -455,8 +445,8 @@ export class KintoneFormRepository extends BaseKintoneRepository {
      */
     async updateFormLayout(appId, layout, revision = -1) {
         try {
-            console.error(`Updating form layout for app: ${appId}`);
-            console.error('Layout:', layout);
+            LoggingUtils.info('form', 'update_form_layout', { appId, revision });
+            LoggingUtils.debug('form', 'update_form_layout_payload', layout);
             
             // レイアウトのバリデーション
             validateFormLayout(layout);
@@ -483,18 +473,15 @@ export class KintoneFormRepository extends BaseKintoneRepository {
             try {
                 const fieldsResponse = await this.getFormFields(appId);
                 formFields = fieldsResponse.properties || {};
-                console.error(`Retrieved form fields for width correction: ${Object.keys(formFields).length} fields`);
-                
-                // ルックアップフィールドの情報をログに出力（デバッグ用）
-                const lookupFields = Object.entries(formFields).filter(([_, field]) => field.lookup !== undefined);
-                if (lookupFields.length > 0) {
-                    console.error(`Found ${lookupFields.length} lookup fields: ${lookupFields.map(([code]) => code).join(', ')}`);
-                } else {
-                    console.error('No lookup fields found in form fields');
-                }
+                LoggingUtils.debug('form', 'form_field_count_for_layout', {
+                    appId,
+                    count: Object.keys(formFields).length
+                });
             } catch (error) {
-                console.error(`Failed to get form fields for width correction: ${error.message}`);
-                console.error('Continuing without width correction');
+                LoggingUtils.warn('form', 'form_field_fetch_failed_for_layout', {
+                    appId,
+                    message: error.message
+                });
             }
             
             // 不足しているフィールドの自動追加の有効/無効を制御するフラグ
@@ -507,7 +494,10 @@ export class KintoneFormRepository extends BaseKintoneRepository {
                 const missingFields = validateFieldsInLayout(layout, formFields);
                 
                 if (missingFields.length > 0) {
-                    console.error(`Warning: 以下のフィールドがレイアウトに含まれていません: ${missingFields.join(', ')}`);
+                    LoggingUtils.warn('form', 'layout_missing_fields', {
+                        appId,
+                        missingFields
+                    });
                     
                     if (autoAddMissingFields) {
                         // 不足しているフィールドを自動追加
@@ -515,12 +505,14 @@ export class KintoneFormRepository extends BaseKintoneRepository {
                         layoutWithMissingFields = fixedLayout;
                         
                         // 警告メッセージを出力
-                        warnings.forEach(warning => console.error(warning));
+                        warnings.forEach((warning) => {
+                            LoggingUtils.warn('form', 'auto_added_missing_field', { appId, warning });
+                        });
                     } else {
-                        console.error('不足しているフィールドの自動追加は無効化されています。不足しているフィールドは手動で追加してください。');
+                        LoggingUtils.warn('form', 'auto_add_missing_fields_disabled', { appId });
                     }
                 } else {
-                    console.error('All fields are included in the layout');
+                    LoggingUtils.debug('form', 'layout_contains_all_fields', { appId });
                 }
             }
             
@@ -529,34 +521,35 @@ export class KintoneFormRepository extends BaseKintoneRepository {
             if (formFields) {
                 const { layout: widthCorrectedLayout } = autoCorrectLayoutWidths(layoutWithMissingFields, formFields);
                 correctedLayout = widthCorrectedLayout;
-                console.error(`Applied width correction to layout`);
+                LoggingUtils.debug('form', 'layout_width_corrected', { appId });
             }
             
             // GROUPフィールドの label プロパティを除去する関数
             const removeGroupLabels = (items) => {
                 // 入力チェック
                 if (!items) {
-                    console.error('Warning: removeGroupLabels called with null or undefined items');
+                    LoggingUtils.warn('form', 'remove_group_labels_missing_items', { appId });
                     return [];
                 }
                 
                 // Promiseオブジェクトの場合はエラーログを出力
                 if (items instanceof Promise) {
-                    console.error('Warning: removeGroupLabels received a Promise object. This should not happen in synchronous mode.');
-                    console.error('Promise content:', JSON.stringify(items));
+                    LoggingUtils.warn('form', 'remove_group_labels_received_promise', { appId });
                     return [];
                 }
                 
                 // 配列でない場合は配列に変換
                 if (!Array.isArray(items)) {
-                    console.error(`Warning: removeGroupLabels received non-array items: ${typeof items}`);
-                    console.error('Items content:', JSON.stringify(items));
+                    LoggingUtils.warn('form', 'remove_group_labels_non_array', {
+                        appId,
+                        itemType: typeof items
+                    });
                     return [];
                 }
                 
                 return items.map(item => {
                     if (!item) {
-                        console.error('Warning: null or undefined item in layout');
+                        LoggingUtils.warn('form', 'remove_group_labels_null_item', { appId });
                         return null;
                     }
                     
@@ -569,11 +562,11 @@ export class KintoneFormRepository extends BaseKintoneRepository {
                         if (newItem.layout) {
                             // Promiseオブジェクトの場合はエラーログを出力
                             if (newItem.layout instanceof Promise) {
-                                console.error(`Warning: GROUP要素 "${newItem.code}" の layout プロパティがPromiseオブジェクトです。同期処理に変更してください。`);
+                                LoggingUtils.warn('form', 'group_layout_contains_promise', { appId, groupCode: newItem.code });
                                 newItem.layout = [];
                             } else if (!Array.isArray(newItem.layout)) {
                                 // 配列でない場合は配列に変換
-                                console.error(`Warning: GROUP要素 "${newItem.code}" の layout プロパティが配列ではありません。自動的に配列に変換します。`);
+                                LoggingUtils.warn('form', 'group_layout_not_array', { appId, groupCode: newItem.code });
                                 // 空でない値の場合のみ配列に変換
                                 newItem.layout = newItem.layout ? [newItem.layout] : [];
                             }
@@ -585,7 +578,7 @@ export class KintoneFormRepository extends BaseKintoneRepository {
                     } else if (item.type === "ROW" && item.fields) {
                         // fieldsが配列でない場合は配列に変換
                         if (!Array.isArray(item.fields)) {
-                            console.error(`Warning: ROW要素の fields プロパティが配列ではありません。自動的に配列に変換します。`);
+                            LoggingUtils.warn('form', 'row_fields_not_array', { appId });
                             item.fields = item.fields ? [item.fields] : [];
                         }
                         
@@ -594,7 +587,7 @@ export class KintoneFormRepository extends BaseKintoneRepository {
                             ...item,
                             fields: item.fields.map(field => {
                                 if (!field) {
-                                    console.error('Warning: null or undefined field in ROW');
+                                    LoggingUtils.warn('form', 'row_contains_null_field', { appId });
                                     return null;
                                 }
                                 
@@ -621,12 +614,14 @@ export class KintoneFormRepository extends BaseKintoneRepository {
             };
             
             // リクエストパラメータの詳細をデバッグログに出力
-            console.error('REST API request parameters:');
-            console.error(`app: ${params.app}, revision: ${params.revision}`);
-            console.error('updateFormLayout (JSON):', JSON.stringify(params.layout, null, 2));
+            LoggingUtils.debug('form', 'update_form_layout_request', {
+                app: params.app,
+                revision: params.revision
+            });
+            LoggingUtils.debug('form', 'update_form_layout_request_layout', params.layout);
             
             const response = await this.client.app.updateFormLayout(params);
-            console.error('Update form layout response:', response);
+            LoggingUtils.debug('form', 'update_form_layout_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `update form layout for app ${appId}`);
@@ -642,23 +637,28 @@ export class KintoneFormRepository extends BaseKintoneRepository {
      */
     async updateFormFields(appId, properties, revision = -1) {
         try {
-            console.error(`Updating form fields for app: ${appId}`);
-            console.error('Properties:', properties);
+            LoggingUtils.info('form', 'update_form_fields', { appId, revision, propertyCount: Object.keys(properties || {}).length });
+            LoggingUtils.debug('form', 'update_form_fields_payload', properties);
 
             // 既存のフィールド情報を取得
-            console.error(`Fetching existing fields for app ${appId} to validate updates`);
             let existingFields;
             try {
                 existingFields = await this.getFormFields(appId);
-                console.error(`Found ${Object.keys(existingFields.properties || {}).length} existing fields`);
+                LoggingUtils.debug('form', 'existing_field_count_for_update', {
+                    appId,
+                    count: Object.keys(existingFields.properties || {}).length
+                });
             } catch (error) {
-                console.error(`Failed to get existing fields: ${error.message}`);
+                LoggingUtils.error('form', 'existing_fields_fetch_failed_for_update', error, { appId });
                 throw new Error(`既存のフィールド情報を取得できませんでした。アプリID: ${appId}`);
             }
             
             // 既存のフィールドコードのリストを作成
             const existingFieldCodes = Object.keys(existingFields.properties || {});
-            console.error(`Existing field codes: ${existingFieldCodes.join(', ')}`);
+            LoggingUtils.debug('form', 'existing_field_codes_for_update', {
+                appId,
+                codes: existingFieldCodes
+            });
 
             // 更新対象のフィールドが存在するかチェック
             for (const fieldCode of Object.keys(properties)) {
@@ -689,7 +689,11 @@ export class KintoneFormRepository extends BaseKintoneRepository {
                     if (fieldConfig.type === "NUMBER" || 
                         (fieldConfig.type === "CALC" && fieldConfig.format === "NUMBER")) {
                         if (fieldConfig.unit && !fieldConfig.unitPosition && correctedField.unitPosition) {
-                            console.error(`フィールド "${fieldCode}" の unitPosition を "${correctedField.unitPosition}" に自動設定しました。`);
+                            LoggingUtils.debug('form', 'unit_position_auto_set', {
+                                appId,
+                                fieldCode,
+                                unitPosition: correctedField.unitPosition
+                            });
                         }
                     }
                 }
@@ -702,7 +706,7 @@ export class KintoneFormRepository extends BaseKintoneRepository {
             };
             
             const response = await this.client.app.updateFormFields(params);
-            console.error('Update form fields response:', response);
+            LoggingUtils.debug('form', 'update_form_fields_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `update form fields for app ${appId}`);
@@ -718,8 +722,8 @@ export class KintoneFormRepository extends BaseKintoneRepository {
      */
     async deleteFormFields(appId, fields, revision = -1) {
         try {
-            console.error(`Deleting form fields for app: ${appId}`);
-            console.error('Fields to delete:', fields);
+            LoggingUtils.info('form', 'delete_form_fields', { appId, revision, fieldCount: fields?.length || 0 });
+            LoggingUtils.debug('form', 'delete_form_fields_payload', fields);
 
             const params = {
                 app: appId,
@@ -728,7 +732,7 @@ export class KintoneFormRepository extends BaseKintoneRepository {
             };
             
             const response = await this.client.app.deleteFormFields(params);
-            console.error('Delete form fields response:', response);
+            LoggingUtils.debug('form', 'delete_form_fields_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `delete form fields for app ${appId}`);

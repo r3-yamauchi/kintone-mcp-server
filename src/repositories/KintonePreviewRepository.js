@@ -1,5 +1,6 @@
 // src/repositories/KintonePreviewRepository.js
 import { BaseKintoneRepository } from './base/BaseKintoneRepository.js';
+import { LoggingUtils } from '../utils/LoggingUtils.js';
 
 /**
  * kintoneアプリのプレビュー環境関連操作を担当するリポジトリクラス
@@ -13,7 +14,7 @@ export class KintonePreviewRepository extends BaseKintoneRepository {
      */
     async getPreviewAppSettings(appId, lang) {
         try {
-            console.error(`Fetching preview app settings for app: ${appId}`);
+            LoggingUtils.info('preview', 'get_preview_app_settings', { appId, lang });
             
             // プレビュー環境のAPIを呼び出す
             const params = { app: appId, preview: true };
@@ -23,7 +24,7 @@ export class KintonePreviewRepository extends BaseKintoneRepository {
             
             const response = await this.client.app.getAppSettings(params);
             
-            console.error('Preview app settings response:', response);
+            LoggingUtils.debug('preview', 'get_preview_app_settings_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `get preview app settings for app ${appId}`);
@@ -38,7 +39,7 @@ export class KintonePreviewRepository extends BaseKintoneRepository {
      */
     async getPreviewFormFields(appId, lang) {
         try {
-            console.error(`Fetching preview form fields for app: ${appId}`);
+            LoggingUtils.info('preview', 'get_preview_form_fields', { appId, lang });
             
             // プレビュー環境のAPIを呼び出す
             const params = { app: appId, preview: true };
@@ -48,7 +49,7 @@ export class KintonePreviewRepository extends BaseKintoneRepository {
             
             const response = await this.client.app.getFormFields(params);
             
-            console.error('Preview form fields response:', response);
+            LoggingUtils.debug('preview', 'get_preview_form_fields_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `get preview form fields for app ${appId}`);
@@ -62,7 +63,7 @@ export class KintonePreviewRepository extends BaseKintoneRepository {
      */
     async getPreviewFormLayout(appId) {
         try {
-            console.error(`Fetching preview form layout for app: ${appId}`);
+            LoggingUtils.info('preview', 'get_preview_form_layout', { appId });
             
             // プレビュー環境のAPIを呼び出す
             const response = await this.client.app.getFormLayout({
@@ -70,7 +71,7 @@ export class KintonePreviewRepository extends BaseKintoneRepository {
                 preview: true // プレビュー環境を指定
             });
             
-            console.error('Preview form layout response:', response);
+            LoggingUtils.debug('preview', 'get_preview_form_layout_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `get preview form layout for app ${appId}`);
@@ -84,7 +85,7 @@ export class KintonePreviewRepository extends BaseKintoneRepository {
      */
     async getPreviewProcessManagement(appId) {
         try {
-            console.error(`Fetching preview process management for app: ${appId}`);
+            LoggingUtils.info('preview', 'get_preview_process_management', { appId });
             
             // プレビュー環境のAPIを呼び出す
             const response = await this.client.app.getProcessManagement({
@@ -92,7 +93,7 @@ export class KintonePreviewRepository extends BaseKintoneRepository {
                 preview: true // プレビュー環境を指定
             });
             
-            console.error('Preview process management response:', response);
+            LoggingUtils.debug('preview', 'get_preview_process_management_response', response);
             return response;
         } catch (error) {
             this.handleKintoneError(error, `get preview process management for app ${appId}`);

@@ -1,5 +1,6 @@
 // src/utils/LayoutUtils.js
 import { LOOKUP_FIELD_MIN_WIDTH, SYSTEM_FIELD_TYPES } from '../constants.js';
+import { LoggingUtils } from './LoggingUtils.js';
 
 /**
  * フィールドの幅を自動補正する関数
@@ -13,48 +14,30 @@ export function autoCorrectFieldWidth(field, fieldDef) {
     // ガイダンスメッセージを格納する変数
     let guidance = null;
     
-    // デバッグ情報の出力
-    console.error(`autoCorrectFieldWidth: フィールド "${field.code}" の幅を確認中...`);
-    console.error(`フィールドタイプ: ${field.type}`);
-    console.error(`現在の幅: ${field.size?.width || "未指定"}`);
-    
-    if (fieldDef) {
-        console.error(`フィールド定義: ${JSON.stringify({
-            type: fieldDef.type,
-            hasLookup: fieldDef.lookup !== undefined,
-            lookupInfo: fieldDef.lookup ? {
-                relatedApp: fieldDef.lookup.relatedApp?.app,
-                relatedKeyField: fieldDef.lookup.relatedKeyField
-            } : null
-        })}`);
-    } else {
-        console.error(`フィールド定義が見つかりません`);
+    if (!fieldDef) {
+        LoggingUtils.warn('layout', 'field_definition_missing', { fieldCode: field.code });
     }
     
     // ルックアップフィールドの場合（lookup プロパティの有無で判断）
     if (fieldDef && fieldDef.lookup !== undefined) {
-        console.error(`"${field.code}" はルックアップフィールドです`);
-        
         // sizeプロパティがない場合は作成
         if (!correctedField.size) {
             correctedField.size = {};
-            console.error(`"${field.code}" のsizeプロパティが存在しないため作成しました`);
         }
         
         // 幅が指定されていない、または最小幅より小さい場合は補正
         if (!correctedField.size.width || parseInt(correctedField.size.width, 10) < parseInt(LOOKUP_FIELD_MIN_WIDTH, 10)) {
             const oldWidth = correctedField.size.width || "未指定";
             correctedField.size.width = LOOKUP_FIELD_MIN_WIDTH;
-            console.error(`ルックアップフィールド "${field.code}" の幅を ${oldWidth} から ${LOOKUP_FIELD_MIN_WIDTH} に自動補正しました。`);
+            LoggingUtils.info('layout', 'lookup_width_corrected', {
+                fieldCode: field.code,
+                previousWidth: oldWidth,
+                newWidth: LOOKUP_FIELD_MIN_WIDTH
+            });
             
             // ガイダンスメッセージを設定
             guidance = `ルックアップフィールド "${field.code}" をフォームレイアウトに配置する際には必ず幅を指定する必要があり、その幅は ${LOOKUP_FIELD_MIN_WIDTH} 以上の値を明示的に指定してください。`;
-            console.error(`ガイダンス: ${guidance}`);
-        } else {
-            console.error(`ルックアップフィールド "${field.code}" の幅は ${correctedField.size.width} で、最小幅 ${LOOKUP_FIELD_MIN_WIDTH} 以上のため補正不要です。`);
         }
-    } else {
-        console.error(`"${field.code}" はルックアップフィールドではありません`);
     }
     
     // 推奨幅の情報がある場合
@@ -68,7 +51,11 @@ export function autoCorrectFieldWidth(field, fieldDef) {
         if (!correctedField.size.width || parseInt(correctedField.size.width, 10) < parseInt(fieldDef._recommendedMinWidth, 10)) {
             const oldWidth = correctedField.size.width || "未指定";
             correctedField.size.width = fieldDef._recommendedMinWidth;
-            console.error(`フィールド "${field.code}" の幅を ${oldWidth} から ${fieldDef._recommendedMinWidth} に自動補正しました。`);
+            LoggingUtils.info('layout', 'field_width_corrected', {
+                fieldCode: field.code,
+                previousWidth: oldWidth,
+                newWidth: fieldDef._recommendedMinWidth
+            });
         }
     }
     

@@ -1,4 +1,9 @@
 // src/repositories/validators/LayoutValidator.js
+import { LoggingUtils } from '../../utils/LoggingUtils.js';
+
+function logLayoutWarning(message, metadata = {}) {
+    LoggingUtils.warn('layout_validator', 'warning', { message, ...metadata });
+}
 
 // レイアウト要素のタイプを検証する関数
 export function validateLayoutElementType(element, allowedTypes) {
@@ -7,11 +12,11 @@ export function validateLayoutElementType(element, allowedTypes) {
         // デフォルトのタイプを設定
         if (allowedTypes && allowedTypes.length > 0) {
             element.type = allowedTypes[0]; // 許可されているタイプの最初のものを使用
-            console.error(`Warning: レイアウト要素に type プロパティが指定されていません。自動的に "${element.type}" を設定します。`);
+            logLayoutWarning(`レイアウト要素に type プロパティが指定されていません。自動的に "${element.type}" を設定します。`);
         } else {
             // 許可されているタイプが指定されていない場合は "ROW" をデフォルトとして使用
             element.type = "ROW";
-            console.error(`Warning: レイアウト要素に type プロパティが指定されていません。自動的に "ROW" を設定します。`);
+            logLayoutWarning('レイアウト要素に type プロパティが指定されていません。自動的に "ROW" を設定します。');
         }
     }
     
@@ -32,12 +37,12 @@ export function validateRowElement(row) {
     // fieldsプロパティが指定されていない場合は自動的に補完
     if (!row.fields) {
         row.fields = [];
-        console.error(`Warning: ROW要素に fields プロパティが指定されていません。空の配列を設定します。`);
+        logLayoutWarning('ROW要素に fields プロパティが指定されていません。空の配列を設定します。');
     }
     
     // fieldsプロパティが配列でない場合は配列に変換
     if (!Array.isArray(row.fields)) {
-        console.error(`Warning: ROW要素の fields プロパティが配列ではありません。自動的に配列に変換します。`);
+        logLayoutWarning('ROW要素の fields プロパティが配列ではありません。自動的に配列に変換します。');
         row.fields = [row.fields];
     }
     
@@ -106,18 +111,18 @@ export function validateGroupElement(group) {
     // kintoneの仕様では省略すると false になるが、このMCP Serverでは明示的に true を設定
     if (group.openGroup === undefined) {
         group.openGroup = true;
-        console.error(`Warning: GROUP要素 "${group.code}" の openGroup プロパティが指定されていません。自動的に true を設定します。`);
+        logLayoutWarning(`GROUP要素 "${group.code}" の openGroup プロパティが指定されていません。自動的に true を設定します。`, { groupCode: group.code });
     }
     
     // layout プロパティが存在しない場合は空の配列を設定
     if (group.layout === undefined) {
         group.layout = [];
-        console.error(`Warning: GROUP要素 "${group.code}" に layout プロパティが指定されていません。空の配列を設定します。`);
+        logLayoutWarning(`GROUP要素 "${group.code}" に layout プロパティが指定されていません。空の配列を設定します。`, { groupCode: group.code });
     }
     
     // layout プロパティが配列でない場合は配列に変換
     if (!Array.isArray(group.layout)) {
-        console.error(`Warning: GROUP要素 "${group.code}" の layout プロパティが配列ではありません。自動的に配列に変換します。`);
+        logLayoutWarning(`GROUP要素 "${group.code}" の layout プロパティが配列ではありません。自動的に配列に変換します。`, { groupCode: group.code });
         group.layout = [group.layout];
     }
     
@@ -210,9 +215,9 @@ export function validateFieldSize(size) {
             
             // 元の文字列に数値以外の文字が含まれていた場合は警告
             if (size.width !== numericPart) {
-                console.error(`Warning: size.width に単位または数値以外の文字が含まれています。kintoneでは単位の指定はできません。数値部分のみを使用します: "${size.width}" → ${numWidth}`);
+                logLayoutWarning(`size.width に単位または数値以外の文字が含まれています。kintoneでは単位の指定はできません。数値部分のみを使用します: "${size.width}" → ${numWidth}`);
             } else {
-                console.error(`Warning: size.width が文字列形式で指定されています。自動的に数値に変換しました: "${size.width}" → ${numWidth}`);
+                logLayoutWarning(`size.width が文字列形式で指定されています。自動的に数値に変換しました: "${size.width}" → ${numWidth}`);
             }
             
             // 数値に変換して置き換え
@@ -241,9 +246,9 @@ export function validateFieldSize(size) {
             
             // 元の文字列に数値以外の文字が含まれていた場合は警告
             if (size.height !== numericPart) {
-                console.error(`Warning: size.height に単位または数値以外の文字が含まれています。kintoneでは単位の指定はできません。数値部分のみを使用します: "${size.height}" → ${numHeight}`);
+                logLayoutWarning(`size.height に単位または数値以外の文字が含まれています。kintoneでは単位の指定はできません。数値部分のみを使用します: "${size.height}" → ${numHeight}`);
             } else {
-                console.error(`Warning: size.height が文字列形式で指定されています。自動的に数値に変換しました: "${size.height}" → ${numHeight}`);
+                logLayoutWarning(`size.height が文字列形式で指定されています。自動的に数値に変換しました: "${size.height}" → ${numHeight}`);
             }
             
             // 数値に変換して置き換え
@@ -272,9 +277,9 @@ export function validateFieldSize(size) {
             
             // 元の文字列に数値以外の文字が含まれていた場合は警告
             if (size.innerHeight !== numericPart) {
-                console.error(`Warning: size.innerHeight に単位または数値以外の文字が含まれています。kintoneでは単位の指定はできません。数値部分のみを使用します: "${size.innerHeight}" → ${numInnerHeight}`);
+                logLayoutWarning(`size.innerHeight に単位または数値以外の文字が含まれています。kintoneでは単位の指定はできません。数値部分のみを使用します: "${size.innerHeight}" → ${numInnerHeight}`);
             } else {
-                console.error(`Warning: size.innerHeight が文字列形式で指定されています。自動的に数値に変換しました: "${size.innerHeight}" → ${numInnerHeight}`);
+                logLayoutWarning(`size.innerHeight が文字列形式で指定されています。自動的に数値に変換しました: "${size.innerHeight}" → ${numInnerHeight}`);
             }
             
             // 数値に変換して置き換え

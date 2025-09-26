@@ -13,14 +13,14 @@ kintoneデータを参照・更新したり、kintoneアプリ自体を作成し
 
 ## dxtファイル による [Claude Desktop](https://claude.ai/download) アプリ へのインストール手順（推奨）
 
-[https://github.com/r3-yamauchi/kintone-mcp-server/releases](https://github.com/r3-yamauchi/kintone-mcp-server/releases) から最新の [unofficial-kintone-mcp-server-7.7.0.dxt](https://github.com/r3-yamauchi/kintone-mcp-server/releases/download/7.7.0/unofficial-kintone-mcp-server-7.7.0.dxt) をダウンロードし、 
+[https://github.com/r3-yamauchi/kintone-mcp-server/releases](https://github.com/r3-yamauchi/kintone-mcp-server/releases) から最新の [unofficial-kintone-mcp-server-7.8.0.dxt](https://github.com/r3-yamauchi/kintone-mcp-server/releases/download/7.8.0/unofficial-kintone-mcp-server-7.8.0.dxt) をダウンロードし、 
 [Claude Desktop](https://claude.ai/download) アプリ の [設定] の [デスクトップアプリ] - [拡張機能] をクリックして、「詳細設定」をクリックしてください。
 
 <!-- markdownlint-disable MD033 -->
 <img height="500" src="docs/images/dxt-install1.png" alt="デスクトップアプリの拡張機能設定" style="margin-bottom: 1.6rem;" />
 <!-- markdownlint-enable MD033 -->
 
-「拡張機能をインストール...」をクリックし、ダウンロードした unofficial-kintone-mcp-server-7.7.0.dxt を指定してください。
+「拡張機能をインストール...」をクリックし、ダウンロードした unofficial-kintone-mcp-server-7.8.0.dxt を指定してください。
 
 <!-- markdownlint-disable MD033 -->
 <img height="600" src="docs/images/dxt-install2.png" alt="dxtファイルによるインストール" style="margin-bottom: 1.6rem;" />

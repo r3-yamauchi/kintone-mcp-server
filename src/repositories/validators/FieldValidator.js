@@ -2,6 +2,26 @@
 import { FIELD_TYPES_REQUIRING_OPTIONS, CALC_FIELD_TYPE, LINK_FIELD_TYPE, VALID_LINK_PROTOCOLS, REFERENCE_TABLE_FIELD_TYPE, SINGLE_LINE_TEXT_FIELD_TYPE, MULTI_LINE_TEXT_FIELD_TYPE, NUMBER_FIELD_TYPE, VALID_UNIT_POSITIONS, DATE_FIELD_TYPE, TIME_FIELD_TYPE, DATETIME_FIELD_TYPE, RICH_TEXT_FIELD_TYPE, ATTACHMENT_FIELD_TYPE, USER_SELECT_FIELD_TYPE, GROUP_SELECT_FIELD_TYPE, ORGANIZATION_SELECT_FIELD_TYPE, SUBTABLE_FIELD_TYPE, STATUS_FIELD_TYPE, RELATED_RECORDS_FIELD_TYPE, RECORD_NUMBER_FIELD_TYPE, CREATOR_FIELD_TYPE, MODIFIER_FIELD_TYPE, CREATED_TIME_FIELD_TYPE, UPDATED_TIME_FIELD_TYPE, UNIT_POSITION_PATTERNS } from '../../constants.js';
 
 import { autoCorrectUnitPosition } from '../../server/tools/FieldTools.js';
+import { LoggingUtils } from '../../utils/LoggingUtils.js';
+
+function logUnitPositionDecision(reason, position, detail) {
+    LoggingUtils.debug('validator', 'unit_position_decision', {
+        reason,
+        position,
+        detail
+    });
+}
+
+function logValidationWarning(message, metadata = {}) {
+    LoggingUtils.warn('validator', 'validation_warning', {
+        message,
+        ...metadata
+    });
+}
+
+function logValidationInfo(code, metadata = {}) {
+    LoggingUtils.info('validator', code, metadata);
+}
 
 /**
  * フィールドを検証し、必要に応じて自動修正を適用する関数
@@ -119,21 +139,21 @@ function determineUnitPosition(unit) {
     // 単位が指定されていない場合
     if (!unit) {
         reason = "単位が指定されていないため";
-        console.error(`単位位置判定: ${reason}、デフォルト値 "AFTER" を設定`);
+        logUnitPositionDecision(reason, 'AFTER', 'default');
         return "AFTER";
     }
     
     // 単位の長さが4文字以上の場合
     if (unit.length >= 4) {
         reason = `単位の長さが4文字以上 (${unit.length}文字) のため`;
-        console.error(`単位位置判定: ${reason}、"AFTER" を設定`);
+        logUnitPositionDecision(reason, 'AFTER', 'fallback');
         return "AFTER";
     }
     
     // 複合単位の判定（スペースや特殊記号を含む）
     if (/[\s\/\-\+]/.test(unit) || (unit.length > 1 && /[^\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(unit))) {
         reason = `複合単位 "${unit}" と判断されるため`;
-        console.error(`単位位置判定: ${reason}、"AFTER" を設定`);
+        logUnitPositionDecision(reason, 'AFTER', 'fallback');
         return "AFTER";
     }
     
@@ -144,21 +164,21 @@ function determineUnitPosition(unit) {
     // 両方のパターンに一致する場合
     if (isBeforeExact && isAfterExact) {
         reason = `単位 "${unit}" が BEFORE と AFTER の両方のパターンに一致するため`;
-        console.error(`単位位置判定: ${reason}、"AFTER" を優先設定`);
+        logUnitPositionDecision(reason, 'AFTER', 'preferred');
         return "AFTER";
     }
     
     // BEFOREパターンに完全一致
     if (isBeforeExact) {
         reason = `単位 "${unit}" が BEFORE パターンに完全一致するため`;
-        console.error(`単位位置判定: ${reason}、"BEFORE" を設定`);
+        logUnitPositionDecision(reason, 'BEFORE', 'preferred');
         return "BEFORE";
     }
     
     // AFTERパターンに完全一致
     if (isAfterExact) {
         reason = `単位 "${unit}" が AFTER パターンに完全一致するため`;
-        console.error(`単位位置判定: ${reason}、"AFTER" を設定`);
+        logUnitPositionDecision(reason, 'AFTER', 'fallback');
         return "AFTER";
     }
     
@@ -169,27 +189,27 @@ function determineUnitPosition(unit) {
     // 両方のパターンに部分一致する場合
     if (beforeMatches.length > 0 && afterMatches.length > 0) {
         reason = `単位 "${unit}" が BEFORE パターン [${beforeMatches.join(', ')}] と AFTER パターン [${afterMatches.join(', ')}] の両方に部分一致するため`;
-        console.error(`単位位置判定: ${reason}、"AFTER" を優先設定`);
+        logUnitPositionDecision(reason, 'AFTER', 'preferred');
         return "AFTER";
     }
     
     // BEFOREパターンに部分一致
     if (beforeMatches.length > 0) {
         reason = `単位 "${unit}" が BEFORE パターン [${beforeMatches.join(', ')}] に部分一致するため`;
-        console.error(`単位位置判定: ${reason}、"BEFORE" を設定`);
+        logUnitPositionDecision(reason, 'BEFORE', 'preferred');
         return "BEFORE";
     }
     
     // AFTERパターンに部分一致
     if (afterMatches.length > 0) {
         reason = `単位 "${unit}" が AFTER パターン [${afterMatches.join(', ')}] に部分一致するため`;
-        console.error(`単位位置判定: ${reason}、"AFTER" を設定`);
+        logUnitPositionDecision(reason, 'AFTER', 'fallback');
         return "AFTER";
     }
     
     // どのパターンにも一致しない場合
     reason = `単位 "${unit}" がどのパターンにも一致しないため`;
-    console.error(`単位位置判定: ${reason}、デフォルト値 "AFTER" を設定`);
+logUnitPositionDecision(reason, 'AFTER', 'default');
     return "AFTER";
 }
 
@@ -458,14 +478,14 @@ export function validateCalcField(fieldType, expression, config) {
         if (config && config.formula !== undefined && config.expression === undefined) {
             config.expression = config.formula;
             delete config.formula;
-            console.error(`警告: 計算フィールドの計算式は formula ではなく expression に指定してください。今回は自動的に変換しました。`);
+            logValidationWarning('計算フィールドの計算式は formula ではなく expression に指定してください。今回は自動的に変換しました。');
             expression = config.expression;
         }
         
         // digit=trueの場合はformatをNUMBER_DIGITに自動設定
         if (config && config.digit === true && (!config.format || config.format === 'NUMBER')) {
             config.format = 'NUMBER_DIGIT';
-            console.error(`桁区切り表示が有効なため、format を "NUMBER_DIGIT" に自動設定しました。`);
+            logValidationInfo('number_format_autoset', { reason: 'digit_enabled', format: 'NUMBER_DIGIT' });
         }
         
         // 計算式のチェック
@@ -479,7 +499,7 @@ export function validateCalcField(fieldType, expression, config) {
         // digit=trueの場合はformatをNUMBER_DIGITに自動設定
         if (config && config.digit === true && (!config.format || config.format === 'NUMBER')) {
             config.format = 'NUMBER_DIGIT';
-            console.error(`桁区切り表示が有効なため、format を "NUMBER_DIGIT" に自動設定しました。`);
+            logValidationInfo('number_format_autoset', { reason: 'digit_enabled', format: 'NUMBER_DIGIT' });
         }
         
         // 表示形式のチェック
@@ -521,16 +541,19 @@ export function validateCalcField(fieldType, expression, config) {
                             "AFTER": "100円, 100%, 100kg"
                         };
                         
-                        console.error(`警告: 単位記号「${config.unit}」には unitPosition="${recommendedPosition}" が推奨されます。` +
-                                   `現在の設定: "${config.unitPosition}"。` +
-                                   `例: ${examples[recommendedPosition]}`);
+                        const message = `単位記号「${config.unit}」には unitPosition="${recommendedPosition}" が推奨されます。現在の設定: "${config.unitPosition}"。例: ${examples[recommendedPosition]}`;
+                        logValidationWarning(message, {
+                            unit: config.unit,
+                            recommendedPosition,
+                            currentPosition: config.unitPosition
+                        });
                     }
                 }
             }
         } else if (config) {
             // formatが指定されていない場合はデフォルトでNUMBER_DIGITを設定
             config.format = 'NUMBER_DIGIT';
-            console.error(`formatが指定されていないため、デフォルト値 "NUMBER_DIGIT" を設定しました。`);
+            logValidationInfo('number_format_autoset', { reason: 'missing_format', format: 'NUMBER_DIGIT' });
         }
     }
     return true;
@@ -622,9 +645,12 @@ export function validateNumberField(fieldType, config) {
                     "AFTER": "100円, 100%, 100kg"
                 };
                 
-                console.error(`警告: 単位記号「${config.unit}」には unitPosition="${recommendedPosition}" が推奨されます。` +
-                           `現在の設定: "${config.unitPosition}"。` +
-                           `例: ${examples[recommendedPosition]}`);
+                const message = `単位記号「${config.unit}」には unitPosition="${recommendedPosition}" が推奨されます。現在の設定: "${config.unitPosition}"。例: ${examples[recommendedPosition]}`;
+                logValidationWarning(message, {
+                    unit: config.unit,
+                    recommendedPosition,
+                    currentPosition: config.unitPosition
+                });
             }
         }
         
@@ -640,7 +666,7 @@ export function validateNumberField(fieldType, config) {
         if (config.displayScale === "") {
             // 空文字列の場合は削除
             delete config.displayScale;
-            console.error(`数値フィールドの displayScale に空文字列が指定されたため、指定を削除しました。`);
+            logValidationInfo('display_scale_removed', { reason: 'empty_string' });
         } else if (config.displayScale !== undefined) {
             const scale = parseInt(config.displayScale, 10);
             if (isNaN(scale) || scale < 0 || scale > 10) {
@@ -1074,12 +1100,12 @@ export function validateLookupField(fieldType, lookup) {
     
     // lookupPickerFieldsのチェック
     if (!lookup.lookupPickerFields || !Array.isArray(lookup.lookupPickerFields) || lookup.lookupPickerFields.length === 0) {
-        console.error(`警告: lookupPickerFieldsが指定されていません。ルックアップピッカーに表示するフィールドを指定することを推奨します。`);
+        logValidationWarning('lookupPickerFieldsが指定されていません。ルックアップピッカーに表示するフィールドを指定することを推奨します。');
     }
     
     // sortのチェック
     if (!lookup.sort) {
-        console.error(`警告: sortが指定されていません。ルックアップの検索結果のソート順を指定することを推奨します。`);
+        logValidationWarning('sortが指定されていません。ルックアップの検索結果のソート順を指定することを推奨します。');
     }
     
     // ルックアップフィールドには推奨最小幅の情報を追加
