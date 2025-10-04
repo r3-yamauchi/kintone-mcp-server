@@ -19,7 +19,7 @@
   "license": "AGPL-3.0",
   "description": "MCP server for kintone (Unofficial)",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.18.2"
+    "@modelcontextprotocol/sdk": "1.19.1"
   },
   "engines": {
     "node": ">=20"
