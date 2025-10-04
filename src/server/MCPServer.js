@@ -19,7 +19,7 @@ export class MCPServer {
         this.server = new Server(
             {
                 name: 'kintonemcp',
-                version: '7.8.0',
+                version: '7.9.0',
             },
             {
                 capabilities: {

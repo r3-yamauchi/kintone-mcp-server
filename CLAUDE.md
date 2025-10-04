@@ -13,7 +13,6 @@
 ## 最新の依存関係 (2025年9月更新)
 
 - **`@modelcontextprotocol/sdk`**: ^1.18.2 (MCP 2025-03-26仕様対応)
-- **`dotenv`**: ^17.2.2 (環境変数管理)
 - **HTTPクライアント**: Node.js 20標準の `fetch` / `FormData`
 
 ## ライセンス
@@ -22,16 +21,15 @@
 
 ## クイックセットアップ
 
-1. `.env.sample`を`.env`にコピー
-2. kintone認証情報を設定:
+1. 必要な環境変数をシェルで設定（例）:
 
    ```bash
-   KINTONE_DOMAIN=your-domain.cybozu.com
-   KINTONE_USERNAME=your-username
-   KINTONE_PASSWORD=your-password
+   export KINTONE_DOMAIN=your-domain.cybozu.com
+   export KINTONE_USERNAME=your-username
+   export KINTONE_PASSWORD=your-password
    ```
 
-3. `npm install`を実行後、`npm start`で起動
+2. `npm install`を実行後、`npm start`で起動
 
 ## 開発ワークフロー
 
@@ -131,8 +129,7 @@ User Request → ToolRouter → CategoryTools → Repository → kintone API
 
 ### 設定
 
-- 環境変数: `KINTONE_DOMAIN`, `KINTONE_USERNAME`, `KINTONE_PASSWORD`
-- 環境変数が設定されていない場合は`.env`ファイルにフォールバック
+- 環境変数: `KINTONE_DOMAIN`, `KINTONE_USERNAME`, `KINTONE_PASSWORD`（サーバー起動前に必ず設定する）
 - 認証情報は`KintoneCredentials.js`モデルで管理
 - **重要**: `KINTONE_DOMAIN`は`https://`を含めない (例: `your-domain.cybozu.com`)
 
@@ -469,8 +466,8 @@ if (existingFields[fieldCode]) {
 ### よくあるエラーと解決方法
 
 **認証エラー**
-- 原因: `.env`ファイルの認証情報が不正
-- 解決: `KINTONE_DOMAIN`にhttps://を含めない、パスワードは平文で指定
+- 原因: 環境変数が未設定、または値が不正
+- 解決: サーバー起動前に `KINTONE_DOMAIN`, `KINTONE_USERNAME`, `KINTONE_PASSWORD` を再設定し、`KINTONE_DOMAIN` に `https://` を含めない
 
 **フィールドが見つからない**
 - 原因: アプリが本番環境にデプロイされていない
