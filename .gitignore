@@ -1,3 +1,14 @@
+.npmrc
+
+# Standalone build artifacts
+standalone/
+standalone-package/
+*.tgz
+
+# Test directories
+test-package/
+coverage/
+
 # Logs
 logs
 *.log
