@@ -18,13 +18,28 @@ export class KintoneAppRepository extends BaseKintoneRepository {
         this.previewRepository = new KintonePreviewRepository(client);
     }
 
-    async getAppsInfo(appName) {
-        const params = { name: appName };
+    async getAppsInfo({ appName, appId, appCode, spaceId }) {
+        const params = {
+            ids: appId ? [appId] : []
+        };
+
+        if (appName) {
+            params.name = appName;
+        }
+
+        if (appCode) {
+            params.codes = [appCode];
+        }
+
+        if (spaceId) {
+            params.spaceIds = [spaceId];
+        }
+
         return this.executeWithDetailedLogging(
             'getApps',
             params,
             () => this.client.app.getApps(params),
-            `get apps info ${appName}`
+            `get apps info ${appName || ''}${appId ? ` (id: ${appId})` : ''}${appCode ? ` (code: ${appCode})` : ''}${spaceId ? ` (space: ${spaceId})` : ''}`
         );
     }
 

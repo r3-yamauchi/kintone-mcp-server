@@ -7,6 +7,8 @@ export const fieldToolDefinitions = [
     {
         name: 'add_fields',
         description: 'kintoneアプリにフィールドを追加します。各フィールドには code（フィールドコード）、type（フィールドタイプ）、label（表示名）の指定が必須です。\n' +
+            '初期値を設定する際は、フィールドタイプごとに `defaultValue` または `defaultNowValue` を使用できます。`defaultValue` には文字列を指定し、日付なら "YYYY-MM-DD"、時刻なら "HH:MM"、日時なら "YYYY-MM-DDTHH:MM:SS" 形式を守ってください。`defaultNowValue` は true/false または "true"/"false" を受け付け、省略時は false として扱われます。\n' +
+            '日付・時刻・日時フィールドで `defaultValue` と `defaultNowValue: true` を同時に指定した場合、`defaultNowValue: true` が優先され `defaultValue` は無視されます。\n' +
             'フィールドコードに使用できる文字: ひらがな、カタカナ、漢字、英数字、記号(_＿･・＄￥)\n' +
             '注意: システムフィールドタイプ（CREATOR, MODIFIER, RECORD_NUMBER, CREATED_TIME, UPDATED_TIME）は追加できません。これらはkintoneによって自動的に作成されるフィールドです。\n' +
             '`type`: `CREATOR` のようなシステムフィールドタイプを指定すると、エラーが発生します。\n' +

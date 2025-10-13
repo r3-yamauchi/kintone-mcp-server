@@ -35,11 +35,12 @@ MCP仕様2025-03-26に対応するために追加されたツールアノテー�
 
 | ツール名 | readOnly | safe | category | requiresConfirmation | longRunning | impact | 説明 |
 |---------|----------|------|----------|----------------------|-------------|--------|------|
-| get_apps_info | true | true | app | false | false | low | アプリ情報取得は読み取り専用で安全 |
+| get_apps_info | true | true | app | false | false | low | アプリ名/ID/コード/スペースIDでアプリ情報を取得（app_name または app_id は必須） |
 | create_app | false | true | app | true | false | high | 新規アプリ作成は大きな変更だが既存データへの影響なし |
 | deploy_app | false | false | app | true | true | high | デプロイは重要な変更操作で時間がかかる場合あり |
 | get_deploy_status | true | true | app | false | false | low | デプロイ状態確認は読み取り専用で安全 |
 | update_app_settings | false | false | app | true | false | medium | アプリ設定変更は重要な変更操作 |
+| get_form_fields | true | true | app | false | false | low | フィールド設定取得は読み取り専用で安全 |
 | get_form_layout | true | true | app | false | false | low | フォームレイアウト取得は読み取り専用で安全 |
 | get_app_actions | true | true | app | false | false | low | アプリアクションの設定取得は読み取り専用で安全 |
 | get_app_plugins | true | true | app | false | false | low | アプリのプラグイン一覧取得は読み取り専用で安全 |

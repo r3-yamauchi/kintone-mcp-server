@@ -4,11 +4,12 @@
 
 ## 開発コマンド
 
-- **サーバー起動**: `npm start` (`node server.js`を実行)
-- **依存関係のインストール**: `npm install`
+- **サーバー起動**: `pnpm start` (`node server.js`を実行)
+- **依存関係のインストール**: `pnpm install`
+- **パッケージマネージャーの指定**: `preinstall` スクリプトで pnpm 以外でのインストールを拒否します。必要に応じて `corepack enable` → `corepack prepare pnpm@10.13.1 --activate` を実行してから `pnpm install` を実行してください。
 - **Node.js要件**: バージョン20以上
-- **テスト**: 現在未実装 (`npm test`は失敗します)
-- **開発時のリアルタイム実行**: 依存関係更新後は`npm start`でサーバーを再起動
+- **テスト**: 現在未実装 (`pnpm test`は失敗します)
+- **開発時のリアルタイム実行**: 依存関係更新後は`pnpm start`でサーバーを再起動
 
 ## 最新の依存関係 (2025年9月更新)
 
@@ -29,7 +30,7 @@
    export KINTONE_PASSWORD=your-password
    ```
 
-2. `npm install`を実行後、`npm start`で起動
+2. `pnpm install`を実行後、`pnpm start`で起動
 
 ## 開発ワークフロー
 

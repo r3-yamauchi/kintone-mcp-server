@@ -156,10 +156,58 @@ export async function handleAppTools(name, args, repository) {
         }
         
         case 'get_apps_info': {
-            ValidationUtils.validateRequired(args, ['app_name']);
-            ValidationUtils.validateString(args.app_name, 'app_name');
-            
-            return repository.getAppsInfo(args.app_name);
+            const hasName = args.app_name !== undefined && args.app_name !== null;
+            const hasId = args.app_id !== undefined && args.app_id !== null;
+
+            if (!hasName && !hasId) {
+                throw new Error('app_name または app_id のいずれかを指定してください。');
+            }
+
+            let appName;
+            if (hasName) {
+                ValidationUtils.validateString(args.app_name, 'app_name', { minLength: 1 });
+                appName = args.app_name.trim();
+                if (appName.length === 0) {
+                    throw new Error('app_name は空文字列にはできません。');
+                }
+            }
+
+            let appId;
+            if (hasId) {
+                ValidationUtils.validateNumber(args.app_id, 'app_id', { min: 1 });
+                if (!Number.isInteger(args.app_id)) {
+                    throw new Error('app_id は自然数（整数）で指定してください。');
+                }
+                appId = Number(args.app_id);
+            }
+
+            let appCode;
+            if (args.app_code !== undefined && args.app_code !== null) {
+                ValidationUtils.validateString(args.app_code, 'app_code', { minLength: 1 });
+                const trimmed = args.app_code.trim();
+                if (!/^[A-Za-z][A-Za-z0-9]*$/.test(trimmed)) {
+                    throw new Error('app_code はアルファベットで始まる半角英数字で指定してください。');
+                }
+                appCode = trimmed;
+            }
+
+            let spaceId;
+            if (args.space_id !== undefined && args.space_id !== null) {
+                ValidationUtils.validateNumber(args.space_id, 'space_id', { min: 1 });
+                if (!Number.isInteger(args.space_id)) {
+                    throw new Error('space_id は自然数（整数）で指定してください。');
+                }
+                spaceId = Number(args.space_id);
+            }
+
+            return repository.getAppsInfo({ appName, appId, appCode, spaceId });
+        }
+
+        case 'get_form_fields': {
+            ValidationUtils.validateRequired(args, ['app_id']);
+
+            const fields = await repository.getFormFields(args.app_id);
+            return fields;
         }
         
         case 'get_form_layout': {

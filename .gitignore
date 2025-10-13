@@ -1,4 +1,5 @@
-.npmrc
+# Package manager configuration
+.pnpm-store/
 
 # Standalone build artifacts
 standalone/

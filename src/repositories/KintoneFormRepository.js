@@ -42,22 +42,12 @@ export class KintoneFormRepository extends BaseKintoneRepository {
                 logLookupFieldSummary(appId, response.properties, 'production');
                 return response;
             } catch (error) {
-                // 404エラー（アプリが見つからない）の場合、プレビュー環境のAPIを試す
-                if (error instanceof KintoneApiError && 
+                if (error instanceof KintoneApiError &&
                     (error.code === 'GAIA_AP01' || error.status === 404)) {
-                    // プレビュー環境のフィールド情報を取得
-                    const params = { app: appId, preview: true };
-                    const previewResponse = await this.client.app.getFormFields(params);
-                    logLookupFieldSummary(appId, previewResponse.properties, 'preview');
-                    
-                    // プレビュー環境から取得したことを示す情報を追加
-                    return {
-                        ...previewResponse,
-                        preview: true,
-                        message: 'このフィールド情報はプレビュー環境から取得されました。アプリをデプロイするには deploy_app ツールを使用してください。'
-                    };
+                    throw new Error(
+                        '対象アプリのフィールド情報が本番環境で見つかりませんでした。プレビュー環境の情報が必要な場合は get_preview_form_fields ツールを使用してください。'
+                    );
                 }
-                // その他のエラーは通常通り処理
                 throw error;
             }
         } catch (error) {

@@ -23,7 +23,7 @@ export class ToolRouter {
             app: {
                 tools: [
                     'create_app', 'deploy_app', 'get_deploy_status', 'update_app_settings', 'get_apps_info',
-                    'get_form_layout', 'update_form_layout', 'get_preview_app_settings',
+                    'get_form_layout', 'get_form_fields', 'update_form_layout', 'get_preview_app_settings',
                     'get_preview_form_fields', 'get_preview_form_layout',
                     'move_app_to_space', 'move_app_from_space', 'get_app_actions', 'get_app_plugins',
                     'get_process_management', 'update_process_management', 'get_views', 'update_views', 'get_app_acl',

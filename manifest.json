@@ -1,15 +1,19 @@
 {
-  "dxt_version": "0.1",
+  "manifest_version": "0.2",
   "name": "unofficial-kintone-mcp-server",
-  "version": "7.9.0",
-  "description": "MCP server for kintone (Unofficial)",
+  "version": "8.0.0",
+  "description": "MCP server for kintone (Unofficial) by r3-yamauchi",
+  "long_description": "MCP server for kintone (Unofficial) by r3-yamauchi",
   "author": {
     "name": "r3-yamauchi",
     "url": "https://www.r3it.com/blog/author/yamauchi"
   },
   "homepage": "https://github.com/r3-yamauchi/kintone-mcp-server",
   "documentation": "https://github.com/r3-yamauchi/kintone-mcp-server",
-  "support": "https://github.com/r3-yamauchi/kintone-mcp-server",
+  "screenshots": [
+    "docs/images/tool.png",
+    "docs/images/tools.png"
+  ],
   "server": {
     "type": "node",
     "entry_point": "server.js",
@@ -51,7 +55,7 @@
   "tools": [
     {
       "name": "get_apps_info",
-      "description": "検索キーワードを指定して該当する複数のkintoneアプリの情報を取得します"
+      "description": "アプリ名（全文/部分一致）、アプリID、アプリコード、スペースIDでkintoneアプリを絞り込んで情報を取得します。app_name または app_id のいずれかは必須です"
     },
     {
       "name": "get_record",
@@ -59,7 +63,7 @@
     },
     {
       "name": "search_records",
-      "description": "kintoneアプリのレコードを検索して取得します"
+      "description": "kintoneアプリのレコードを検索して取得します（最大500件）"
     },
     {
       "name": "create_record",
@@ -124,6 +128,10 @@
     {
       "name": "get_form_layout",
       "description": "kintoneアプリのフォームレイアウトを取得します"
+    },
+    {
+      "name": "get_form_fields",
+      "description": "kintoneアプリのフォームフィールド情報を取得します（本番環境のみ）。プレビュー環境の情報が必要な場合は get_preview_form_fields を使用してください"
     },
     {
       "name": "update_form_layout",
@@ -244,6 +252,23 @@
     {
       "name": "update_space_guests",
       "description": "スペースのゲストメンバーを更新します"
+    }
+  ],
+  "prompts": [
+    {
+      "name": "親子アプリ作成",
+      "description": "親子関係のある2つのアプリを一度に作成",
+      "text": "kintoneアプリを新たに 2つ作って。1つ目は商品マスタ。商品コードと商品名称が必要。いずれも必須で商品コードは一意にしてください。2つめは在庫管理アプリ。商品コードと商品名称、在庫数が必要だが、商品コードは商品マスタを参照するルックアップフィールドにして"
+    },
+    {
+      "name": "フォームレイアウト指定",
+      "description": "レイアウト情報を細かく指定",
+      "text": "kintoneアプリを新規作成してください。文字列一行フィールド、数値フィールド、日付フィールドを横一列に配置し、各フィールドの長さを同じにしてください。その下に空のグループフィールドを設置してください。その下にスペースフィールドを設置してください。さらにその下にグループフィールドを配置し、文字列一行フィールドと日時フィールドを設置してください。一番下にテーブルを設置し、文字列一行フィールドと添付ファイルフィールドを設置してください。"
+    },
+    {
+      "name": "フォームレイアウトコピー",
+      "description": "既存アプリのレイアウトをコピーして新しいアプリを作成",
+      "text": "kintoneアプリID 500 のフォームレイアウト情報を取得し、全く同じフィールド構成とレイアウトの新規アプリを作成して"
     }
   ],
   "keywords": [

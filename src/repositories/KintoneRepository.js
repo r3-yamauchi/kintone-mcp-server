@@ -98,8 +98,8 @@ export class KintoneRepository {
     }
 
     // アプリ関連
-    async getAppsInfo(appName) {
-        return this.appRepo.getAppsInfo(appName);
+    async getAppsInfo(params) {
+        return this.appRepo.getAppsInfo(params);
     }
 
     async createApp(name, space = null, thread = null) {

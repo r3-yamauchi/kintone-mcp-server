@@ -3,49 +3,57 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/r3-yamauchi/kintone-mcp-server)
 
 これは [kintone](https://kintone.cybozu.co.jp/) との連携目的で使用できる [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) サーバーのサンプルコードです。
-生成AIを用いて自動作成したものを現状有姿で提供します。
 
-この MCP server を使うと [Claude Desktop](https://claude.ai/download) アプリなどの MCPホストアプリから
+この MCP server を使うと [Claude Desktop](https://claude.ai/download) アプリなどの
+MCPをサポートしているデスクトップアプリ（MCPホスト）から
 kintoneデータを参照・更新したり、kintoneアプリ自体を作成したりなどすることができます。
+LLM がスムーズに kintone を扱えるように工夫しています。
 
 **サイボウズより 公式の MCP Server が提供開始されました。**
 特に理由がなければ公式MCP Serverを使用するのが良いと思います。
 
-## dxtファイル による [Claude Desktop](https://claude.ai/download) アプリ へのインストール手順（推奨）
+## mcpbファイル（以前は dxt という拡張子でした）による [Claude Desktop](https://claude.ai/download) アプリ へのインストール手順（推奨）
 
-[https://github.com/r3-yamauchi/kintone-mcp-server/releases](https://github.com/r3-yamauchi/kintone-mcp-server/releases) から最新の [unofficial-kintone-mcp-server-7.9.0.dxt](https://github.com/r3-yamauchi/kintone-mcp-server/releases/download/7.9.0/unofficial-kintone-mcp-server-7.9.0.dxt) をダウンロードし、 
-[Claude Desktop](https://claude.ai/download) アプリ の [設定] の [デスクトップアプリ] - [拡張機能] をクリックして、「詳細設定」をクリックしてください。
+[https://github.com/r3-yamauchi/kintone-mcp-server/releases](https://github.com/r3-yamauchi/kintone-mcp-server/releases) から最新の [unofficial-kintone-mcp-server-8.0.0.mcpb](https://github.com/r3-yamauchi/kintone-mcp-server/releases/download/8.0.0/unofficial-kintone-mcp-server-8.0.0.mcpb) をダウンロードし、 
+[Claude Desktop](https://claude.ai/download) アプリ の [設定] の [デスクトップアプリ] - [拡張機能] をクリックしてください。
 
 <!-- markdownlint-disable MD033 -->
-<img height="500" src="docs/images/dxt-install1.png" alt="デスクトップアプリの拡張機能設定" style="margin-bottom: 1.6rem;" />
+<img height="500" src="docs/images/mcpb-install0.png" alt="mcpbファイルのドラッグ・アンド・ドロップによるインストール" style="margin-bottom: 1.6rem;" />
 <!-- markdownlint-enable MD033 -->
 
-「拡張機能をインストール...」をクリックし、ダウンロードした unofficial-kintone-mcp-server-7.9.0.dxt を指定してください。
+「.MCPBまたは.DXTファイルをここにドラッグしてインストールしてください」と表示されている場合は、
+ダウンロードした unofficial-kintone-mcp-server-8.0.0.mcpb をドラッグ・アンド・ドロップしてください。
+
+「.MCPBまたは.DXTファイルをここにドラッグしてインストールしてください」の表示がない場合は「詳細設定」をクリックし、さらに「拡張機能をインストール...」をクリックして、ダウンロードした unofficial-kintone-mcp-server-8.0.0.mcpb を指定してください。
 
 <!-- markdownlint-disable MD033 -->
-<img height="600" src="docs/images/dxt-install2.png" alt="dxtファイルによるインストール" style="margin-bottom: 1.6rem;" />
+<img height="500" src="docs/images/mcpb-install1.png" alt="デスクトップアプリの拡張機能設定" style="margin-bottom: 1.6rem;" />
+<!-- markdownlint-enable MD033 -->
+
+<!-- markdownlint-disable MD033 -->
+<img height="600" src="docs/images/mcpb-install2.png" alt="mcpbファイルによるインストール" style="margin-bottom: 1.6rem;" />
 <!-- markdownlint-enable MD033 -->
 
 「インストール」をクリックしてください。
 
 <!-- markdownlint-disable MD033 -->
-<img height="500" src="docs/images/dxt-install3.png" alt="kintoneへの接続情報の入力欄" style="margin-bottom: 1.6rem;" />
+<img height="500" src="docs/images/mcpb-install3.png" alt="kintoneへの接続情報の入力欄" style="margin-bottom: 1.6rem;" />
 <!-- markdownlint-enable MD033 -->
 
 接続先の kintone のドメイン, ユーザー名, パスワード を入力して「保存」ボタンをクリックしてください。
 
 <!-- markdownlint-disable MD033 -->
-<img height="500" src="docs/images/dxt-install4.png" alt="kintoneへの接続情報の入力欄" style="margin-bottom: 1.6rem;" />
+<img height="500" src="docs/images/mcpb-install4.png" alt="kintoneへの接続情報の入力欄" style="margin-bottom: 1.6rem;" />
 <!-- markdownlint-enable MD033 -->
 
 <!-- markdownlint-disable MD033 -->
-<img height="500" src="docs/images/dxt-install5.png" alt="kintoneへの接続情報を入力して保存ボタンをクリック" style="margin-bottom: 1.6rem;" />
+<img height="500" src="docs/images/mcpb-install5.png" alt="kintoneへの接続情報を入力して保存ボタンをクリック" style="margin-bottom: 1.6rem;" />
 <!-- markdownlint-enable MD033 -->
 
 「無効」となっているトグルスイッチをクリックして「有効」にし、設定画面を閉じてください。
 
 <!-- markdownlint-disable MD033 -->
-<img height="300" src="docs/images/dxt-install6.png" alt="「有効」にする" style="margin-bottom: 1.6rem;" />
+<img height="300" src="docs/images/mcpb-install6.png" alt="「有効」にする" style="margin-bottom: 1.6rem;" />
 <!-- markdownlint-enable MD033 -->
 
 新規チャット画面を開いてください。
@@ -60,23 +68,30 @@ kintoneデータを参照・更新したり、kintoneアプリ自体を作成し
 使用したくないツールがある場合は無効化してください。
 
 <!-- markdownlint-disable MD033 -->
-<img height="300" src="docs/images/tools.png" alt="ツールの一覧" style="margin-bottom: 1.6rem;" />
+<img height="300" src="docs/images/tools.png" alt="ツールの一覧" style="margin-bottom: 1.8rem;" />
 <!-- markdownlint-enable MD033 -->
 
-## dxtファイルを使用しない場合の Claude Desktopアプリ へのインストール手順
+## mcpbファイルを使用しない場合のローカルインストール手順
 
-### 1. ソースコードをダウンロードする
+### 1. 要件
+
+- Node.js 20 以降
+- pnpm または npm
+
+### 2. ソースコードをダウンロードする
 
 ダウンロード先はどこでも構いませんが、半角英数のみで構成される、あいだにスペースを含まないパスに入れるのが良いと思います。
 
-### 2. Node.jsをインストールする
-
-Node.js 20 以降を使用してください。
-
-### 3. npm installする
+### 3. 依存関係をインストールする
 
 ```bash
-npm i
+pnpm install
+```
+
+または
+
+```bash
+npm install
 ```
 
 ### 4. Claude Desktopアプリの設定ファイルを編集する
@@ -137,8 +152,9 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 
 #### アプリ情報
 
-- `get_apps_info`: 検索キーワードを指定して該当する複数のkintoneアプリの情報を取得
+- `get_apps_info`: アプリ名（文字列検索）、アプリID（自然数）、アプリコード、スペースIDを組み合わせてkintoneアプリ情報を取得（app_name または app_id は必須）
 - `get_form_layout`: kintoneアプリのフォームレイアウトを取得
+- `get_form_fields`: kintoneアプリのフォームフィールド情報を取得（本番環境のみ、プレビュー環境は `get_preview_form_fields` を使用）
 - `get_app_actions`: kintoneアプリのアプリアクション設定を取得
 - `get_app_plugins`: kintoneアプリに追加されているプラグインの一覧を取得
 - `get_process_management`: kintoneアプリのプロセス管理設定を取得

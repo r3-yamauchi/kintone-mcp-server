@@ -6,7 +6,7 @@
 
 ## 実行環境
 - **Node.js 20** 以降を使用する。
-- 初回は `npm i` で依存をインストールした後、`server.js` を起動して MCP Server を立ち上げる。
+- 初回は `corepack enable` → `corepack prepare pnpm@10.13.1 --activate` → `pnpm install` の順で依存をインストールした後、`server.js` を起動して MCP Server を立ち上げる。
 - 環境変数 `KINTONE_DOMAIN`, `KINTONE_USERNAME`, `KINTONE_PASSWORD` は必ずシェル等で設定し、`.env` ファイルへのフォールバックはサポートしない。
 
 ## 重要ドキュメント

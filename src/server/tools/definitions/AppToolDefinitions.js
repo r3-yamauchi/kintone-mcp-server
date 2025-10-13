@@ -142,16 +142,32 @@ export const appToolDefinitions = [
     },
     {
         name: 'get_apps_info',
-        description: '検索キーワードを指定して該当する複数のkintoneアプリの情報を取得します',
+        description: 'アプリ名（またはその部分文字列）で検索、アプリIDで絞り込み、さらに任意でアプリコードやスペースIDでも絞り込んでkintoneアプリの情報を取得します。`app_name` と `app_id` のいずれか一方は必ず指定し、`app_code` と `space_id` は任意で組み合わせ可能です。',
         inputSchema: {
             type: 'object',
             properties: {
                 app_name: {
                     type: 'string',
-                    description: 'アプリ名またはその一部'
+                    description: 'アプリ名の全文または部分文字列（アプリIDは指定できません）'
+                },
+                app_id: {
+                    type: 'number',
+                    description: '単一のアプリID（自然数）'
+                },
+                app_code: {
+                    type: 'string',
+                    description: 'kintoneアプリコード（アルファベットで始まる半角英数字、完全一致・大文字小文字区別）'
+                },
+                space_id: {
+                    type: 'number',
+                    description: 'スペースID（自然数）'
                 }
             },
-            required: ['app_name']
+            additionalProperties: false,
+            anyOf: [
+                { required: ['app_name'] },
+                { required: ['app_id'] }
+            ]
         },
         annotations: {
             readOnly: true,
@@ -531,6 +547,28 @@ export const appToolDefinitions = [
                     type: 'string',
                     enum: ['ja', 'en', 'zh'],
                     description: '言語設定（オプション）'
+                }
+            },
+            required: ['app_id']
+        },
+        annotations: {
+            readOnly: true,
+            safe: true,
+            category: 'app',
+            requiresConfirmation: false,
+            longRunning: false,
+            impact: 'low'
+        }
+    },
+    {
+        name: 'get_form_fields',
+        description: 'kintoneアプリのフォームフィールド情報を取得します。対象アプリが本番環境に存在しない場合はエラーとなります。プレビュー環境の情報を取得したい場合は get_preview_form_fields を使用してください。',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                app_id: {
+                    type: 'number',
+                    description: 'kintoneアプリのID'
                 }
             },
             required: ['app_id']

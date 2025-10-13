@@ -1,11 +1,12 @@
 {
   "name": "unofficial-kintone-mcp-server",
-  "version": "7.9.0",
+  "version": "8.0.0",
+  "packageManager": "pnpm@10.13.1",
   "main": "server.js",
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test"
   },
   "keywords": [
     "modelcontextprotocol",
@@ -18,10 +19,10 @@
   },
   "license": "AGPL-3.0",
   "description": "MCP server for kintone (Unofficial)",
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "1.18.2"
-  },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.18.2"
   }
 }

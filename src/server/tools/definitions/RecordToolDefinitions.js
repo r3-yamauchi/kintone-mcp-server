@@ -6,7 +6,7 @@
 export const recordToolDefinitions = [
     {
         name: 'get_record',
-        description: 'kintoneアプリの1レコードを取得します',
+        description: 'kintoneアプリの1レコードを取得します。事前に対象アプリのフィールド構造を把握したい場合は、\\`get_form_fields\\` ツールで利用予定のフィールドコードを確認してから本ツールを呼び出してください。',
         inputSchema: {
             type: 'object',
             properties: {
@@ -32,7 +32,7 @@ export const recordToolDefinitions = [
     },
     {
         name: 'search_records',
-        description: 'kintoneアプリのレコードを検索します。\n\n' +
+        description: 'kintoneアプリのレコードを検索します。事前に対象アプリのフィールド一覧を把握するため、\\`get_form_fields\\` ツールで利用予定のフィールドコードやフィールドタイプを確認してからクエリーを作成することを推奨します。\n\n' +
             '【よく使用されるクエリ例】\n' +
             '• 文字列検索: Customer = "サイボウズ株式会社" (完全一致)\n' +
             '• 部分一致: Customer like "株式会社" (部分一致)\n' +
@@ -94,7 +94,7 @@ export const recordToolDefinitions = [
     },
     {
         name: 'create_record',
-        description: 'kintoneアプリに新しいレコードを作成します。各フィールドは { "value": ... } の形式で指定します。\n' +
+        description: 'kintoneアプリに新しいレコードを作成します。事前に対象アプリのフィールド構造を把握するため、\\`get_form_fields\\` やフォームの配置情報を確認できる\\`get_form_layout\\` を実行し、必要なフィールドコードと配置を整理してから本ツールを使用することを推奨します。各フィールドは { "value": ... } の形式で指定します。\n' +
             '例: {\n' +
             '  "app_id": 1,\n' +
             '  "fields": {\n' +
@@ -134,7 +134,7 @@ export const recordToolDefinitions = [
     },
     {
         name: 'update_record',
-        description: 'kintoneアプリの既存レコードを更新します。各フィールドは { "value": ... } の形式で指定します。\n' +
+        description: 'kintoneアプリの既存レコードを更新します。更新前に\\`get_form_fields\\` や\\`get_form_layout\\` でフィールド構造とレイアウトを確認し、利用するフィールドコードが最新であることをチェックしてから操作してください。各フィールドは { "value": ... } の形式で指定します。\n' +
             '例1（レコードIDを指定して更新）: {\n' +
             '  "app_id": 1,\n' +
             '  "record_id": 1001,\n' +
@@ -454,7 +454,7 @@ export const recordToolDefinitions = [
     },
     {
         name: 'upsert_record',
-        description: 'kintoneアプリのレコードを作成または更新します（Upsert操作）。重複禁止フィールドを使用してレコードの存在を確認し、存在する場合は更新、存在しない場合は新規作成します。',
+        description: 'kintoneアプリのレコードを作成または更新します（Upsert操作）。実行前に\\`get_form_fields\\` や\\`get_form_layout\\` で対象アプリのフィールド構造を確認し、使用する重複禁止フィールドや更新対象フィールドのコードが正しいことを必ずチェックしてください。重複禁止フィールドを使用してレコードの存在を確認し、存在する場合は更新、存在しない場合は新規作成します。',
         inputSchema: {
             type: 'object',
             properties: {

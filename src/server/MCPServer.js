@@ -4,6 +4,13 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
     CallToolRequestSchema,
     ListToolsRequestSchema,
+    ListPromptsRequestSchema,
+    ListResourcesRequestSchema,
+    GetPromptRequestSchema,
+    ListResourceTemplatesRequestSchema,
+    ReadResourceRequestSchema,
+    McpError,
+    ErrorCode,
 } from '@modelcontextprotocol/sdk/types.js';
 import { KintoneCredentials } from '../models/KintoneCredentials.js';
 import { KintoneRepository } from '../repositories/KintoneRepository.js';
@@ -19,11 +26,13 @@ export class MCPServer {
         this.server = new Server(
             {
                 name: 'kintonemcp',
-                version: '7.9.0',
+                version: '8.0.0',
             },
             {
                 capabilities: {
                     tools: {},
+                    prompts: {},
+                    resources: {},
                 },
             }
         );
@@ -43,6 +52,25 @@ export class MCPServer {
         this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
             tools: allToolDefinitions
         }));
+        
+        // プロンプト一覧（未提供のため空配列）
+        this.server.setRequestHandler(ListPromptsRequestSchema, async () => ({
+            prompts: []
+        }));
+        this.server.setRequestHandler(GetPromptRequestSchema, async () => {
+            throw new McpError(ErrorCode.MethodNotFound, 'promptは提供されていません');
+        });
+
+        // リソース一覧（未提供のため空配列）
+        this.server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+            resources: []
+        }));
+        this.server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
+            resourceTemplates: []
+        }));
+        this.server.setRequestHandler(ReadResourceRequestSchema, async () => {
+            throw new McpError(ErrorCode.MethodNotFound, 'resourceは提供されていません');
+        });
         
         // ツールリクエストを実行するハンドラー
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
