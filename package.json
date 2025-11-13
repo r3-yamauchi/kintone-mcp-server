@@ -23,6 +23,6 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.18.2"
+    "@modelcontextprotocol/sdk": "1.22.0"
   }
 }
