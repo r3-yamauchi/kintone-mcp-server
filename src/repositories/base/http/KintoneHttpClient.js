@@ -62,24 +62,6 @@ export class KintoneHttpClient {
         });
         const url = new URL(path, this.baseUrl);
 
-        const cleanedParams = params ? stripUndefined(params) : undefined;
-        if (cleanedParams) {
-            for (const [key, value] of Object.entries(cleanedParams)) {
-                if (value === undefined || value === null) {
-                    continue;
-                }
-                if (Array.isArray(value)) {
-                    for (const item of value) {
-                        if (item !== undefined && item !== null) {
-                            url.searchParams.append(key, String(item));
-                        }
-                    }
-                } else {
-                    url.searchParams.append(key, String(value));
-                }
-            }
-        }
-
         const requestHeaders = new Headers(this.getDefaultHeaders());
         for (const [key, value] of Object.entries(headers)) {
             if (value !== undefined && value !== null) {
@@ -87,21 +69,30 @@ export class KintoneHttpClient {
             }
         }
 
+        const originalMethod = method.toUpperCase();
+        const useOverride = originalMethod !== 'POST';
         const init = {
-            method: method.toUpperCase(),
+            method: 'POST',
             headers: requestHeaders,
             signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS)
         };
 
+        if (useOverride) {
+            requestHeaders.set('X-HTTP-Method-Override', originalMethod);
+        }
+
         const expectedResponseType = responseType || 'json';
 
-        if (data !== undefined) {
-            if (isFormData(data)) {
+        // kintone の method override では GET/PUT/DELETE も POST ボディにパラメータを含める
+        const payloadSource = data !== undefined ? data : params;
+
+        if (payloadSource !== undefined) {
+            if (isFormData(payloadSource)) {
                 // fetchがboundary付きヘッダーを自動付与するため、Content-Typeは削除
                 requestHeaders.delete('Content-Type');
-                init.body = data;
+                init.body = payloadSource;
             } else {
-                const payload = stripUndefined(data);
+                const payload = stripUndefined(payloadSource);
                 init.body = JSON.stringify(payload);
                 if (!requestHeaders.has('Content-Type')) {
                     requestHeaders.set('Content-Type', 'application/json');
