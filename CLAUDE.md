@@ -412,9 +412,9 @@ if (existingFields[fieldCode]) {
 
 ### 実装済みAPI (79ツール)
 
-#### レコード操作 (15ツール)
+#### レコード操作 (14ツール)
 - `get_record`, `search_records`, `create_record`, `update_record`
-- `add_record_comment`, `get_record_comments`, `update_record_comment`
+- `add_record_comment`, `get_record_comments`
 - `get_record_acl`, `update_record_status`, `update_record_assignees`
 - `create_records`, `update_records` (バッチ処理)
 - `upsert_record` (重複禁止フィールドを使用したUpsert操作)

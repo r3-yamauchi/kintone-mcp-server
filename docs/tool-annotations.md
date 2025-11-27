@@ -26,7 +26,6 @@ MCP仕様2025-03-26に対応するために追加されたツールアノテー�
 | update_record_status | false | false | record | true | false | medium | プロセス管理ステータス更新は重要な変更操作 |
 | update_record_assignees | false | false | record | true | false | medium | 作業者更新はアクセス権に影響する変更操作 |
 | get_record_comments | true | true | record | false | false | low | コメント一覧取得は読み取り専用で安全 |
-| update_record_comment | false | false | record | true | false | low | コメント編集は変更操作だが影響範囲が限定的 |
 | create_records | false | true | record | true | true | high | 複数レコードの一括作成は大きな変更操作 |
 | upsert_record | false | false | record | true | false | medium | レコードの作成または更新を行うUpsert操作 |
 | upsert_records | false | false | record | true | true | high | 複数レコードをUpsertする変更操作（既存更新と新規作成を同時に実行） |

@@ -130,10 +130,6 @@ export async function handleRecordTools(name, args, repository) {
             return comments;
         }
         
-        case 'update_record_comment': {
-            throw new Error('kintone REST APIにはコメント編集機能がありません。add_record_comment で新規コメントを追加してください。');
-        }
-        
         case 'create_records': {
             ValidationUtils.validateRequired(args, ['app_id', 'records']);
             ValidationUtils.validateArray(args.records, 'records', {
@@ -160,6 +156,7 @@ export async function handleRecordTools(name, args, repository) {
             return {
                 record_id: result.id,
                 revision: result.revision,
+                message: `レコードをupsertしました (ID: ${result.id})`,
                 operation: result.operation
             };
         }

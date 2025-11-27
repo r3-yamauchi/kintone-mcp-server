@@ -12,7 +12,8 @@ export async function handleSpaceTools(name, args, repository) {
         case 'get_space': {
             ValidationUtils.validateRequired(args, ['space_id']);
             
-            return repository.getSpace(args.space_id);
+            const space = await repository.getSpace(args.space_id);
+            return space;
         }
         
         case 'update_space': {
@@ -38,7 +39,8 @@ export async function handleSpaceTools(name, args, repository) {
         case 'get_space_members': {
             ValidationUtils.validateRequired(args, ['space_id']);
             
-            return repository.getSpaceMembers(args.space_id);
+            const members = await repository.getSpaceMembers(args.space_id);
+            return members;
         }
         
         case 'update_space_members': {

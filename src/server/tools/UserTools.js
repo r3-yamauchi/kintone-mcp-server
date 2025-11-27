@@ -15,7 +15,8 @@ export async function handleUserTools(name, args, repository) {
                 ValidationUtils.validateArray(codes, 'codes');
             }
             
-            return repository.getUsers(codes);
+            const users = await repository.getUsers(codes);
+            return users;
         }
         
         case 'get_groups': {
@@ -25,14 +26,16 @@ export async function handleUserTools(name, args, repository) {
                 ValidationUtils.validateArray(codes, 'codes');
             }
             
-            return repository.getGroups(codes);
+            const groups = await repository.getGroups(codes);
+            return groups;
         }
         
         case 'get_group_users': {
             ValidationUtils.validateRequired(args, ['group_code']);
             ValidationUtils.validateString(args.group_code, 'group_code');
             
-            return repository.getGroupUsers(args.group_code);
+            const groupUsers = await repository.getGroupUsers(args.group_code);
+            return groupUsers;
         }
         
         default:

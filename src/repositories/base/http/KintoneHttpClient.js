@@ -106,6 +106,7 @@ export class KintoneHttpClient {
             const payloadSource = data !== undefined ? data : params;
             if (payloadSource !== undefined) {
                 if (isFormData(payloadSource)) {
+                    // fetchがboundary付きヘッダーを自動付与するため、Content-Typeは削除
                     requestHeaders.delete('Content-Type');
                     init.body = payloadSource;
                 } else {

@@ -401,7 +401,7 @@ export const recordToolDefinitions = [
     },
     {
         name: 'upsert_record',
-        description: '重複禁止フィールド（updateKey）またはレコードIDをキーに、存在すれば更新・無ければ作成を1回の呼び出しで行います。kintone公式 records API の upsert 機能を使用します。',
+        description: '重複禁止フィールド（updateKey）またはレコードIDをキーに、存在すれば更新・無ければ作成する upsert 機能を使用します。実行前に \`get_form_fields\` や \`get_form_layout\` でフィールド構造を確認し、利用するフィールドコードが最新であることをチェックしてから実行してください。各フィールドは { "value": ... } の形式で指定します。',
         inputSchema: {
             type: 'object',
             properties: {
