@@ -70,9 +70,10 @@ export class KintoneHttpClient {
         }
 
         const originalMethod = method.toUpperCase();
-        const useOverride = originalMethod !== 'POST';
+        const isRawGetArrayBuffer = originalMethod === 'GET' && responseType === 'arraybuffer';
+        const useOverride = !isRawGetArrayBuffer && originalMethod !== 'POST';
         const init = {
-            method: 'POST',
+            method: isRawGetArrayBuffer ? 'GET' : 'POST',
             headers: requestHeaders,
             signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS)
         };
@@ -83,19 +84,36 @@ export class KintoneHttpClient {
 
         const expectedResponseType = responseType || 'json';
 
-        // kintone の method override では GET/PUT/DELETE も POST ボディにパラメータを含める
-        const payloadSource = data !== undefined ? data : params;
-
-        if (payloadSource !== undefined) {
-            if (isFormData(payloadSource)) {
-                // fetchがboundary付きヘッダーを自動付与するため、Content-Typeは削除
-                requestHeaders.delete('Content-Type');
-                init.body = payloadSource;
-            } else {
-                const payload = stripUndefined(payloadSource);
-                init.body = JSON.stringify(payload);
-                if (!requestHeaders.has('Content-Type')) {
-                    requestHeaders.set('Content-Type', 'application/json');
+        // GET + arraybuffer はクエリパラメータで送信
+        if (isRawGetArrayBuffer) {
+            const cleanedParams = params ? stripUndefined(params) : undefined;
+            if (cleanedParams) {
+                for (const [key, value] of Object.entries(cleanedParams)) {
+                    if (value === undefined || value === null) continue;
+                    if (Array.isArray(value)) {
+                        for (const item of value) {
+                            if (item !== undefined && item !== null) {
+                                url.searchParams.append(key, String(item));
+                            }
+                        }
+                    } else {
+                        url.searchParams.append(key, String(value));
+                    }
+                }
+            }
+        } else {
+            // kintone の method override では GET/PUT/DELETE も POST ボディにパラメータを含める
+            const payloadSource = data !== undefined ? data : params;
+            if (payloadSource !== undefined) {
+                if (isFormData(payloadSource)) {
+                    requestHeaders.delete('Content-Type');
+                    init.body = payloadSource;
+                } else {
+                    const payload = stripUndefined(payloadSource);
+                    init.body = JSON.stringify(payload);
+                    if (!requestHeaders.has('Content-Type')) {
+                        requestHeaders.set('Content-Type', 'application/json');
+                    }
                 }
             }
         }

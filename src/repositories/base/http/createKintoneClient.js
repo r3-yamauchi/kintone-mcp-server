@@ -204,6 +204,7 @@ export function createKintoneClient(credentials) {
             return http.post('file', form);
         },
         downloadFile: async (params) => {
+            // 添付ファイルはGET＋バイナリ応答を維持する
             const response = await http.get('file', params, {
                 responseType: 'arraybuffer',
                 rawResponse: true

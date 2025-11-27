@@ -37,11 +37,6 @@ export async function handleRecordTools(name, args, repository) {
             ValidationUtils.validateRequired(args, ['app_id', 'fields']);
             ValidationUtils.validateObject(args.fields, 'fields');
             
-            // フィールドの検証
-            if (!args.fields.project_manager) {
-                LoggingUtils.logWarning('create_record', 'project_manager field is missing');
-            }
-            
             const recordId = await repository.createRecord(
                 args.app_id,
                 args.fields
@@ -136,17 +131,7 @@ export async function handleRecordTools(name, args, repository) {
         }
         
         case 'update_record_comment': {
-            ValidationUtils.validateRequired(args, ['app_id', 'record_id', 'comment_id', 'text']);
-            ValidationUtils.validateString(args.text, 'text');
-            
-            await repository.updateRecordComment(
-                args.app_id,
-                args.record_id,
-                args.comment_id,
-                args.text,
-                args.mentions || []
-            );
-            return ResponseBuilder.success();
+            throw new Error('kintone REST APIにはコメント編集機能がありません。add_record_comment で新規コメントを追加してください。');
         }
         
         case 'create_records': {
@@ -165,19 +150,17 @@ export async function handleRecordTools(name, args, repository) {
             ValidationUtils.validateObject(args.updateKey, 'updateKey');
             ValidationUtils.validateString(args.updateKey.field, 'updateKey.field');
             ValidationUtils.validateObject(args.fields, 'fields');
-            
+
             const result = await repository.upsertRecord(
                 args.app_id,
                 args.updateKey,
                 args.fields
             );
-            
-            // result.id: 作成または更新されたレコードのID
-            // result.revision: レコードのリビジョン番号
+
             return {
                 record_id: result.id,
                 revision: result.revision,
-                message: `レコードをupsertしました (ID: ${result.id})`
+                operation: result.operation
             };
         }
 
@@ -207,9 +190,14 @@ export async function handleRecordTools(name, args, repository) {
             });
 
             const result = await repository.upsertRecords(args.app_id, normalizedRecords);
-            return ResponseBuilder.recordsUpserted(result, {
+            return {
+                records: result.map((r) => ({
+                    record_id: r.id,
+                    revision: r.revision,
+                    operation: r.operation
+                })),
                 message: `${result.length}件のレコードをupsertしました`
-            });
+            };
         }
 
         default:

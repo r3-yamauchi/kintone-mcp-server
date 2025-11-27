@@ -146,14 +146,13 @@ export class KintoneRecordRepository extends BaseKintoneRepository {
         ).then(response => response.id);
     }
 
-    async getRecordAcl(appId, recordIds) {
-        // kintone REST APIではレコード単位のアクセス権限取得はサポートされていません
-        throw new Error(
-            'レコード単位のアクセス権限取得機能はkintone REST APIではサポートされていません。\n\n' +
-            '代替案：\n' +
-            '1. アプリ全体のアクセス権限を確認する場合は get_app_acl を使用してください\n' +
-            '2. プロセス管理のステータスに基づくアクセス制御を確認する場合は get_process_management を使用してください\n' +
-            '3. レコードの作成者・更新者を確認する場合は、レコード取得時に CREATOR/MODIFIER フィールドを参照してください'
+    async getRecordAcl(appId, recordId) {
+        const params = { app: appId, id: recordId };
+        return this.executeWithDetailedLogging(
+            'getRecordAcl',
+            params,
+            () => this.client.app.getRecordAcl(params),
+            `get record ACL ${appId}/${recordId}`
         );
     }
 
@@ -209,21 +208,7 @@ export class KintoneRecordRepository extends BaseKintoneRepository {
         }));
     }
 
-    async updateRecordComment(appId, recordId, commentId, text, mentions = []) {
-        const params = {
-            app: appId,
-            record: recordId,
-            comment: commentId,
-            text: text,
-            mentions: mentions
-        };
-        return this.executeWithDetailedLogging(
-            'updateRecordComment',
-            params,
-            () => this.client.record.updateRecordComment(params),
-            `update comment ${commentId} for record ${appId}/${recordId}`
-        );
-    }
+    // コメント編集APIは存在しないため、実装しない（ツール側からも非公開）
 
     async createRecords(appId, records) {
         const params = {
@@ -257,12 +242,13 @@ export class KintoneRecordRepository extends BaseKintoneRepository {
             updateKey: updateKey,
             record: fields
         };
-        return this.executeWithDetailedLogging(
+        const response = await this.executeWithDetailedLogging(
             'upsertRecord',
             params,
             () => this.client.record.upsertRecord(params),
             `upsert record in app ${appId} with key ${updateKey.field}=${updateKey.value}`
         );
+        return response;
     }
 
     async upsertRecords(appId, records) {

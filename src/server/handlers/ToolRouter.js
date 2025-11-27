@@ -16,7 +16,7 @@ export class ToolRouter {
             record: {
                 tools: ['get_record', 'search_records', 'create_record', 'update_record', 'add_record_comment', 
                        'update_record_status', 'update_record_assignees',
-                       'get_record_comments', 'update_record_comment', 'create_records', 'upsert_record',
+                       'get_record_comments', 'create_records', 'upsert_record',
                        'upsert_records'],
                 handler: handleRecordTools
             },

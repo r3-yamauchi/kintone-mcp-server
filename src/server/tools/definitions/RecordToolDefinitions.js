@@ -369,59 +369,6 @@ export const recordToolDefinitions = [
         }
     },
     {
-        name: 'update_record_comment',
-        description: 'kintoneレコードの既存コメントを更新します',
-        inputSchema: {
-            type: 'object',
-            properties: {
-                app_id: {
-                    type: 'number',
-                    description: 'kintoneアプリのID'
-                },
-                record_id: {
-                    type: 'number',
-                    description: 'レコードID'
-                },
-                comment_id: {
-                    type: 'number',
-                    description: 'コメントID'
-                },
-                text: {
-                    type: 'string',
-                    description: '更新後のコメント本文'
-                },
-                mentions: {
-                    type: 'array',
-                    items: {
-                        type: 'object',
-                        properties: {
-                            code: {
-                                type: 'string',
-                                description: 'メンション対象のユーザー、グループ、組織のコード'
-                            },
-                            type: {
-                                type: 'string',
-                                enum: ['USER', 'GROUP', 'ORGANIZATION'],
-                                description: 'メンション対象の種類'
-                            }
-                        },
-                        required: ['code', 'type']
-                    },
-                    description: 'メンション情報の配列'
-                }
-            },
-            required: ['app_id', 'record_id', 'comment_id', 'text']
-        },
-        annotations: {
-            readOnly: false,
-            safe: false,
-            category: 'record',
-            requiresConfirmation: true,
-            longRunning: false,
-            impact: 'low'
-        }
-    },
-    {
         name: 'create_records',
         description: 'kintoneアプリに複数のレコードを一括作成します（最大100件）',
         inputSchema: {
@@ -454,7 +401,7 @@ export const recordToolDefinitions = [
     },
     {
         name: 'upsert_record',
-        description: 'kintoneアプリのレコードを作成または更新します（Upsert操作）。実行前に\\`get_form_fields\\` や\\`get_form_layout\\` で対象アプリのフィールド構造を確認し、使用する重複禁止フィールドや更新対象フィールドのコードが正しいことを必ずチェックしてください。重複禁止フィールドを使用してレコードの存在を確認し、存在する場合は更新、存在しない場合は新規作成します。',
+        description: '重複禁止フィールド（updateKey）またはレコードIDをキーに、存在すれば更新・無ければ作成を1回の呼び出しで行います。kintone公式 records API の upsert 機能を使用します。',
         inputSchema: {
             type: 'object',
             properties: {
@@ -486,7 +433,7 @@ export const recordToolDefinitions = [
         },
         annotations: {
             readOnly: false,
-            safe: false,
+            safe: true,
             category: 'record',
             requiresConfirmation: true,
             longRunning: false,
@@ -495,7 +442,7 @@ export const recordToolDefinitions = [
     },
     {
         name: 'upsert_records',
-        description: 'kintoneアプリで複数レコードを一括Upsertします。各要素に重複禁止フィールド（updateKey）と更新内容を指定すると、存在するレコードは更新、存在しないレコードは新規作成されます。',
+        description: '複数レコードを一括Upsertします。各要素に重複禁止フィールド（updateKey）と更新内容を指定すると、存在するレコードは更新、存在しないレコードは新規作成されます。最大100件。',
         inputSchema: {
             type: 'object',
             properties: {
@@ -538,11 +485,11 @@ export const recordToolDefinitions = [
         },
         annotations: {
             readOnly: false,
-            safe: false,
+            safe: true,
             category: 'record',
             requiresConfirmation: true,
             longRunning: true,
-            impact: 'high'
+            impact: 'medium'
         }
     }
 ];
