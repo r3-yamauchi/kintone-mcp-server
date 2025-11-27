@@ -2,19 +2,19 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/r3-yamauchi/kintone-mcp-server)
 
-これは [kintone](https://kintone.cybozu.co.jp/) との連携目的で使用できる [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) サーバーのサンプルコードです。
+これは [kintone](https://kintone.cybozu.co.jp/) との連携目的で使用できる **サイボウズ公式ではない、非公式の** ローカル [MCP(Model Context Protocol)](https://modelcontextprotocol.io/) サーバー（サンプルコード）です。
 
-この MCP server を使うと [Claude Desktop](https://claude.ai/download) アプリなどの
+> ⚠️ **注意: この MCP Server は非公式です**  
+> この MCP Server は kintone の提供元である サイボウズ が開発・保守しているものではありません。個人で開発している非公式のものです。ご利用は自己責任でお願いいたします。 サイボウズ公式のローカルMCPサーバーは [https://github.com/kintone/mcp-server](https://github.com/kintone/mcp-server) で公開・配布されています。
+
+この ローカル MCP server を使うと [Claude Desktop](https://claude.ai/download) アプリなどの
 MCPをサポートしているデスクトップアプリ（MCPホスト）から
 kintoneデータを参照・更新したり、kintoneアプリ自体を作成したりなどすることができます。
 LLM がスムーズに kintone を扱えるように工夫しています。
 
-**サイボウズより 公式の MCP Server が提供開始されました。**
-特に理由がなければ公式MCP Serverを使用するのが良いと思います。
-
 ## mcpbファイル（以前は dxt という拡張子でした）による [Claude Desktop](https://claude.ai/download) アプリ へのインストール手順（推奨）
 
-[https://github.com/r3-yamauchi/kintone-mcp-server/releases](https://github.com/r3-yamauchi/kintone-mcp-server/releases) から最新の [unofficial-kintone-mcp-server-8.0.0.mcpb](https://github.com/r3-yamauchi/kintone-mcp-server/releases/download/8.0.0/unofficial-kintone-mcp-server-8.0.0.mcpb) をダウンロードし、 
+[https://github.com/r3-yamauchi/kintone-mcp-server/releases](https://github.com/r3-yamauchi/kintone-mcp-server/releases) から最新の [unofficial-kintone-mcp-server-8.1.0.mcpb](https://github.com/r3-yamauchi/kintone-mcp-server/releases/download/8.1.0/unofficial-kintone-mcp-server-8.1.0.mcpb) をダウンロードし、 
 [Claude Desktop](https://claude.ai/download) アプリ の [設定] の [デスクトップアプリ] - [拡張機能] をクリックしてください。
 
 <!-- markdownlint-disable MD033 -->
@@ -22,9 +22,9 @@ LLM がスムーズに kintone を扱えるように工夫しています。
 <!-- markdownlint-enable MD033 -->
 
 「.MCPBまたは.DXTファイルをここにドラッグしてインストールしてください」と表示されている場合は、
-ダウンロードした unofficial-kintone-mcp-server-8.0.0.mcpb をドラッグ・アンド・ドロップしてください。
+ダウンロードした unofficial-kintone-mcp-server-8.1.0.mcpb をドラッグ・アンド・ドロップしてください。
 
-「.MCPBまたは.DXTファイルをここにドラッグしてインストールしてください」の表示がない場合は「詳細設定」をクリックし、さらに「拡張機能をインストール...」をクリックして、ダウンロードした unofficial-kintone-mcp-server-8.0.0.mcpb を指定してください。
+「.MCPBまたは.DXTファイルをここにドラッグしてインストールしてください」の表示がない場合は「詳細設定」をクリックし、さらに「拡張機能をインストール...」をクリックして、ダウンロードした unofficial-kintone-mcp-server-8.1.0.mcpb を指定してください。
 
 <!-- markdownlint-disable MD033 -->
 <img height="500" src="docs/images/mcpb-install1.png" alt="デスクトップアプリの拡張機能設定" style="margin-bottom: 1.6rem;" />
@@ -143,7 +143,6 @@ claude_desktop_config.json への変更を保存したのち、Claude Desktopア
 - `update_record_status`: kintoneレコードのステータスを更新（プロセス管理）
 - `update_record_assignees`: kintoneレコードの作業者を更新（プロセス管理）
 - `get_record_comments`: kintoneレコードのコメントを取得
-- `update_record_comment`: kintoneレコードの既存コメントを更新
 
 #### ファイル操作
 

@@ -1,6 +1,7 @@
 // src/repositories/KintoneUserRepository.js
 import { BaseKintoneRepository } from './base/BaseKintoneRepository.js';
 import { LoggingUtils } from '../utils/LoggingUtils.js';
+import { USER_AGENT } from '../constants/appInfo.js';
 
 export class KintoneUserRepository extends BaseKintoneRepository {
     /**
@@ -11,7 +12,7 @@ export class KintoneUserRepository extends BaseKintoneRepository {
      */
     async callUserApi(path, params = {}) {
         // User APIのエンドポイントを構築
-        const baseUrl = `https://${this.credentials.domain}`;
+        const baseUrl = this.credentials.origin || `https://${this.credentials.domain}`;
         const url = new URL(path, baseUrl);
         
         // kintone/cybozu.com共通管理APIの認証ヘッダー
@@ -21,7 +22,8 @@ export class KintoneUserRepository extends BaseKintoneRepository {
             'X-Cybozu-Authorization': auth,
             'X-HTTP-Method-Override': 'GET',  // GETメソッドのオーバーライド
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'User-Agent': USER_AGENT
         };
 
         // リクエストボディを構築

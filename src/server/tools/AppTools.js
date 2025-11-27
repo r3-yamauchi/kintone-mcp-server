@@ -135,7 +135,8 @@ export async function handleAppTools(name, args, repository) {
             ValidationUtils.validateRequired(args, ['apps']);
             ValidationUtils.validateArray(args.apps, 'apps', { minLength: 1 });
             
-            return repository.getDeployStatus(args.apps);
+            const status = await repository.getDeployStatus(args.apps);
+            return status;
         }
         
         case 'update_app_settings': {
@@ -200,7 +201,8 @@ export async function handleAppTools(name, args, repository) {
                 spaceId = Number(args.space_id);
             }
 
-            return repository.getAppsInfo({ appName, appId, appCode, spaceId });
+            const appsInfo = await repository.getAppsInfo({ appName, appId, appCode, spaceId });
+            return appsInfo;
         }
 
         case 'get_form_fields': {
@@ -325,8 +327,12 @@ export async function handleAppTools(name, args, repository) {
             
             // プレビュー環境かどうかを判定
             const preview = args.preview === true;
-            
-            return repository.getProcessManagement(args.app_id, preview);
+
+            const processManagement = await repository.getProcessManagement(
+                args.app_id,
+                preview
+            );
+            return processManagement;
         }
         
         case 'update_process_management': {

@@ -326,7 +326,7 @@ export const recordToolDefinitions = [
     },
     {
         name: 'get_record_comments',
-        description: 'kintoneレコードのコメントを取得します',
+        description: 'kintoneレコードのコメントを取得します。limit未指定の場合は内部でページングして全件を取得します。大量データになる場合は limit（例: 10）を指定することを推奨します。',
         inputSchema: {
             type: 'object',
             properties: {
@@ -351,10 +351,8 @@ export const recordToolDefinitions = [
                 },
                 limit: {
                     type: 'number',
-                    description: '取得件数（省略時は10、最大100）',
-                    minimum: 1,
-                    maximum: 100,
-                    default: 10
+                    description: '取得件数。未指定または空文字の場合は全件取得。',
+                    minimum: 1
                 }
             },
             required: ['app_id', 'record_id']
@@ -401,7 +399,7 @@ export const recordToolDefinitions = [
     },
     {
         name: 'upsert_record',
-        description: '重複禁止フィールド（updateKey）またはレコードIDをキーに、存在すれば更新・無ければ作成を1回の呼び出しで行います。kintone公式 records API の upsert 機能を使用します。',
+        description: '重複禁止フィールド（updateKey）またはレコードIDをキーに、存在すれば更新・無ければ作成する upsert 機能を使用します。実行前に \`get_form_fields\` や \`get_form_layout\` でフィールド構造を確認し、利用するフィールドコードが最新であることをチェックしてから実行してください。各フィールドは { "value": ... } の形式で指定します。',
         inputSchema: {
             type: 'object',
             properties: {

@@ -17,6 +17,7 @@ import { KintoneRepository } from '../repositories/KintoneRepository.js';
 import { executeToolRequest } from './handlers/ToolRequestHandler.js';
 import { allToolDefinitions } from './tools/definitions/index.js';
 import { LoggingUtils } from '../utils/LoggingUtils.js';
+import { SERVER_VERSION } from '../constants/appInfo.js';
 
 export class MCPServer {
     constructor(domain, username, password) {
@@ -26,7 +27,7 @@ export class MCPServer {
         this.server = new Server(
             {
                 name: 'kintonemcp',
-                version: '8.0.0',
+                version: SERVER_VERSION,
             },
             {
                 capabilities: {

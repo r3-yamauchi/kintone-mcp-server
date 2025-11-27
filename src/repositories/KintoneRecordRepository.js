@@ -204,7 +204,9 @@ export class KintoneRecordRepository extends BaseKintoneRepository {
             `get comments for record ${appId}/${recordId}`
         ).then(response => ({
             comments: response.comments,
-            totalCount: response.totalCount
+            totalCount: response.totalCount,
+            older: response.older,
+            newer: response.newer
         }));
     }
 

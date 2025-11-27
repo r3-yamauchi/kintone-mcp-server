@@ -1,5 +1,6 @@
 // src/repositories/base/http/KintoneHttpClient.js
 import { KintoneApiError } from './KintoneApiError.js';
+import { USER_AGENT } from '../../../constants/appInfo.js';
 
 const DEFAULT_TIMEOUT_MS = 60000;
 
@@ -42,7 +43,7 @@ function stripUndefined(value) {
 export class KintoneHttpClient {
     constructor(credentials) {
         this.credentials = credentials;
-        this.baseUrl = `https://${credentials.domain}`;
+        this.baseUrl = credentials.origin || `https://${credentials.domain}`;
         this.authHeader = Buffer.from(`${credentials.username}:${credentials.password}`).toString('base64');
     }
 
@@ -50,7 +51,8 @@ export class KintoneHttpClient {
         return {
             'X-Cybozu-Authorization': this.authHeader,
             'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'User-Agent': USER_AGENT
         };
     }
 
@@ -106,6 +108,7 @@ export class KintoneHttpClient {
             const payloadSource = data !== undefined ? data : params;
             if (payloadSource !== undefined) {
                 if (isFormData(payloadSource)) {
+                    // fetchがboundary付きヘッダーを自動付与するため、Content-Typeは削除
                     requestHeaders.delete('Content-Type');
                     init.body = payloadSource;
                 } else {

@@ -1,7 +1,7 @@
 {
   "manifest_version": "0.2",
   "name": "unofficial-kintone-mcp-server",
-  "version": "8.0.0",
+  "version": "8.1.0",
   "description": "MCP server for kintone (Unofficial) by r3-yamauchi",
   "long_description": "MCP server for kintone (Unofficial) by r3-yamauchi",
   "author": {
@@ -88,10 +88,6 @@
     {
       "name": "get_record_comments",
       "description": "kintoneレコードのコメントを取得します"
-    },
-    {
-      "name": "update_record_comment",
-      "description": "kintoneレコードの既存コメントを更新します"
     },
     {
       "name": "create_records",

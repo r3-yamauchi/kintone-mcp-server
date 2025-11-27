@@ -119,19 +119,71 @@ export async function handleRecordTools(name, args, repository) {
         
         case 'get_record_comments': {
             ValidationUtils.validateRequired(args, ['app_id', 'record_id']);
-            
-            const comments = await repository.getRecordComments(
-                args.app_id,
-                args.record_id,
-                args.order || 'desc',
-                args.offset || 0,
-                args.limit || 10
-            );
-            return comments;
-        }
-        
-        case 'update_record_comment': {
-            throw new Error('kintone REST APIにはコメント編集機能がありません。add_record_comment で新規コメントを追加してください。');
+
+            const PAGE_SIZE = 10;
+
+            const order = (args.order ?? 'desc').toString();
+            ValidationUtils.validateString(order, 'order', { allowedValues: ['asc', 'desc'] });
+
+            const offset = args.offset ?? 0;
+            ValidationUtils.validateNumber(offset, 'offset', { min: 0, allowString: true });
+
+            const limitProvided = args.limit !== undefined && args.limit !== null && args.limit !== '';
+            let targetLimit = null;
+            if (limitProvided) {
+                targetLimit = args.limit;
+                ValidationUtils.validateNumber(targetLimit, 'limit', { min: 1, allowString: true });
+                targetLimit = Number(targetLimit);
+            }
+
+            const apiOrder = targetLimit === null ? 'asc' : order;
+            const outputOrder = order;
+
+            let currentOffset = Number(offset);
+            const collected = [];
+            let totalCount = null;
+
+            while (true) {
+                const response = await repository.getRecordComments(
+                    args.app_id,
+                    args.record_id,
+                    apiOrder,
+                    currentOffset,
+                    PAGE_SIZE
+                );
+
+                const fetched = response.comments || [];
+                totalCount = response.totalCount ?? totalCount;
+
+                collected.push(...fetched);
+
+                const hasMore = apiOrder === 'asc'
+                    ? Boolean(response?.newer)
+                    : Boolean(response?.older);
+
+                const reachedLimit = targetLimit !== null && collected.length >= targetLimit;
+
+                if (fetched.length === 0 || reachedLimit || !hasMore) {
+                    break;
+                }
+
+                currentOffset += PAGE_SIZE;
+            }
+
+            const sorted = [...collected].sort((a, b) => {
+                const aId = Number(a.id);
+                const bId = Number(b.id);
+                return outputOrder === 'asc' ? aId - bId : bId - aId;
+            });
+
+            const finalComments = targetLimit !== null ? sorted.slice(0, targetLimit) : sorted;
+            const finalTotalCount = totalCount ?? (targetLimit !== null ? finalComments.length : sorted.length);
+
+            return {
+                comments: finalComments,
+                totalCount: finalTotalCount,
+                order: outputOrder
+            };
         }
         
         case 'create_records': {
@@ -160,6 +212,7 @@ export async function handleRecordTools(name, args, repository) {
             return {
                 record_id: result.id,
                 revision: result.revision,
+                message: `レコードをupsertしました (ID: ${result.id})`,
                 operation: result.operation
             };
         }
